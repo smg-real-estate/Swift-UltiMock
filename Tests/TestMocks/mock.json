@@ -1,0 +1,13 @@
+{
+    "sources" : [
+        "."
+    ],
+    "sdkModules" : {
+        "iPhoneSimulator" : [
+            "ObjectiveC.NSObject"
+        ]
+    },
+    "packageDependencies" : [
+        "XFoundation"
+    ]
+}

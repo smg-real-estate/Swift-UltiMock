@@ -1,0 +1,261 @@
+import TestMocks
+import XCTest
+import XFoundation
+
+class MockTests: XCTestCase {
+    func test_unexpectedCalls1() {
+        // Failures in async methods cannot be tested this way for the time being
+        XCTExpectFailure {
+            let mock = TestMockableMock()
+            mock.noParamsVoid()
+        }
+    }
+
+    func test_unexpectedCalls2() {
+        XCTExpectFailure {
+            let mock = TestMockableMock()
+            mock.withParamsVoid(int: 0, label: "label", "string", nil, 1, [2], ["1": 2]) { _ in }
+        }
+    }
+
+    func test_unexpectedCalls3() {
+        XCTExpectFailure {
+            let mock = TestMockableMock()
+            _ = mock.withParamsResult(int: 0, label: "label", "string")
+        }
+    }
+
+    func test_unexpectedPropertyCall() {
+        XCTExpectFailure {
+            let mock = TestMockableMock()
+            _ = mock.property
+        }
+    }
+
+    func test_unexpectedPropertySetterCall() {
+        XCTExpectFailure {
+            let mock = TestMockableMock()
+            mock.expect(set: .readwriteProperty, to: 3)
+            _ = mock.readwriteProperty = 0
+            mock.verify()
+        }
+    }
+
+    func test_failedVerifications() {
+        let mock = TestMockableMock()
+
+        mock.expect(.property) { OnlyProperty(value: 1) }
+        mock.expect(.readwriteProperty) { 2 }
+        mock.expect(set: .readwriteProperty, to: 3) { _ in }
+        mock.expect(.forceUnwrapped) { nil }
+
+        mock.expect(.forceUnwrappedResult()) { nil }
+        mock.expect(.noParamsVoid()) {}
+        mock.expect(.noParamsVoidAsync()) {}
+        mock.expect(.noParamsVoidAsyncThrowing()) {}
+
+        mock.expect(.noParamsResult()) { 1 as Int }
+        mock.expect(.noParamsResult()) { nil }
+        mock.expect(.noParamsArrayResult()) { [1] }
+        mock.expect(.noParamsDictionaryResult()) { ["1": 2] }
+        mock.expect(.noParamsClosureResult()) { { _ in } }
+        mock.expect(.noParamsResultAsync()) { 2 }
+        mock.expect(.noParamsAsyncThrowingResult()) { 3 }
+
+        mock.expect(.withOptionalClosure(.any)) { $0?(1) }
+
+        mock.expect(
+            .withParamsVoid(
+                int: 1, label: "label", "string", nil, .value(1), [2], ["1": 2], .any
+            )
+        ) { _, _, _, _, _, _, _, _ in }
+        mock.expect(.withParamsVoidAsync(int: 1, label: "label", "string", nil)) { _, _, _, _ in }
+        mock.expect(.withParamsVoidAsyncThrowing(int: 1, label: "label", "string", nil)) { _, _, _, _ in }
+
+        mock.expect(.withParamsResult(int: 1, label: "label", "string")) { _, _, _ in 1 }
+        mock.expect(.withParamsResultAsync(int: 1, label: "label", "string")) { _, _, _ in 2 }
+        mock.expect(.withParamsAsyncThrowingResult(int: 1, label: "label", "string")) { _, _, _ in 3 }
+
+        mock.expect(.`func`()) {}
+        mock.expect(.withSelf(.any)) { $0 }
+
+        XCTExpectFailure {
+            mock.verify()
+        }
+
+        mock.verify() // Should reset expectations after verification
+    }
+
+    func test_resetExpectations() {
+        let mock = TestMockableMock()
+
+        mock.expect(.property) { .init(value: 1) }
+        mock.expect(.readwriteProperty) { 2 }
+        mock.expect(set: .readwriteProperty, to: 3) { _ in }
+        mock.expect(.forceUnwrapped) { nil }
+
+        mock.expect(.forceUnwrappedResult()) { nil }
+        mock.expect(.noParamsVoid()) {}
+        mock.expect(.noParamsVoidAsync()) {}
+        mock.expect(.noParamsVoidAsyncThrowing()) {}
+
+        mock.expect(.noParamsResult()) { 1 as Int }
+        mock.expect(.noParamsResult()) { nil }
+        mock.expect(.noParamsArrayResult()) { [1] }
+        mock.expect(.noParamsDictionaryResult()) { ["1": 2] }
+        mock.expect(.noParamsClosureResult()) { { _ in } }
+        mock.expect(.noParamsResultAsync()) { 2 }
+        mock.expect(.noParamsAsyncThrowingResult()) { 3 }
+
+        mock.expect(.withOptionalClosure(.any)) { $0?(1) }
+
+        mock.expect(.withParamsVoid(int: 1, label: "label", "string", nil, .value(1), [2], ["1": 2], .any)) { _, _, _, _, _, _, _, _ in }
+        mock.expect(.withParamsVoidAsync(int: 1, label: "label", "string", nil)) { _, _, _, _ in }
+        mock.expect(.withParamsVoidAsyncThrowing(int: 1, label: "label", "string", nil)) { _, _, _, _ in }
+        mock.expect(.withParamsResult(int: 1, label: "label", "string")) { _, _, _ in 1 }
+        mock.expect(.withParamsResultAsync(int: 1, label: "label", "string")) { _, _, _ in 2 }
+        mock.expect(.withParamsAsyncThrowingResult(int: 1, label: "label", "string")) { _, _, _ in 3 }
+
+        mock.expect(.`func`()) {}
+        mock.expect(.withSelf(.any)) { $0 }
+
+        mock.resetExpectations()
+
+        mock.verify()
+    }
+
+    func test_failsWhenCalledInIncorrectOrder() {
+        let mock = TestMockableMock()
+
+        mock.expect(.noParamsVoid()) {}
+        mock.expect(
+            .withParamsVoid(
+                int: 1, label: "label", "string", nil, .value(1), [2], ["1": 2], .any
+            )
+        ) { _, _, _, _, _, _, _, _ in }
+        mock.expect(.noParamsVoid()) {}
+
+        XCTExpectFailure {
+            mock.noParamsVoid()
+            mock.noParamsVoid()
+            mock.withParamsVoid(int: 1, label: "label", "string", nil, 1, [2], ["1": 2]) { _ in }
+        }
+    }
+
+    func test_successfulVerifications() async throws {
+        let mock = TestMockableMock()
+
+        mock.expect(.property) { .init(value: 1) }
+        mock.expect(.readwriteProperty) { 2 }
+        mock.expect(set: .readwriteProperty, to: 3) {
+            XCTAssertEqual($0, 3)
+        }
+        mock.expect(.forceUnwrapped) { nil }
+        mock.expect(set: .forceUnwrapped, to: .value("some")) {
+            XCTAssertEqual($0, "some")
+        }
+
+        mock.expect(.forceUnwrappedResult()) { nil }
+        mock.expect(.newAPI())
+        mock.expect(.noParamsVoid()) {}
+        mock.expect(.noParamsVoid()) {}
+        mock.expect(.noParamsVoidAsync()) {}
+        mock.expect(.noParamsVoidAsyncThrowing()) {}
+
+        mock.expect(.noParamsResult()) { 1 as Int }
+        mock.expect(.noParamsResult()) { nil }
+        mock.expect(.noParamsImplicitOptionalResult()) { nil }
+        mock.expect(.noParamsArrayResult()) { [1] }
+        mock.expect(.noParamsDictionaryResult()) { ["1": 2] }
+        mock.expect(.noParamsClosureResult()) { { XCTAssertEqual($0, 15) } }
+        mock.expect(.noParamsResultAsync()) { 2 }
+        mock.expect(.noParamsAsyncThrowingResult()) { 3 }
+
+        mock.expect(.withOptionalClosure(.any)) { $0?(1) }
+
+        mock.expect(.withParamsVoid(int: 1, label: "label", "string", nil, .value(1), [2], ["1": 2], .any)) {
+            XCTAssertEqual($0, 1)
+            XCTAssertEqual($1, "label")
+            XCTAssertEqual($2, "string")
+            XCTAssertNil($3)
+            XCTAssertEqual($4, 1)
+            XCTAssertEqual($5, [2])
+            XCTAssertEqual($6, ["1": 2])
+            $7(7)
+        }
+        mock.expect(.withParamsVoidAsync(int: 1, label: "label", "string", nil)) { _, _, _, _ in }
+        mock.expect(.withParamsVoidAsyncThrowing(int: 1, label: "label", "string", nil)) { _, _, _, _ in }
+        mock.expect(.withParamsResult(int: 1, label: "label", "string")) { _, _, _ in 1 }
+        mock.expect(.withParamsResultAsync(int: 1, label: "label", "string")) { _, _, _ in 2 }
+        mock.expect(.withParamsAsyncThrowingResult(int: 1, label: "label", "string")) { _, _, _ in 3 }
+        mock.expect(.generic(parameter1: .value(123), .value("string"))) { _, _ in 4 }
+
+        XCTAssertEqual(mock.property, OnlyProperty(value: 1))
+        XCTAssertEqual(mock.readwriteProperty, 2)
+        mock.readwriteProperty = 3
+        XCTAssertNil(mock.forceUnwrapped)
+        mock.forceUnwrapped = "some"
+
+        XCTAssertNil(mock.forceUnwrappedResult())
+        mock.newAPI()
+        mock.noParamsVoid()
+        mock.noParamsVoid()
+        await mock.noParamsVoidAsync()
+        try await mock.noParamsVoidAsyncThrowing()
+
+        mock.expect(.`func`()) {}
+        mock.expect(.withSelf(.any)) { $0 }
+
+        XCTAssertEqual(mock.noParamsResult(), 1)
+        XCTAssertEqual(mock.noParamsResult(), nil)
+        XCTAssertEqual(mock.noParamsImplicitOptionalResult(), nil)
+        XCTAssertEqual(mock.noParamsArrayResult(), [1])
+        XCTAssertEqual(mock.noParamsDictionaryResult(), ["1": 2])
+        mock.noParamsClosureResult()(15)
+        _ = await mock.noParamsResultAsync()
+        _ = try await mock.noParamsAsyncThrowingResult()
+
+        mock.withOptionalClosure {
+            XCTAssertEqual($0, 1)
+        }
+
+        mock.withParamsVoid(int: 1, label: "label", "string", nil, 1, [2], ["1": 2]) {
+            XCTAssertEqual($0, 7)
+        }
+        await mock.withParamsVoidAsync(int: 1, label: "label", "string", nil)
+        try await mock.withParamsVoidAsyncThrowing(int: 1, label: "label", "string", nil)
+        _ = mock.withParamsResult(int: 1, label: "label", "string")
+        _ = await mock.withParamsResultAsync(int: 1, label: "label", "string")
+        _ = try await mock.withParamsAsyncThrowingResult(int: 1, label: "label", "string")
+        XCTAssertEqual(mock.generic(parameter1: 123, "string"), 4)
+
+        mock.`func`()
+        _ = mock.withSelf(mock)
+
+        mock.verify()
+    }
+
+    func test_MockingAssociatedTypes() {
+        let mock = GenericTestMockableMock<Int, String>()
+
+        mock.expect(.doSomething(with: .value("string"))) { _ in }
+        mock.expect(.doSomething(with: 1)) { _ in }
+        mock.doSomething(with: "string")
+        mock.doSomething(with: 1)
+        mock.verify()
+    }
+
+    func test_mockingMethodsConstrainedToAssociatedTypes() {
+        let mock = GenericTestMockableMock<Int, ([Int]) -> String>()
+
+        // Note: The parameter type should be inferred without the need of `.value()`
+        // which means correct generation of the parameter constraints
+        mock.expect(.doSomethingWithInput([1, 2, 3])) { _ in "123" }
+        XCTAssertEqual(mock.doSomethingWithInput([1, 2, 3]), "123")
+        mock.verify()
+    }
+
+    func test_3DPartyModuleMock_Generated() {
+        let _ = ServicingMock<Int, String>()
+    }
+}

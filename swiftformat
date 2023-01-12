@@ -1,0 +1,18 @@
+#!/bin/zsh
+
+mkdir -p .swiftformat-bin >/dev/null 2>&1
+cd .swiftformat-bin
+
+curl -LO https://github.com/nicklockwood/SwiftFormat/releases/download/0.50.7/swiftformat.zip
+
+SUM="$(shasum -a 256 swiftformat.zip | head -c 64)"
+CHECKSUM="47432dd8bff867736f42255af36024709e0cc90f31a605c81b677838ac4ce616"
+
+if [ $SUM != $CHECKSUM ]; then
+    echo -n "New checksum ($SUM) does not match the expected ($CHECKSUM)"; exit 1
+fi
+
+unzip -o swiftformat.zip
+
+cd ..
+./.swiftformat-bin/swiftformat $@
