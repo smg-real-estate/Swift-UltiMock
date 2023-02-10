@@ -59,8 +59,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/jpsim/SourceKitten",
       "state" : {
-        "revision" : "817dfa6f2e09b0476f3a6c9dbc035991f02f0241",
-        "version" : "0.32.0"
+        "revision" : "f403b5cdbaa1748fe74da47915013fe058166e03",
+        "version" : "0.34.0"
       }
     },
     {
@@ -68,8 +68,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/krzysztofzablocki/Sourcery",
       "state" : {
-        "branch" : "2.0.0",
-        "revision" : "bf06f37585c37138e6f374902d8959a5c9be2001"
+        "branch" : "2.0.1",
+        "revision" : "eb75bb23ced64ea2e55e3a28adafa4c5a557319e"
       }
     },
     {
@@ -131,8 +131,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/drmohundro/SWXMLHash.git",
       "state" : {
-        "revision" : "6469881a3f30417c5bb02404ea4b69207f297592",
-        "version" : "6.0.0"
+        "revision" : "4d0f62f561458cbe1f732171e625f03195151b60",
+        "version" : "7.0.1"
       }
     },
     {
@@ -149,8 +149,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/jpsim/Yams.git",
       "state" : {
-        "revision" : "9ff1cc9327586db4e0c8f46f064b6a82ec1566fa",
-        "version" : "4.0.6"
+        "revision" : "4889c132978bc6ad3e80f680011ec3dd4fead90c",
+        "version" : "5.0.4"
       }
     }
   ],
