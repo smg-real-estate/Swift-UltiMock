@@ -1,0 +1,28 @@
+name: "CodeQL config"
+
+queries:
+  - uses: security-and-quality
+
+query-filters:
+
+# Exclude all low-severity security alerts.
+- exclude:
+    security-severity: /^[0-6]\./   # security-severity < 7.
+
+# Exclude all Warnings and Notes (keep in mind that the following directive will exclude all alerts carrying Warning or Note designation;
+#   this could cause certain important alerts to get excluded if they are designated as high-severity security alerts at the same time).
+- exclude:
+    problem.severity:
+      - recommendation
+      - warning
+
+# Re-include all high-severity security alerts (since alerts can at the same time be both security alerts (having designated security-severity) and Warnings/Notes/Errors).
+- include:
+    security-severity: /^([7-9]|10)\./   # security-severity >= 7.
+
+# Re-include Error alerts (those that have been excluded earlier due to low-severity filter).
+# Remark: CodeQL alerts define Error as an issue that is likely to cause incorrect program behavior, for example a crash or vulnerability.
+#         Alert may be designated as Error and have low-severity security score, but it will show up in the final code scanning report due
+#         to the following inclusion directive (that's why you may find e.g. medium-severity alert in the report).
+- include:
+    problem.severity: error
