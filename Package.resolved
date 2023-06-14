@@ -122,8 +122,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/smg-real-estate/Swift-XFoundation.git",
       "state" : {
-        "revision" : "67abedc0ec455696438aa6580dcf53062c41609b",
-        "version" : "0.1.1"
+        "revision" : "cd020be624b380dbb6e49cd5c66672aaecd83dd2",
+        "version" : "0.4.0"
       }
     },
     {
