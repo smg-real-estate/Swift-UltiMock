@@ -56,7 +56,8 @@ let package = Package(
         ),
         .testTarget(
             name: "MockTests",
-            dependencies: ["UltiMock", "TestMocks"]
+            dependencies: ["UltiMock", "TestMocks"],
+            plugins: ["MockGenerationPlugin"]
         )
     ]
 )

@@ -39,16 +39,26 @@ struct MockGenerationPlugin: BuildToolPlugin {
 
         let output = context.pluginWorkDirectory.appending(["Mock.generated.swift"])
 
+        var options = [
+            "output": [output.string],
+            "sources": inputFiles.map(\.string)
+        ]
+
+        if !imports.isEmpty {
+            options["imports"] = imports
+        }
+
         let mock = try context.tool(named: "mock").path
+
+        let arguments = [configurationPath.string]
+            + options.map { ["--\($0)"] + $1 }
+            .flatMap { $0 }
 
         return [
             .buildCommand(
                 displayName: "Generate mocks",
                 executable: mock,
-                arguments: [configurationPath.string, "--sources"]
-                    + inputFiles.map(\.string)
-                    + ["--imports"] + imports
-                    + ["--output", output.string],
+                arguments: arguments,
                 inputFiles: inputFiles + [configurationPath],
                 outputFiles: [output]
             )

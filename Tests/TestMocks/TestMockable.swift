@@ -10,7 +10,7 @@ public struct OnlyProperty: Equatable {
 }
 
 // sourcery:AutoMockable
-protocol TestMockable {
+public protocol TestMockable {
     var property: OnlyProperty { get }
     var readwriteProperty: Int { get set }
     var forceUnwrapped: String! { get set }
@@ -65,7 +65,7 @@ extension TestMockable {
 }
 
 // sourcery:AutoMockable
-protocol GenericTestMockable {
+public protocol GenericTestMockable {
     associatedtype Value
     associatedtype ConstrainedValue: Equatable
 
@@ -80,9 +80,9 @@ protocol RequiringInitializer {
 
 public class TestMockableSuperclass {
     init(int: Int) {}
-    func superNoParamsVoid() { fatalError() }
-    func noParamsVoid() { fatalError() }
-    var sideEffectProperty: Int = 0
+    public func superNoParamsVoid() { fatalError() }
+    public func noParamsVoid() { fatalError() }
+    public var sideEffectProperty: Int = 0
 }
 
 public class TestMockableClass: TestMockableSuperclass {
@@ -105,52 +105,52 @@ public class TestMockableClass: TestMockableSuperclass {
         forwarded = true
     }
 
-    func noParamsVoidAsync() async {
+    public func noParamsVoidAsync() async {
         forwarded = true
     }
 
-    func noParamsVoidAsyncThrowing() async throws {
+    public func noParamsVoidAsyncThrowing() async throws {
         forwarded = true
     }
 
-    func noParamsResult() -> Int {
-        forwarded = true
-        return expectedResult
-    }
-
-    func noParamsResultAsync() async -> Int {
+    public func noParamsResult() -> Int {
         forwarded = true
         return expectedResult
     }
 
-    func noParamsAsyncThrowingResult() async throws -> Int {
+    public func noParamsResultAsync() async -> Int {
         forwarded = true
         return expectedResult
     }
 
-    func withParamsVoid(int: Int, label labelString: String, _ string: String) {
-        forwarded = true
-    }
-
-    func withParamsVoidAsync(int: Int, label labelString: String, _ string: String) async {
-        forwarded = true
-    }
-
-    func withParamsVoidAsyncThrowing(int: Int, label labelString: String, _ string: String) async throws {
-        forwarded = true
-    }
-
-    func withParamsResult(int: Int, label labelString: String, _ string: String) -> Int {
+    public func noParamsAsyncThrowingResult() async throws -> Int {
         forwarded = true
         return expectedResult
     }
 
-    func withParamsResultAsync(int: Int, label labelString: String, _ string: String) async -> Int {
+    public func withParamsVoid(int: Int, label labelString: String, _ string: String) {
+        forwarded = true
+    }
+
+    public func withParamsVoidAsync(int: Int, label labelString: String, _ string: String) async {
+        forwarded = true
+    }
+
+    public func withParamsVoidAsyncThrowing(int: Int, label labelString: String, _ string: String) async throws {
+        forwarded = true
+    }
+
+    public func withParamsResult(int: Int, label labelString: String, _ string: String) -> Int {
         forwarded = true
         return expectedResult
     }
 
-    func withParamsAsyncThrowingResult(int: Int, label labelString: String, _ string: String) async throws -> Int {
+    public func withParamsResultAsync(int: Int, label labelString: String, _ string: String) async -> Int {
+        forwarded = true
+        return expectedResult
+    }
+
+    public func withParamsAsyncThrowingResult(int: Int, label labelString: String, _ string: String) async throws -> Int {
         forwarded = true
         return expectedResult
     }
