@@ -44,6 +44,7 @@ protocol TestMockable {
         _ string: String,
         _ optional: Int?,
         _ implicitOptional: Int!,
+        _ `inout`: inout Int,
         _ array: [Int],
         _ dictionary: [String: Int],
         _ escapingClosure: @escaping (Int) -> Void
