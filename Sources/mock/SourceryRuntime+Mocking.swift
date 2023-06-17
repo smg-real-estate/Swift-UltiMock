@@ -138,11 +138,11 @@ extension SourceryRuntime.Method {
 
     func expectationConstructor(_ mockTypeName: String, forwarding: Bool) -> String {
         """
-        public static func \(shortName)(\(expectationDefinitionParameters(mockTypeName))) -> Self
+        \(accessLevel) static func \(shortName)(\(expectationDefinitionParameters(mockTypeName))) -> Self
         where Signature == \(signature(mockTypeName, substituteReturnSelf: true))\(whereConstraints.map { ", \($0)" } ?? "") {
             .init(
                 method: Methods.\(methodIdentifier),
-                parameters: [\(parameters.map { "\($0.name).anyParameter" }.joined(separator: ", "))]
+                parameters: [\(parameters.map { "\($0.forwardedName).anyParameter" }.joined(separator: ", "))]
             )
         }
         """
@@ -150,7 +150,7 @@ extension SourceryRuntime.Method {
 
     func mockExpect(_ mockTypeName: String, forwarding: Bool) -> String {
         """
-            public func expect\(genericClause)(
+            \(accessLevel) func expect\(genericClause)(
                 _ expectation: MethodExpectation<\(signature(mockTypeName, substituteReturnSelf: true))>,
                 file: StaticString = #filePath,
                 line: UInt = #line,
@@ -180,7 +180,7 @@ extension SourceryRuntime.Method {
         (
             attributes.values.flatMap { $0 }.map(\.description) +
                 [
-                    "public\(override ? " override" : "") func \(shortName)("
+                    "\(accessLevel)\(override ? " override" : "") func \(shortName)("
                         + parameters.map {
                             $0.implementationDefinition(mockTypeName)
                         }
@@ -197,7 +197,7 @@ extension SourceryRuntime.Method {
     }
 
     func recordedParameters() -> String {
-        parameters.map(\.name)
+        parameters.map(\.forwardedName)
             .joined(separator: ", ")
     }
 
@@ -292,7 +292,11 @@ extension MethodParameter {
     }
 
     var forwardedString: String {
-        "\(`inout` ? "&" : "")\(name)"
+        "\(`inout` ? "&" : "")\(forwardedName)"
+    }
+
+    var forwardedName: String {
+        keywords.contains(name) ? name.backticked : name
     }
 
     func description(at index: Int) -> String {
@@ -303,6 +307,10 @@ extension MethodParameter {
         return "\(argumentLabel.map { "\($0): " } ?? "")\(value)"
     }
 }
+
+let keywords = [
+    "internal"
+]
 
 extension SourceryRuntime.`Protocol` {
     var genericParameters: String {
@@ -554,6 +562,10 @@ extension String {
 
     var trimmedBackticks: Self {
         trimmingCharacters(in: .init(charactersIn: "`"))
+    }
+
+    var backticked: Self {
+        "`\(self)`"
     }
 }
 
