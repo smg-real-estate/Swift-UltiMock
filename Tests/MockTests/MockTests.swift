@@ -14,7 +14,8 @@ class MockTests: XCTestCase {
     func test_unexpectedCalls2() {
         XCTExpectFailure {
             let mock = TestMockableMock()
-            mock.withParamsVoid(int: 0, label: "label", "string", nil, 1, [2], ["1": 2]) { _ in }
+            var int: Int = 2
+            mock.withParamsVoid(int: 0, label: "label", "string", nil, 1, &int, [2], ["1": 2]) { _ in }
         }
     }
 
@@ -66,9 +67,9 @@ class MockTests: XCTestCase {
 
         mock.expect(
             .withParamsVoid(
-                int: 1, label: "label", "string", nil, .value(1), [2], ["1": 2], .any
+                int: 1, label: "label", "string", nil, .value(1), 2, [2], ["1": 2], .any
             )
-        ) { _, _, _, _, _, _, _, _ in }
+        ) { _, _, _, _, _, _, _, _, _ in }
         mock.expect(.withParamsVoidAsync(int: 1, label: "label", "string", nil)) { _, _, _, _ in }
         mock.expect(.withParamsVoidAsyncThrowing(int: 1, label: "label", "string", nil)) { _, _, _, _ in }
 
@@ -109,7 +110,7 @@ class MockTests: XCTestCase {
 
         mock.expect(.withOptionalClosure(.any)) { $0?(1) }
 
-        mock.expect(.withParamsVoid(int: 1, label: "label", "string", nil, .value(1), [2], ["1": 2], .any)) { _, _, _, _, _, _, _, _ in }
+        mock.expect(.withParamsVoid(int: 1, label: "label", "string", nil, .value(1), 2, [2], ["1": 2], .any)) { _, _, _, _, _, _, _, _, _ in }
         mock.expect(.withParamsVoidAsync(int: 1, label: "label", "string", nil)) { _, _, _, _ in }
         mock.expect(.withParamsVoidAsyncThrowing(int: 1, label: "label", "string", nil)) { _, _, _, _ in }
         mock.expect(.withParamsResult(int: 1, label: "label", "string")) { _, _, _ in 1 }
@@ -130,15 +131,16 @@ class MockTests: XCTestCase {
         mock.expect(.noParamsVoid()) {}
         mock.expect(
             .withParamsVoid(
-                int: 1, label: "label", "string", nil, .value(1), [2], ["1": 2], .any
+                int: 1, label: "label", "string", nil, .value(1), 2, [2], ["1": 2], .any
             )
-        ) { _, _, _, _, _, _, _, _ in }
+        ) { _, _, _, _, _, _, _, _, _ in }
         mock.expect(.noParamsVoid()) {}
 
+        var int = 2
         XCTExpectFailure {
             mock.noParamsVoid()
             mock.noParamsVoid()
-            mock.withParamsVoid(int: 1, label: "label", "string", nil, 1, [2], ["1": 2]) { _ in }
+            mock.withParamsVoid(int: 1, label: "label", "string", nil, 1, &int, [2], ["1": 2]) { _ in }
         }
     }
 
@@ -173,15 +175,17 @@ class MockTests: XCTestCase {
 
         mock.expect(.withOptionalClosure(.any)) { $0?(1) }
 
-        mock.expect(.withParamsVoid(int: 1, label: "label", "string", nil, .value(1), [2], ["1": 2], .any)) {
+        mock.expect(.withParamsVoid(int: 1, label: "label", "string", nil, .value(1), 2, [2], ["1": 2], .any)) {
             XCTAssertEqual($0, 1)
             XCTAssertEqual($1, "label")
             XCTAssertEqual($2, "string")
             XCTAssertNil($3)
             XCTAssertEqual($4, 1)
-            XCTAssertEqual($5, [2])
-            XCTAssertEqual($6, ["1": 2])
-            $7(7)
+            XCTAssertEqual($5, 2)
+            $5 = 117
+            XCTAssertEqual($6, [2])
+            XCTAssertEqual($7, ["1": 2])
+            $8(7)
         }
         mock.expect(.withParamsVoidAsync(int: 1, label: "label", "string", nil)) { _, _, _, _ in }
         mock.expect(.withParamsVoidAsyncThrowing(int: 1, label: "label", "string", nil)) { _, _, _, _ in }
@@ -219,9 +223,13 @@ class MockTests: XCTestCase {
             XCTAssertEqual($0, 1)
         }
 
-        mock.withParamsVoid(int: 1, label: "label", "string", nil, 1, [2], ["1": 2]) {
+        var int = 2
+        mock.withParamsVoid(int: 1, label: "label", "string", nil, 1, &int, [2], ["1": 2]) {
             XCTAssertEqual($0, 7)
         }
+
+        XCTAssertEqual(int, 117) // Verifying inout mutation in `perform` closure
+
         await mock.withParamsVoidAsync(int: 1, label: "label", "string", nil)
         try await mock.withParamsVoidAsyncThrowing(int: 1, label: "label", "string", nil)
         _ = mock.withParamsResult(int: 1, label: "label", "string")

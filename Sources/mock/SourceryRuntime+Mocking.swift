@@ -64,7 +64,7 @@ extension SourceryRuntime.Method {
 
     var parametersPart: String {
         parameters.map {
-            "\($0.argumentLabel ?? "")_\($0.name)_\($0.argumentTypePart)"
+            "\($0.argumentLabel?.trimmedBackticks ?? "")_\($0.name.trimmedBackticks)_\($0.argumentTypePart)"
         }
         .joined(separator: "_")
     }
@@ -192,7 +192,12 @@ extension SourceryRuntime.Method {
     }
 
     func forwardedParameters(prepending: [String] = []) -> String {
-        (prepending + parameters.map(\.name))
+        (prepending + parameters.map(\.forwardedString))
+            .joined(separator: ", ")
+    }
+
+    func recordedParameters() -> String {
+        parameters.map(\.name)
             .joined(separator: ", ")
     }
 
@@ -249,7 +254,7 @@ extension SourceryRuntime.Method {
             """
                 let perform = _perform(
                     Methods.\(methodIdentifier),
-                    [\(forwardedParameters())]
+                    [\(recordedParameters())]
                 ) as! \(closureDefinition(mockTypeName, forwarding: override))
                 return \(callAttributes)perform(\(forwardedParameters(callToSuper: override)))
             }
@@ -276,12 +281,18 @@ extension MethodParameter {
     }
 
     func expectationConstructorDefinition(_ mockTypeName: String) -> String {
-        let typeName = typeName.name(convertingImplicitOptional: true).replacingOccurrences(of: "Self", with: mockTypeName)
+        let typeName = typeName.name(convertingImplicitOptional: true)
+            .replacingOccurrences(of: "Self", with: mockTypeName)
+            .replacingOccurrences(of: "inout ", with: "")
         return "\(definitionName): Parameter<\(typeName)>"
     }
 
     var argumentTypePart: String {
         typeName.escapedIdentifierName()
+    }
+
+    var forwardedString: String {
+        "\(`inout` ? "&" : "")\(name)"
     }
 
     func description(at index: Int) -> String {
@@ -539,6 +550,10 @@ extension String {
         components(separatedBy: "\n")
             .map { String(repeating: " ", count: level * width) + $0 }
             .joined(separator: "\n")
+    }
+
+    var trimmedBackticks: Self {
+        trimmingCharacters(in: .init(charactersIn: "`"))
     }
 }
 
