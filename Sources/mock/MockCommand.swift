@@ -22,6 +22,9 @@ struct MockCommand: ParsableCommand {
     @Option(parsing: .upToNextOption, help: "A list of additional imports for the generated mock.")
     var imports: [String] = []
 
+    @Option(parsing: .upToNextOption, help: "A list of additional @testable imports for the generated mock.")
+    var testableImports: [String] = []
+
     @Option(help: "Path to the output file. If the path is directory the default `Mock.generated.swift` filename will be used.")
     var output: String?
 
@@ -44,7 +47,8 @@ struct MockCommand: ParsableCommand {
             types: sourceryContext.types,
             type: sourceryContext.types.typesByName,
             functions: sourceryContext.functions,
-            imports: imports.isEmpty ? context.configuration.imports ?? [] : imports
+            imports: imports.isEmpty ? context.configuration.imports ?? [] : imports,
+            testableImports: testableImports
         )
         .render()
 

@@ -1,5 +1,11 @@
 {
     "sources" : [
         "."
+    ],
+    "packageDependencies" : [
+        "TestableMockables"
+    ],
+    "testableImports" : [
+        "TestableMockables"
     ]
 }

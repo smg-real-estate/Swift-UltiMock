@@ -49,6 +49,10 @@ let package = Package(
             path: "Tests/TestMocks",
             plugins: ["MockGenerationPlugin"]
         ),
+        .target(
+            name: "TestableMockables",
+            path: "Tests/TestableMockables"
+        ),
         .plugin(
             name: "MockGenerationPlugin",
             capability: .buildTool(),
@@ -56,7 +60,11 @@ let package = Package(
         ),
         .testTarget(
             name: "MockTests",
-            dependencies: ["UltiMock", "TestMocks"],
+            dependencies: [
+                "UltiMock",
+                "TestMocks",
+                "TestableMockables"
+            ],
             plugins: ["MockGenerationPlugin"]
         )
     ]
