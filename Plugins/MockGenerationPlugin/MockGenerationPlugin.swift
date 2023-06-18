@@ -48,6 +48,8 @@ struct MockGenerationPlugin: BuildToolPlugin {
             options["imports"] = imports
         }
 
+        options["testable-imports"] = configuration.testableImports
+
         let mock = try context.tool(named: "mock").path
 
         let arguments = [configurationPath.string]
@@ -86,6 +88,7 @@ struct Configuration: Decodable {
     let sources: [String]
     let packageDependencies: [String]?
     let imports: [String]?
+    let testableImports: [String]?
 }
 
 extension PackagePlugin.Target {

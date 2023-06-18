@@ -120,6 +120,12 @@ public struct Parameter<T>: CustomStringConvertible {
     public static func any(_ type: T.Type) -> Self {
         .init(description: "<any>") { _ in true }
     }
+
+    public static func matching(_ type: T.Type = T.self, isMatching: @escaping (T) -> Bool) -> Self {
+        .init(description: "<matching>") {
+            isMatching($0 as! T)
+        }
+    }
 }
 
 public extension Parameter where T: Equatable {
