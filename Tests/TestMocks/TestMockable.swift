@@ -57,6 +57,19 @@ public protocol TestMockable {
     func withParamsAsyncThrowingResult(int: Int, label labelString: String, _ string: String) async throws -> Int
 
     func generic<P1: Equatable, P2>(parameter1: P1, _ parameter2: P2) -> Int where P2: Hashable
+    func generic(some: some TestGenericProtocol<Int>, any: any TestGenericProtocol<String>) -> Int
+}
+
+public protocol TestGenericProtocol<T> {
+    associatedtype T
+}
+
+public struct TestGenericStruct<T: Equatable>: TestGenericProtocol, Equatable {
+    let value: T
+
+    public init(_ value: T) {
+        self.value = value
+    }
 }
 
 extension TestMockable {
