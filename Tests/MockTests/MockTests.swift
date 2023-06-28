@@ -192,7 +192,11 @@ class MockTests: XCTestCase {
         mock.expect(.withParamsResult(int: 1, label: "label", "string")) { _, _, _ in 1 }
         mock.expect(.withParamsResultAsync(int: 1, label: "label", "string")) { _, _, _ in 2 }
         mock.expect(.withParamsAsyncThrowingResult(int: 1, label: "label", "string")) { _, _, _ in 3 }
+
         mock.expect(.generic(parameter1: .value(123), .value("string"))) { _, _ in 4 }
+        mock.expect(.generic(some: .value(TestGenericStruct(123)), any: .matching {
+            $0 as! TestGenericStruct<String> == TestGenericStruct("string")
+        })) { _, _ in 5 }
 
         XCTAssertEqual(mock.property, OnlyProperty(value: 1))
         XCTAssertEqual(mock.readwriteProperty, 2)
@@ -235,7 +239,9 @@ class MockTests: XCTestCase {
         _ = mock.withParamsResult(int: 1, label: "label", "string")
         _ = await mock.withParamsResultAsync(int: 1, label: "label", "string")
         _ = try await mock.withParamsAsyncThrowingResult(int: 1, label: "label", "string")
+
         XCTAssertEqual(mock.generic(parameter1: 123, "string"), 4)
+        XCTAssertEqual(mock.generic(some: TestGenericStruct(123), any: TestGenericStruct("string")), 5)
 
         mock.`func`()
         _ = mock.withSelf(mock)

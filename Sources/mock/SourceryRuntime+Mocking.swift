@@ -19,6 +19,7 @@ extension SourceryRuntime.Method {
             "\($0.name): "
                 + $0.typeName.name(convertingImplicitOptional: true)
                 .replacingOccurrences(of: "Self", with: mockTypeName)
+                .replacingOccurrences(of: "some ", with: "any ")
         }
     }
 

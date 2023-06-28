@@ -6,7 +6,7 @@ import PackageDescription
 
 let package = Package(
     name: "UltiMock",
-    platforms: [.iOS(.v15), .macOS(.v12)],
+    platforms: [.iOS(.v15), .macOS(.v13)],
     products: [
         .library(
             name: "UltiMock",
