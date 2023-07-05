@@ -2,11 +2,12 @@
     "sources" : [
         "."
     ],
-    "sdkModules" : {
-        "iPhoneSimulator" : [
-            "ObjectiveC.NSObject"
-        ]
-    },
+    "sdkModules" : [
+        "ObjectiveC.NSObject",
+        "CoreLocation.CLLocation",
+        "CoreLocation.CLLocationManager"
+    ],
+    "imports" : ["CoreLocation"],
     "packageDependencies" : [
         "XFoundation"
     ]

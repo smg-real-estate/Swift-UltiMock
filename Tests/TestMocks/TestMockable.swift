@@ -1,3 +1,4 @@
+import CoreLocation
 import XFoundation
 
 /// A type for distinguishing `expect` method's `perform` parameter.
@@ -91,14 +92,24 @@ protocol RequiringInitializer {
     init()
 }
 
-public class TestMockableSuperclass {
+open class TestMockableSuperclass {
     init(int: Int) {}
+
+    open func openMethod() { fatalError() }
     public func superNoParamsVoid() { fatalError() }
     public func noParamsVoid() { fatalError() }
     public var sideEffectProperty: Int = 0
+
+    // Non-mockable methods
+    private func privateMethod() {}
+    static func staticMethod() {}
+    open class func openClassMethod() {}
 }
 
-public class TestMockableClass: TestMockableSuperclass {
+// sourcery:AutoMockable
+public extension CLLocationManager {}
+
+open class TestMockableClass: TestMockableSuperclass {
     public var forwarded = false
     public var expectedResult: Int!
 
@@ -173,9 +184,6 @@ public class TestMockableClass: TestMockableSuperclass {
 // sourcery:skip = "forwarded"
 // sourcery:skip = "expectedResult"
 extension TestMockableClass {}
-
-// sourcery:AutoMockable
-extension NSObjectProtocol {}
 
 // sourcery:AutoMockable
 extension Servicing {}

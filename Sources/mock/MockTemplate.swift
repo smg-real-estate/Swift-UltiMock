@@ -31,23 +31,30 @@ struct MockTemplate {
 
         for type in types.types.filter({ $0.annotations["AutoMockable"] != nil && !$0.isExtension }) {
             let skipped = type.annotations.array(of: String.self, for: "skip")
-            let methods = type.allMethods.filter { !$0.isStatic && !$0.definedInExtension && !skipped.contains($0.unbacktickedCallName) }
+            let methods = type.allMethods.filter {
+                !$0.isStatic
+                    && !$0.isClass
+                    && !$0.definedInExtension
+                    && !$0.isPrivate
+                    && !skipped.contains($0.unbacktickedCallName)
+            }
             let properties = type.allVariables.filter { !$0.isStatic && !$0.definedInExtension && !skipped.contains($0.unbacktickedName) }
 
+            let mockAccessLevel = type.mockAccessLevel
             let mockTypeName = "\(type.name)Mock"
 
             if let type = type as? SourceryRuntime.`Protocol` {
                 """
 
-                \(type.accessLevel) final class \(mockTypeName)\(type.genericParameters): \(type.name), Mock {
+                \(type.mockClassAccessLevel) class \(mockTypeName)\(type.genericParameters): \(type.name), Mock {
                 """
                 for associatedType in type.associatedTypes.values.map(\.name).sorted(by: <) {
-                    "    \(type.accessLevel) typealias \(associatedType) = \(associatedType)"
+                    "    \(mockAccessLevel) typealias \(associatedType) = \(associatedType)"
                 }
             } else {
                 """
 
-                \(type.accessLevel) final class \(mockTypeName): \(type.name), Mock {
+                \(type.mockClassAccessLevel) class \(mockTypeName): \(type.name), Mock {
                 """
             }
             """
@@ -63,8 +70,8 @@ struct MockTemplate {
             """
                 }
 
-                \(type.accessLevel) struct MethodExpectation<Signature> {
-                    \(type.accessLevel) let expectation: Recorder.Expectation
+                \(mockAccessLevel) struct MethodExpectation<Signature> {
+                    \(mockAccessLevel) let expectation: Recorder.Expectation
 
                     init(method: MockMethod, parameters: [AnyParameter]) {
                         self.expectation = .init(
@@ -85,21 +92,21 @@ struct MockTemplate {
 
             if !properties.isEmpty {
                 """
-                    \(type.accessLevel) struct PropertyExpectation<Signature> {
+                    \(mockAccessLevel) struct PropertyExpectation<Signature> {
                         private let method: MockMethod
 
                         init(method: MockMethod) {
                             self.method = method
                         }
 
-                        \(type.accessLevel) var getterExpectation: Recorder.Expectation {
+                        \(mockAccessLevel) var getterExpectation: Recorder.Expectation {
                             .init(
                                 method: method,
                                 parameters: []
                             )
                         }
 
-                        \(type.accessLevel) func setterExpectation(_ newValue: AnyParameter) -> Recorder.Expectation {
+                        \(mockAccessLevel) func setterExpectation(_ newValue: AnyParameter) -> Recorder.Expectation {
                             .init(
                                 method: method,
                                 parameters: [newValue]
@@ -126,11 +133,11 @@ struct MockTemplate {
                 """
             }
 
-            let requiredInitialzers = type.implements.values
+            let requiredInitializers = type.implements.values
                 .flatMap(\.methods)
                 .filter(\.isInitializer)
 
-            for method in requiredInitialzers {
+            for method in requiredInitializers {
                 """
 
                     @available(*, unavailable)
@@ -140,7 +147,7 @@ struct MockTemplate {
                 """
             }
 
-            for method in type.methods.filter(\.isInitializer) {
+            for method in type.allMethods.filter(\.isInitializer).unique(by: \.name) {
                 """
 
                     public \(method.name.dropLast())\(method.parameters.isEmpty ? "" : ", ")file: StaticString = #filePath, line: UInt = #line) {
@@ -193,11 +200,17 @@ struct MockTemplate {
                 }
             """
 
-            methods.map {
-                "\n" + $0.implementation(mockTypeName, override: mocksClass)
-                    .indented(1)
-                    .joined(separator: "\n")
-            }
+            let isObjc = type.supertype?.name == "NSObject"
+
+            methods
+                .filter { method in
+                    !isObjc || !method.isAsync
+                }
+                .map {
+                    "\n" + $0.implementation(mockTypeName, override: mocksClass)
+                        .indented(1)
+                        .joined(separator: "\n")
+                }
 
             properties.map {
                 "\n" + $0.implementation(override: mocksClass)
