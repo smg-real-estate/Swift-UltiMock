@@ -22,7 +22,7 @@ let package = Package(
         )
     ],
     dependencies: [
-        .package(name: "XFoundation", url: "https://github.com/smg-real-estate/Swift-XFoundation.git", from: "0.1.1"),
+        .package(url: "https://github.com/smg-real-estate/Swift-XFoundation.git", from: "0.1.1"),
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.2.1"),
         .package(url: "https://github.com/krzysztofzablocki/Sourcery", revision: "2.0.1"),
         .package(url: "https://github.com/jpsim/SourceKitten", from: "0.32.0")
@@ -39,13 +39,16 @@ let package = Package(
                 .product(name: "SourceryFramework", package: "Sourcery"),
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "SourceKittenFramework", package: "SourceKitten"),
-                .product(name: "XFoundation-static", package: "XFoundation")
+                .product(name: "XFoundation-static", package: "Swift-XFoundation")
             ]
         ),
         // We generate the mocks in a separate target to ensure the mocks are defined as `public`
         .target(
             name: "TestMocks",
-            dependencies: ["UltiMock", "XFoundation"],
+            dependencies: [
+                "UltiMock",
+                .product(name: "XFoundation", package: "Swift-XFoundation")
+            ],
             path: "Tests/TestMocks",
             plugins: ["MockGenerationPlugin"]
         ),

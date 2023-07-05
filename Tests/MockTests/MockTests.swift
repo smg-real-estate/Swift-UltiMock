@@ -273,3 +273,6 @@ class MockTests: XCTestCase {
         let _ = ServicingMock<Int, String>()
     }
 }
+
+// Ensure the mock class is `open`
+final class ExtendedTestMockableMock: TestMockableMock {}

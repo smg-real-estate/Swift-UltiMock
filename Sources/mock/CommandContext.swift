@@ -70,45 +70,47 @@ private extension CommandContext {
             .appendingPathComponent("clang/ModuleCache")
             .path
 
-        let developerDirectory = try shell("xcode-select -p")
-            .trimmingTrailingCharacters(in: .newlines)
+        let sdkPath = Path(try env["SDKROOT"].wrapped)
 
-        return try (configuration.sdkModules ?? [:])
-            .flatMap { platform, modules in
-                let sdkPath = Path("\(developerDirectory)/Platforms/\(platform).platform/Developer/SDKs/\(platform).sdk")
+        return try (configuration.sdkModules ?? [])
+            .map { module in
+                let request = SourceKittenFramework.Request.customRequest(request: [
+                    "key.request": UID("source.request.editor.open.interface"),
+                    "key.name": UUID().uuidString,
+                    "key.compilerargs": [
+                        "-target",
+                        try targetTriple(),
+                        "-sdk",
+                        sdkPath.string,
+                        "-I",
+                        (sdkPath + "usr/local/include").string,
+                        "-F",
+                        (sdkPath + "System/Library/PrivateFrameworks").string,
+                        // Default module cache directory is not accessible from a plugin sandbox environment
+                        "-module-cache-path",
+                        moduleCache
+                    ],
+                    "key.modulename": module,
+                    "key.toolchains": [String](), // "com.apple.dt.toolchain.XcodeDefault",
+                    "key.synthesizedextensions": 1
+                ])
 
-                let sdkSettings = try JSONDecoder().decode(SDKSettings.self, from: try (sdkPath + "SDKSettings.json").read())
-
-                return try modules.map { module in
-                    let request = SourceKittenFramework.Request.customRequest(request: [
-                        "key.request": UID("source.request.editor.open.interface"),
-                        "key.name": UUID().uuidString,
-                        "key.compilerargs": [
-                            "-target",
-                            try targetTriple(sdkSettings.defaultDeploymentTarget),
-                            "-sdk",
-                            sdkPath.string,
-                            "-I",
-                            (sdkPath + "usr/local/include").string,
-                            "-F",
-                            (sdkPath + "System/Library/PrivateFrameworks").string,
-                            // Default module cache directory is not accessible from a plugin sandbox environment
-                            "-module-cache-path",
-                            moduleCache
-                        ],
-                        "key.modulename": module,
-                        "key.toolchains": [String](), // "com.apple.dt.toolchain.XcodeDefault",
-                        "key.synthesizedextensions": 1
-                    ])
-
-                    let source: String = try cast(toNSDictionary(try request.send())["key.sourcetext"])
-                    return try makeParser(for: source).parse()
-                }
+                let source: String = try cast(toNSDictionary(try request.send())["key.sourcetext"])
+                return try makeParser(for: source).parse()
             }
     }
 
-    func targetTriple(_ deploymentTarget: String) throws -> String {
-        "\(try systemArchitectureIdentifier())-apple-ios\(deploymentTarget)-simulator"
+    func targetTriple() throws -> String {
+        try [
+            systemArchitectureIdentifier(),
+            "-",
+            env["LLVM_TARGET_TRIPLE_VENDOR"],
+            "-",
+            env["LLVM_TARGET_TRIPLE_OS_VERSION"],
+            env["LLVM_TARGET_TRIPLE_SUFFIX"]
+        ]
+            .compactMap { $0 }
+            .joined()
     }
 }
 
@@ -127,10 +129,6 @@ func systemArchitectureIdentifier() throws -> String {
     return identifier.trimmingCharacters(in: .controlCharacters)
 }
 
-struct SDKSettings: Decodable {
-    let defaultDeploymentTarget: String
-
-    enum CodingKeys: String, CodingKey {
-        case defaultDeploymentTarget = "DefaultDeploymentTarget"
-    }
+var env: [String: String] {
+    ProcessInfo.processInfo.environment
 }

@@ -10,6 +10,16 @@ func additionalImports(_ arguments: [String: Any]) -> [String] {
 }
 
 extension SourceryRuntime.Method {
+    var isPrivate: Bool {
+        modifiers.contains {
+            $0.name == "private"
+        }
+    }
+
+    var implementationAccessLevel: String {
+        accessLevel.replacingOccurrences(of: "open", with: "public")
+    }
+
     var definedInExtension: Bool {
         definedInType?.isExtension ?? false
     }
@@ -139,7 +149,7 @@ extension SourceryRuntime.Method {
 
     func expectationConstructor(_ mockTypeName: String, forwarding: Bool) -> String {
         """
-        \(accessLevel) static func \(shortName)(\(expectationDefinitionParameters(mockTypeName))) -> Self
+        \(implementationAccessLevel) static func \(shortName)(\(expectationDefinitionParameters(mockTypeName))) -> Self
         where Signature == \(signature(mockTypeName, substituteReturnSelf: true))\(whereConstraints.map { ", \($0)" } ?? "") {
             .init(
                 method: Methods.\(methodIdentifier),
@@ -151,7 +161,7 @@ extension SourceryRuntime.Method {
 
     func mockExpect(_ mockTypeName: String, forwarding: Bool) -> String {
         """
-            \(accessLevel) func expect\(genericClause)(
+            \(implementationAccessLevel) func expect\(genericClause)(
                 _ expectation: MethodExpectation<\(signature(mockTypeName, substituteReturnSelf: true))>,
                 file: StaticString = #filePath,
                 line: UInt = #line,
@@ -181,7 +191,7 @@ extension SourceryRuntime.Method {
         (
             attributes.values.flatMap { $0 }.map(\.description) +
                 [
-                    "\(accessLevel)\(override ? " override" : "") func \(shortName)("
+                    "\(implementationAccessLevel)\(override ? " override" : "") func \(shortName)("
                         + parameters.map {
                             $0.implementationDefinition(mockTypeName)
                         }
@@ -203,7 +213,7 @@ extension SourceryRuntime.Method {
     }
 
     func forwardedParameters(callToSuper: Bool) -> String {
-        forwardedParameters(prepending: callToSuper ? ["super.\(callName)"] : [])
+        forwardedParameters(prepending: callToSuper ? ["super.\(selectorName)"] : [])
     }
 
     var forwardedLabeledParameters: String {
@@ -334,9 +344,24 @@ extension SourceryRuntime.`Protocol` {
     }
 }
 
+extension SourceryRuntime.`Type` {
+    var mockAccessLevel: String {
+        accessLevel.replacingOccurrences(of: "open", with: "public")
+            .trimmingCharacters(in: .whitespaces)
+    }
+
+    var mockClassAccessLevel: String {
+        accessLevel.contains("public") ? "open" : accessLevel
+    }
+}
+
 extension SourceryRuntime.TypeName {
     func name(convertingImplicitOptional: Bool) -> String {
         convertingImplicitOptional && isImplicitlyUnwrappedOptional ? unwrappedTypeName + "?" : name
+    }
+
+    func actualName(convertingImplicitOptional: Bool) -> String {
+        (actualTypeName ?? self).name(convertingImplicitOptional: convertingImplicitOptional)
     }
 
     func escapedIdentifierName() -> String {
@@ -363,8 +388,16 @@ extension Variable {
         definedInType?.isExtension ?? false
     }
 
+    var implementationAttributes: [String] {
+        attributes.values.flatMap { $0 }
+            .filter {
+                $0.name != "NSCopying"
+            }
+            .map(\.description)
+    }
+
     func fullDefinition(override: Bool, indentation: String) -> String {
-        (attributes.values.flatMap { $0 }.map(\.description) +
+        (implementationAttributes +
             ["public\(override ? " override" : "") var \(name): \(typeName)"])
             .joined(separator: "\n" + indentation)
     }
@@ -395,12 +428,12 @@ extension Variable {
 
     func getterPerformDefinition(forwarding: Bool) -> String {
         let parameters = forwarding ? ["_ forwardToOriginal: " + getterPerformDefinition(forwarding: false)] : []
-        return "(\(parameters.joined(separator: ", "))) -> \(typeName.name(convertingImplicitOptional: true))"
+        return "(\(parameters.joined(separator: ", "))) -> \(typeName.actualName(convertingImplicitOptional: true))"
     }
 
     func setterPerformDefinition(forwarding: Bool) -> String {
         let parameters = (forwarding ? ["_ forwardToOriginal: " + setterPerformDefinition(forwarding: false)] : [])
-            + ["_ newValue: \(typeName.name(convertingImplicitOptional: true))"]
+            + ["_ newValue: \(typeName.actualName(convertingImplicitOptional: true))"]
         return "(\(parameters.joined(separator: ", "))) -> Void"
     }
 

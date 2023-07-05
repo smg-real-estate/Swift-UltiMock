@@ -1,3 +1,4 @@
+import CoreLocation
 import TestMocks
 import XCTest
 
@@ -119,6 +120,7 @@ class OpenClassMockTests: XCTestCase {
     }
 
     func test_superInitializer() {
+        _ = CLLocationManagerMock()
         _ = TestMockableClassMock(string: "String")
     }
 
