@@ -136,12 +136,15 @@ struct MockTemplate {
             let requiredInitializers = type.implements.values
                 .flatMap(\.methods)
                 .filter(\.isInitializer)
+                + type.allMethods
+                .filter(\.isInitializer)
+                .filter(\.isRequired)
 
             for method in requiredInitializers {
                 """
 
                     @available(*, unavailable)
-                    \("required ")\(method.name) {
+                    \(mockAccessLevel) \("required") \(method.name) {
                         fatalError()
                     }
                 """

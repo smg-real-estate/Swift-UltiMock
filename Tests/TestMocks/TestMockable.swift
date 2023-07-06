@@ -123,6 +123,10 @@ open class TestMockableClass: TestMockableSuperclass {
         super.init(int: 0)
     }
 
+    public required init() {
+        super.init(int: 0)
+    }
+
     var readwriteProperty: Int = 0
 
     override public func noParamsVoid() {
