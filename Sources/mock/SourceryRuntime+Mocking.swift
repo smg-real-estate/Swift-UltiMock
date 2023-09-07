@@ -148,28 +148,38 @@ extension SourceryRuntime.Method {
     }
 
     func expectationConstructor(_ mockTypeName: String, forwarding: Bool) -> String {
-        """
-        \(implementationAccessLevel) static func \(shortName)(\(expectationDefinitionParameters(mockTypeName))) -> Self
-        where Signature == \(signature(mockTypeName, substituteReturnSelf: true))\(whereConstraints.map { ", \($0)" } ?? "") {
-            .init(
-                method: Methods.\(methodIdentifier),
-                parameters: [\(parameters.map { "\($0.forwardedName).anyParameter" }.joined(separator: ", "))]
-            )
-        }
-        """
+        (
+            attributes.values.flatMap { $0 }.map(\.description) +
+                [
+                    """
+                    \(implementationAccessLevel) static func \(shortName)(\(expectationDefinitionParameters(mockTypeName))) -> Self
+                    where Signature == \(signature(mockTypeName, substituteReturnSelf: true))\(whereConstraints.map { ", \($0)" } ?? "") {
+                        .init(
+                            method: Methods.\(methodIdentifier),
+                            parameters: [\(parameters.map { "\($0.forwardedName).anyParameter" }.joined(separator: ", "))]
+                        )
+                    }
+                    """
+                ]
+        ).joined(separator: "\n")
     }
 
     func mockExpect(_ mockTypeName: String, forwarding: Bool) -> String {
-        """
-            \(implementationAccessLevel) func expect\(genericClause)(
-                _ expectation: MethodExpectation<\(signature(mockTypeName, substituteReturnSelf: true))>,
-                file: StaticString = #filePath,
-                line: UInt = #line,
-                perform: @escaping \(closureDefinition(mockTypeName, true, forwarding: forwarding))\(defaultPerformClosure(forwarding: forwarding))
-            ) {
-                _record(expectation.expectation, file, line, perform)
-            }
-        """
+        (
+            attributes.values.flatMap { $0 }.map(\.description) +
+                [
+                    """
+                        \(implementationAccessLevel) func expect\(genericClause)(
+                            _ expectation: MethodExpectation<\(signature(mockTypeName, substituteReturnSelf: true))>,
+                            file: StaticString = #filePath,
+                            line: UInt = #line,
+                            perform: @escaping \(closureDefinition(mockTypeName, true, forwarding: forwarding))\(defaultPerformClosure(forwarding: forwarding))
+                        ) {
+                            _record(expectation.expectation, file, line, perform)
+                        }
+                    """
+                ]
+        ).joined(separator: "\n")
     }
 
     func defaultPerformClosure(forwarding: Bool) -> String {

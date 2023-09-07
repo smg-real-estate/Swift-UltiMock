@@ -42,33 +42,10 @@ let package = Package(
                 .product(name: "XFoundation-static", package: "Swift-XFoundation")
             ]
         ),
-        // We generate the mocks in a separate target to ensure the mocks are defined as `public`
-        .target(
-            name: "TestMocks",
-            dependencies: [
-                "UltiMock",
-                .product(name: "XFoundation", package: "Swift-XFoundation")
-            ],
-            path: "Tests/TestMocks",
-            plugins: ["MockGenerationPlugin"]
-        ),
-        .target(
-            name: "TestableMockables",
-            path: "Tests/TestableMockables"
-        ),
         .plugin(
             name: "MockGenerationPlugin",
             capability: .buildTool(),
             dependencies: ["mock"]
-        ),
-        .testTarget(
-            name: "MockTests",
-            dependencies: [
-                "UltiMock",
-                "TestMocks",
-                "TestableMockables"
-            ],
-            plugins: ["MockGenerationPlugin"]
         )
     ]
 )

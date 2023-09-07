@@ -196,9 +196,11 @@ class MockTests: XCTestCase {
         mock.expect(.withParamsAsyncThrowingResult(int: 1, label: "label", "string")) { _, _, _ in 3 }
 
         mock.expect(.generic(parameter1: .value(123), .value("string"))) { _, _ in 4 }
-        mock.expect(.generic(some: .value(TestGenericStruct(123)), any: .matching {
-            $0 as! TestGenericStruct<String> == TestGenericStruct("string")
-        })) { _, _ in 5 }
+        if #available(iOS 16, *) {
+            mock.expect(.generic(some: .value(TestGenericStruct(123)), any: .matching {
+                $0 as! TestGenericStruct<String> == TestGenericStruct("string")
+            })) { _, _ in 5 }
+        }
 
         XCTAssertEqual(mock.property, OnlyProperty(value: 1))
         XCTAssertEqual(mock.readwriteProperty, 2)
@@ -244,7 +246,9 @@ class MockTests: XCTestCase {
         _ = try await mock.withParamsAsyncThrowingResult(int: 1, label: "label", "string")
 
         XCTAssertEqual(mock.generic(parameter1: 123, "string"), 4)
-        XCTAssertEqual(mock.generic(some: TestGenericStruct(123), any: TestGenericStruct("string")), 5)
+        if #available(iOS 16, *) {
+            XCTAssertEqual(mock.generic(some: TestGenericStruct(123), any: TestGenericStruct("string")), 5)
+        }
 
         mock.`func`()
         _ = mock.withSelf(mock)
@@ -274,6 +278,26 @@ class MockTests: XCTestCase {
 
     func test_3DPartyModuleMock_Generated() {
         let _ = ServicingMock<Int, String>()
+    }
+
+    func test_threadSafety() async {
+        let mock = TestMockableMock()
+
+        let count = 100
+
+        for _ in 0 ..< count {
+            mock.expect(.noParamsVoid())
+        }
+
+        await withTaskGroup(of: Void.self) { group in
+            for _ in 0 ..< count {
+                group.addTask {
+                    mock.noParamsVoid()
+                }
+            }
+        }
+
+        mock.verify()
     }
 }
 
