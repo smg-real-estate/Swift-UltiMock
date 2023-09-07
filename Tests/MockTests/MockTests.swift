@@ -114,6 +114,7 @@ class MockTests: XCTestCase {
         mock.expect(.withParamsVoidAsync(int: 1, label: "label", "string", nil)) { _, _, _, _ in }
         mock.expect(.withParamsVoidAsyncThrowing(int: 1, label: "label", "string", nil)) { _, _, _, _ in }
         mock.expect(.withParamsResult(int: 1, label: "label", "string")) { _, _, _ in 1 }
+        mock.expect(.withParamsResult(otherInt: 2, label: "label2", "string2")) { _, _, _ in 2 }
         mock.expect(.withParamsResultAsync(int: 1, label: "label", "string")) { _, _, _ in 2 }
         mock.expect(.withParamsAsyncThrowingResult(int: 1, label: "label", "string")) { _, _, _ in 3 }
 
@@ -190,6 +191,7 @@ class MockTests: XCTestCase {
         mock.expect(.withParamsVoidAsync(int: 1, label: "label", "string", nil)) { _, _, _, _ in }
         mock.expect(.withParamsVoidAsyncThrowing(int: 1, label: "label", "string", nil)) { _, _, _, _ in }
         mock.expect(.withParamsResult(int: 1, label: "label", "string")) { _, _, _ in 1 }
+        mock.expect(.withParamsResult(otherInt: 2, label: "label2", "string2")) { _, _, _ in 2 }
         mock.expect(.withParamsResultAsync(int: 1, label: "label", "string")) { _, _, _ in 2 }
         mock.expect(.withParamsAsyncThrowingResult(int: 1, label: "label", "string")) { _, _, _ in 3 }
 
@@ -236,7 +238,8 @@ class MockTests: XCTestCase {
 
         await mock.withParamsVoidAsync(int: 1, label: "label", "string", nil)
         try await mock.withParamsVoidAsyncThrowing(int: 1, label: "label", "string", nil)
-        _ = mock.withParamsResult(int: 1, label: "label", "string")
+        XCTAssertEqual(mock.withParamsResult(int: 1, label: "label", "string"), 1)
+        XCTAssertEqual(mock.withParamsResult(otherInt: 2, label: "label2", "string2"), 2)
         _ = await mock.withParamsResultAsync(int: 1, label: "label", "string")
         _ = try await mock.withParamsAsyncThrowingResult(int: 1, label: "label", "string")
 

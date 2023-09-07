@@ -24,9 +24,9 @@ extension SourceryRuntime.Method {
         definedInType?.isExtension ?? false
     }
 
-    func parameterDefinitions(_ mockTypeName: String) -> [String] {
+    func parameterDefinitions(named: Bool, _ mockTypeName: String) -> [String] {
         parameters.map {
-            "\($0.name): "
+            (named ? "\($0.name): " : "")
                 + $0.typeName.name(convertingImplicitOptional: true)
                 .replacingOccurrences(of: "Self", with: mockTypeName)
                 .replacingOccurrences(of: "some ", with: "any ")
@@ -55,22 +55,22 @@ extension SourceryRuntime.Method {
         return "\(isAsync ? "async " : "")\(`throws` ? "throws " : "")-> \(returnType)"
     }
 
-    func closureDefinition(_ mockTypeName: String, _ substituteReturnSelf: Bool = false, forwarding: Bool) -> String {
+    func closureDefinition(namedParameters: Bool = true, _ mockTypeName: String, _ substituteReturnSelf: Bool = false, forwarding: Bool) -> String {
         let parameters = (forwarding ? ["_ forwardToOriginal: " + closureDefinition(
             mockTypeName,
             substituteReturnSelf,
             forwarding: false)] : []
         )
-            + parameterDefinitions(mockTypeName).map { "_ \($0)" }
+            + parameterDefinitions(named: namedParameters, mockTypeName).map { "_ \($0)" }
         return "(\(parameters.joined(separator: ", "))) \(postParametersDefinition(substituteReturnSelf ? mockTypeName : nil, inClosure: true))"
     }
 
-    func signature(_ mockTypeName: String, substituteReturnSelf: Bool = false) -> String {
-        closureDefinition(mockTypeName, substituteReturnSelf, forwarding: false)
+    func signature(namedParameters: Bool = true, _ mockTypeName: String, substituteReturnSelf: Bool = false) -> String {
+        closureDefinition(namedParameters: namedParameters, mockTypeName, substituteReturnSelf, forwarding: false)
     }
 
     var rawSignature: String {
-        signature("Self")
+        signature(namedParameters: false, "Self")
     }
 
     var parametersPart: String {
