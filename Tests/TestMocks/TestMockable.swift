@@ -54,6 +54,7 @@ public protocol TestMockable {
     func withParamsVoidAsyncThrowing(int: Int, label labelString: String, _ string: String, _ optional: Int?) async throws
 
     func withParamsResult(int: Int, label labelString: String, _ string: String) -> Int
+    func withParamsResult(otherInt: Int, label labelString: String, _ string: String) -> Int // For `expect` redeclaration
     func withParamsResultAsync(int: Int, label labelString: String, _ string: String) async -> Int
     func withParamsAsyncThrowingResult(int: Int, label labelString: String, _ string: String) async throws -> Int
 
