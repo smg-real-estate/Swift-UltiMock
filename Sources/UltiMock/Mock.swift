@@ -1,3 +1,4 @@
+import os
 import XCTest
 import XCTestExtensions
 
@@ -24,24 +25,6 @@ public extension Mock {
     }
 
     var isEnabled: Bool { true }
-}
-
-public final class Recorder {
-    private(set) var stubs: [Stub] = []
-
-    public init() {}
-
-    public func record(_ stub: Stub) {
-        stubs.append(stub)
-    }
-
-    public func next() -> Stub? {
-        stubs.isEmpty ? nil : stubs.removeFirst()
-    }
-
-    func reset() {
-        stubs.removeAll()
-    }
 }
 
 public extension Recorder {
