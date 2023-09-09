@@ -37,10 +37,10 @@ jobs:
         run: |
           cd PluginTests
           sed -i '' -e 's/\.iOS(\.v16)/.iOS(.v15)/' Package.swift
-          xcodebuild test -scheme PluginTests-Package -destination 'platform=iOS Simulator,OS=16'
+          xcodebuild test -scheme PluginTests-Package -destination 'platform=iOS Simulator,OS=16,name=iPhone 14'
 
       - name: Test iOS 16
         run: |
           cd PluginTests
           sed -i '' -e 's/\.iOS(\.v15)/.iOS(.v16)/' Package.swift
-          xcodebuild test -scheme PluginTests-Package -destination 'platform=iOS Simulator,OS=16'
+          xcodebuild test -scheme PluginTests-Package -destination 'platform=iOS Simulator,OS=16,name=iPhone 14'
