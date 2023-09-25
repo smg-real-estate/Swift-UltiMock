@@ -129,7 +129,8 @@ open class TestMockableClass: TestMockableSuperclass {
         super.init(int: 0)
     }
 
-    var readwriteProperty: Int = 0
+    public var readwriteProperty: Int = 0
+    public private(set) var privateSettableProperty: Int = 0
 
     override public func noParamsVoid() {
         forwarded = true

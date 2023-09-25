@@ -233,7 +233,7 @@ struct MockTemplate {
             }
             """
             properties.map {
-                "\n" + $0.expectationExtensions(mockTypeName, forwarding: mocksClass)
+                "\n" + $0.expectationExtensions(type.mockClassAccessLevel, mockTypeName, forwarding: mocksClass)
                     .joined(separator: "\n\n")
             }
         }
