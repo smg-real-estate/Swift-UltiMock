@@ -4,6 +4,7 @@ import Foundation
 // sourcery:AutoMockable
 protocol InternalMockable {
     func doSomething(with internal: Internal)
+    func doSomething(withAny any: Any)
 }
 
 struct Internal {}

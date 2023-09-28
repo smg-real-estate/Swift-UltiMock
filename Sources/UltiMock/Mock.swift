@@ -98,18 +98,26 @@ public func handleFatalFailure(_ message: String, file: StaticString, line: UInt
 public struct Parameter<T>: CustomStringConvertible {
     public let description: String
     public let match: (Any?) -> Bool
+}
 
-    public static var any: Self {
+public extension Parameter {
+    static var any: Self {
         .init(description: "<any>") { _ in true }
     }
 
-    public static func any(_ type: T.Type) -> Self {
+    static func any(_ type: T.Type) -> Self {
         .init(description: "<any>") { _ in true }
     }
 
-    public static func matching(_ type: T.Type = T.self, isMatching: @escaping (T) -> Bool) -> Self {
+    static func matching(_ type: T.Type = T.self, isMatching: @escaping (T) -> Bool) -> Self {
         .init(description: "<matching>") {
             isMatching($0 as! T)
+        }
+    }
+
+    static func casted<Other: Equatable>(_ value: Other, as: Other.Type = Other.self) -> Self {
+        .init(description: "\(value)") { other in
+            (other as? Other) == value
         }
     }
 }

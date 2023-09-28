@@ -12,8 +12,10 @@ final class InternalTestMockableTests: XCTestCase {
         let mock = InternalMockableMock()
 
         mock.expect(.doSomething(with: .matching { _ in true }))
+        mock.expect(.doSomething(withAny: .casted(1)))
 
         mock.doSomething(with: .init())
+        mock.doSomething(withAny: 1)
 
         mock.verify()
     }
