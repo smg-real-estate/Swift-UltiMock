@@ -398,6 +398,20 @@ extension Variable {
         definedInType?.isExtension ?? false
     }
 
+    var getterAccessLevel: String {
+        readAccess.replacingOccurrences(of: "open", with: "public")
+    }
+
+    var setterAccessLevel: String {
+        writeAccess.replacingOccurrences(of: "open", with: "public")
+    }
+
+    var implementationAccessLevel: String {
+        getterAccessLevel + (isReadOnly || setterAccessLevel.isEmpty || setterAccessLevel == getterAccessLevel
+            ? ""
+            : " \(setterAccessLevel)(set)")
+    }
+
     var implementationAttributes: [String] {
         attributes.values.flatMap { $0 }
             .filter {
@@ -408,7 +422,7 @@ extension Variable {
 
     func fullDefinition(override: Bool, indentation: String) -> String {
         (implementationAttributes +
-            ["public\(override ? " override" : "") var \(name): \(typeName)"])
+            ["\(implementationAccessLevel)\(override ? " override" : "") var \(name): \(typeName)"])
             .joined(separator: "\n" + indentation)
     }
 
@@ -484,7 +498,7 @@ extension Variable {
     }
 
     var isReadOnly: Bool {
-        writeAccess.isEmpty
+        writeAccess.isEmpty || writeAccess == "private"
     }
 
     @ArrayBuilder<String>
@@ -546,9 +560,10 @@ extension Variable {
     }
 
     @ArrayBuilder<String>
-    func expectationExtensions(_ mockTypeName: String, forwarding: Bool) -> [String] {
+    func expectationExtensions(_ mockAccessLevel: String, _ mockTypeName: String, forwarding: Bool) -> [String] {
         """
-        public extension \(mockTypeName).PropertyExpectation where Signature == \(getterPerformDefinition(forwarding: false)) {
+        \(mockAccessLevel.replacingOccurrences(of: "open", with: "public")) \
+        extension \(mockTypeName).PropertyExpectation where Signature == \(getterPerformDefinition(forwarding: false)) {
             static var \(name): Self {
                 .init(method: \(mockTypeName).Methods.\(getterIdentifier))
             }
@@ -557,7 +572,8 @@ extension Variable {
 
         if !isReadOnly {
             """
-            public extension \(mockTypeName).PropertyExpectation where Signature == \(setterPerformDefinition(forwarding: false)) {
+            \(mockAccessLevel.replacingOccurrences(of: "open", with: "public")) \
+            extension \(mockTypeName).PropertyExpectation where Signature == \(setterPerformDefinition(forwarding: false)) {
                 static var \(name): Self {
                     .init(method: \(mockTypeName).Methods.\(setterIdentifier))
                 }
