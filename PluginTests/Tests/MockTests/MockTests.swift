@@ -256,6 +256,86 @@ class MockTests: XCTestCase {
         mock.verify()
     }
 
+    func test_failedAsyncVerifications() {
+        let mock = TestMockableMock()
+
+        mock.expect(.noParamsVoidAsync())
+
+        Task {
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+
+        let timeout: TimeInterval = 1
+        let start = Date()
+
+        let options = XCTExpectedFailure.Options()
+        options.issueMatcher = { _ in
+            Date().timeIntervalSince(start) > timeout
+        }
+
+        XCTExpectFailure(options: options) {
+            mock.verifyAsync(timeout: timeout)
+        }
+    }
+
+    func test_successfulAsyncVerifications_SyncContext() {
+        let mock = TestMockableMock()
+
+        mock.expect(.noParamsResultAsync()) {
+            123
+        }
+
+        mock.expect(.noParamsVoidAsync())
+
+        let expectation = expectation(description: "Async task completion")
+        Task {
+            let result = await mock.noParamsResultAsync()
+            XCTAssertEqual(result, 123)
+            await mock.noParamsVoidAsync()
+            expectation.fulfill()
+        }
+
+        let timeout: TimeInterval = 3
+        let start = Date()
+
+        mock.verifyAsync(timeout: timeout)
+
+        XCTAssertLessThan(Date().timeIntervalSince(start), timeout)
+        XCTAssertLessThan(Date().timeIntervalSince(start), timeout)
+
+        wait(for: [expectation])
+        mock.verify() // Checking if our `verifyAsync` lied to us
+    }
+
+    func test_successfulAsyncVerifications_AyncContext() async {
+        let mock = TestMockableMock()
+
+        mock.expect(.noParamsResultAsync()) {
+            123
+        }
+
+        mock.expect(.noParamsVoidAsync())
+
+        let expectation = expectation(description: "Async task completion")
+        Task {
+            let result = await mock.noParamsResultAsync()
+            XCTAssertEqual(result, 123)
+            await mock.noParamsVoidAsync()
+            expectation.fulfill()
+        }
+
+        let timeout: TimeInterval = 3
+        let start = Date()
+
+        await mock.verifyAsync(timeout: timeout)
+
+        XCTAssertLessThan(Date().timeIntervalSince(start), timeout)
+
+        await XCTWaiter().fulfillment(of: [expectation])
+
+        mock.verify() // Checking if our `verifyAsync` lied to us
+    }
+
     func test_MockingAssociatedTypes() {
         let mock = GenericTestMockableMock<Int, String>()
 

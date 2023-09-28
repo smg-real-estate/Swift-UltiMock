@@ -239,6 +239,7 @@ struct MockTemplate {
                         )
                     }
 
+                    defer { recorder.checkVerification() }
                     return stub.perform
                 }
             """

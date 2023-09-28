@@ -12,12 +12,15 @@ public protocol Mock {
 
 public extension Mock {
     func verify(file: StaticString = #filePath, line: UInt = #line) {
-        if recorder.stubs.count > 1 {
-            XCTFail("Missing expected calls:\n\(recorder.stubs.map { "  \($0.expectation)" }.joined(separator: "\n"))", file: file, line: line)
-        } else if recorder.stubs.count == 1 {
-            XCTFail("Missing expected call: \(recorder.stubs[0].expectation)", file: file, line: line)
-        }
-        recorder.reset()
+        recorder.verify(file: file, line: line)
+    }
+
+    func verifyAsync(timeout: TimeInterval, file: StaticString = #filePath, line: UInt = #line) {
+        recorder.verifyAsync(timeout: timeout, file: file, line: line)
+    }
+
+    func verifyAsync(timeout: TimeInterval, file: StaticString = #filePath, line: UInt = #line) async {
+        recorder.verifyAsync(timeout: timeout, file: file, line: line)
     }
 
     func resetExpectations() {
