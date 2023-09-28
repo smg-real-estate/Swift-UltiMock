@@ -24,3 +24,18 @@ class InternalSubclassOfAPublicClass: PublicMockableClass {}
     @objc(doSomethingWith:)
     func doSomething(with int: Int)
 }
+
+protocol BaseGenericProtocol<Base> {
+    associatedtype Base
+    var base: Base { get set }
+}
+
+// sourcery:AutoMockable
+// Sourcery does not support where clause for associated types
+// sourcery:typealias = "B = Base"
+protocol RefinedGenericProtocol<A>: BaseGenericProtocol
+    // The edge case needs Base.ID == A and not A == Base.ID
+    where Base: Identifiable, Base.ID == A {
+    associatedtype A
+    associatedtype B where B == Base
+}

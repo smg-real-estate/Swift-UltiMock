@@ -338,16 +338,33 @@ let keywords = [
 ]
 
 extension SourceryRuntime.`Protocol` {
-    var genericParameters: String {
+    func genericParameters(_ associatedTypes: [AssociatedType]) -> String {
         if associatedTypes.isEmpty {
             return ""
         }
-        let parameters = associatedTypes.values
-            .sorted { $0.name < $1.name }
+        let conformanceConstraints = conformanceConstraints
+        let parameters = associatedTypes
             .map {
-                "\($0.name)\($0.typeName.map { ": " + $0.name } ?? "")"
+                let conformances = [
+                    $0.typeName?.name,
+                    conformanceConstraints[$0.name]
+                ]
+                    .compactMap { $0 }
+                    .joined(separator: " & ")
+
+                return "\($0.name)\(conformances.isEmpty ? "" : ": \(conformances)")"
             }
         return "<\(parameters.joined(separator: ", "))>"
+    }
+
+    var conformanceConstraints: [String: String] {
+        genericRequirements
+            .filter {
+                $0.relationshipSyntax == ":"
+            }
+            .reduce(into: [:]) { partialResult, requirement in
+                partialResult[requirement.leftType.name] = requirement.rightType.typeName.name
+            }
     }
 
     var equatableAssociatedTypes: [String] {
@@ -454,14 +471,16 @@ extension Variable {
         setterPerformDefinition(forwarding: false)
     }
 
-    func getterPerformDefinition(forwarding: Bool) -> String {
-        let parameters = forwarding ? ["_ forwardToOriginal: " + getterPerformDefinition(forwarding: false)] : []
-        return "(\(parameters.joined(separator: ", "))) -> \(typeName.actualName(convertingImplicitOptional: true))"
+    func getterPerformDefinition(forwarding: Bool, _ namespacedTypes: [String: String] = [:]) -> String {
+        let parameters = forwarding ? ["_ forwardToOriginal: " + getterPerformDefinition(forwarding: false, namespacedTypes)] : []
+        let returnType = typeName.actualName(convertingImplicitOptional: true)
+        return "(\(parameters.joined(separator: ", "))) -> \(namespacedTypes[returnType, default: returnType])"
     }
 
-    func setterPerformDefinition(forwarding: Bool) -> String {
-        let parameters = (forwarding ? ["_ forwardToOriginal: " + setterPerformDefinition(forwarding: false)] : [])
-            + ["_ newValue: \(typeName.actualName(convertingImplicitOptional: true))"]
+    func setterPerformDefinition(forwarding: Bool, _ namespacedTypes: [String: String] = [:]) -> String {
+        let type = typeName.actualName(convertingImplicitOptional: true)
+        let parameters = (forwarding ? ["_ forwardToOriginal: " + setterPerformDefinition(forwarding: false, namespacedTypes)] : [])
+            + ["_ newValue: \(namespacedTypes[type, default: type])"]
         return "(\(parameters.joined(separator: ", "))) -> Void"
     }
 
@@ -564,10 +583,15 @@ extension Variable {
     }
 
     @ArrayBuilder<String>
-    func expectationExtensions(_ mockAccessLevel: String, _ mockTypeName: String, forwarding: Bool) -> [String] {
+    func expectationExtensions(
+        _ mockAccessLevel: String,
+        _ mockTypeName: String,
+        _ namespacedTypes: [String: String],
+        forwarding: Bool
+    ) -> [String] {
         """
         \(mockAccessLevel.replacingOccurrences(of: "open", with: "public")) \
-        extension \(mockTypeName).PropertyExpectation where Signature == \(getterPerformDefinition(forwarding: false)) {
+        extension \(mockTypeName).PropertyExpectation where Signature == \(getterPerformDefinition(forwarding: false, namespacedTypes)) {
             static var \(name): Self {
                 .init(method: \(mockTypeName).Methods.\(getterIdentifier))
             }
@@ -577,7 +601,7 @@ extension Variable {
         if !isReadOnly {
             """
             \(mockAccessLevel.replacingOccurrences(of: "open", with: "public")) \
-            extension \(mockTypeName).PropertyExpectation where Signature == \(setterPerformDefinition(forwarding: false)) {
+            extension \(mockTypeName).PropertyExpectation where Signature == \(setterPerformDefinition(forwarding: false, namespacedTypes)) {
                 static var \(name): Self {
                     .init(method: \(mockTypeName).Methods.\(setterIdentifier))
                 }
@@ -614,6 +638,27 @@ extension Variable {
                 _record(expectation.setterExpectation(newValue.anyParameter), file, line, perform)
             }
         """
+    }
+}
+
+extension `Type` {
+    var refinedAssociatedTypes: [String: String] {
+        guard let protocolType = self as? SourceryRuntime.`Protocol` else {
+            return [:]
+        }
+        return protocolType.genericRequirements
+            .filter { $0.relationshipSyntax == "==" }
+            .reduce(into: [:]) { partialResult, requirement in
+                let left = requirement.leftType.name
+                let right = requirement.rightType.typeName.name
+
+                if !left.contains(".") {
+                    partialResult[left] = right
+                }
+                if !right.contains(".") {
+                    partialResult[right] = left
+                }
+            }
     }
 }
 
