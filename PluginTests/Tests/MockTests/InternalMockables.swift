@@ -1,3 +1,4 @@
+import Foundation
 @testable import TestableMockables
 
 // sourcery:AutoMockable
@@ -17,3 +18,9 @@ public class PublicMockableClass {
 
 // sourcery:AutoMockable
 class InternalSubclassOfAPublicClass: PublicMockableClass {}
+
+// sourcery:AutoMockable
+@objc protocol ObjCMockable {
+    @objc(doSomethingWith:)
+    func doSomething(with int: Int)
+}
