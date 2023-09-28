@@ -149,7 +149,7 @@ extension SourceryRuntime.Method {
 
     func expectationConstructor(_ mockTypeName: String, forwarding: Bool) -> String {
         (
-            attributes.values.flatMap { $0 }.map(\.description) +
+            expectationAttributes +
                 [
                     """
                     \(implementationAccessLevel) static func \(shortName)(\(expectationDefinitionParameters(mockTypeName))) -> Self
@@ -166,7 +166,7 @@ extension SourceryRuntime.Method {
 
     func mockExpect(_ mockTypeName: String, forwarding: Bool) -> String {
         (
-            attributes.values.flatMap { $0 }.map(\.description) +
+            expectationAttributes +
                 [
                     """
                         \(implementationAccessLevel) func expect\(genericClause)(
@@ -281,6 +281,10 @@ extension SourceryRuntime.Method {
             }
             """
         }
+    }
+
+    var expectationAttributes: [String] {
+        attributes.filter { $0.key != "objc" }.values.flatMap { $0 }.map(\.description)
     }
 }
 
