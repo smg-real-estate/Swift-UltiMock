@@ -150,7 +150,8 @@ struct MockTemplate {
                 """
             }
 
-            for method in type.allMethods.filter(\.isInitializer).unique(by: \.name) {
+            let initializers = type.allMethods.filter(\.isInitializer).unique(by: \.name)
+            for method in initializers {
                 """
 
                     public \(method.name.dropLast())\(method.parameters.isEmpty ? "" : ", ")file: StaticString = #filePath, line: UInt = #line) {
@@ -158,6 +159,20 @@ struct MockTemplate {
                         self.line = line
                         self.autoForwardingEnabled = true
                         super.init(\(method.forwardedLabeledParameters))
+                        self.autoForwardingEnabled = false
+                    }
+                """
+            }
+
+            // Defining default initializer
+            if initializers.isEmpty, type is SourceryRuntime.Class {
+                """
+
+                    \(type.mockAccessLevel) init(file: StaticString = #filePath, line: UInt = #line) {
+                        self.file = file
+                        self.line = line
+                        self.autoForwardingEnabled = true
+                        super.init()
                         self.autoForwardingEnabled = false
                     }
                 """
