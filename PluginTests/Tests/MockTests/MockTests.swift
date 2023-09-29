@@ -278,7 +278,7 @@ class MockTests: XCTestCase {
         }
     }
 
-    func test_successfulAsyncVerifications_SyncContext() {
+    func test_successfulAsyncVerifications_SyncContext_AsyncExecution() {
         let mock = TestMockableMock()
 
         mock.expect(.noParamsResultAsync()) {
@@ -301,9 +301,25 @@ class MockTests: XCTestCase {
         mock.verifyAsync(timeout: timeout)
 
         XCTAssertLessThan(Date().timeIntervalSince(start), timeout)
-        XCTAssertLessThan(Date().timeIntervalSince(start), timeout)
 
         wait(for: [expectation])
+        mock.verify() // Checking if our `verifyAsync` lied to us
+    }
+
+    func test_successfulAsyncVerifications_SyncContext_SyncExecution() {
+        let mock = TestMockableMock()
+
+        mock.expect(.noParamsVoid())
+
+        mock.noParamsVoid()
+
+        let timeout: TimeInterval = 1
+        let start = Date()
+
+        mock.verifyAsync(timeout: timeout)
+
+        XCTAssertLessThan(Date().timeIntervalSince(start), timeout)
+
         mock.verify() // Checking if our `verifyAsync` lied to us
     }
 

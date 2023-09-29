@@ -48,6 +48,10 @@ public final class Recorder {
     }
 
     func verifyAsync(timeout: TimeInterval, file: StaticString, line: UInt) {
+        guard stubs.count > 0 else {
+            return
+        }
+
         let expectation = XCTestExpectation(description: "Mock verify \(file):\(line)")
         guard onEmpty == nil else {
             XCTFail("Attempt to verify the mock multiple times.", file: file, line: line)
