@@ -16,6 +16,9 @@ public protocol TestMockable {
     var readwriteProperty: Int { get set }
     var forceUnwrapped: String! { get set }
 
+    subscript(key: Int) -> String { get }
+    subscript(key: String) -> Int { get set }
+
     func forceUnwrappedResult() -> String!
 
     @available(iOS 15.0, *)

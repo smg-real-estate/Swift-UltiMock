@@ -46,6 +46,7 @@ struct MockTemplate {
                     && !skipped.contains($0.unbacktickedCallName)
             }
             let properties = type.allVariables.filter { !$0.isStatic && !$0.definedInExtension && !skipped.contains($0.unbacktickedName) }
+            let subscripts = type.allSubscripts.unique(by: \.getterSignature) { old, new in old.isReadOnly ? new : old }
 
             let mockAccessLevel = type.mockAccessLevel
             let mockTypeName = "\(type.name)Mock"
@@ -86,9 +87,12 @@ struct MockTemplate {
 
                 enum Methods {
             """
-            methods.map(\.definition).indented(2)
 
+            methods.map(\.definition).indented(2)
             properties.flatMap(\.definitions).indented(2)
+            subscripts.unique(by: \.getterSignature) { old, new in old.isReadOnly ? new : old }
+                .flatMap(\.definitions)
+                .indented(2)
 
             let mocksClass = type is SourceryRuntime.Class
 
@@ -140,6 +144,46 @@ struct MockTemplate {
                     }
                 """
             }
+
+            if !subscripts.isEmpty {
+                """
+                    \(mockAccessLevel) struct SubscriptExpectation<Signature> {
+                        private let method: MockMethod
+                        private let parameters: [AnyParameter]
+
+                        init(method: MockMethod, parameters: [AnyParameter]) {
+                            self.method = method
+                            self.parameters = parameters
+                        }
+
+                        \(mockAccessLevel) var getterExpectation: Recorder.Expectation {
+                            .init(
+                                method: method,
+                                parameters: parameters
+                            )
+                        }
+
+                        \(mockAccessLevel) func setterExpectation(_ newValue: AnyParameter) -> Recorder.Expectation {
+                            .init(
+                                method: method,
+                                parameters: parameters + [newValue]
+                            )
+                        }
+
+                        \(mockAccessLevel) static var `subscript`: \(mockTypeName).SubscriptExpectations { .init() }
+                    }
+
+                    \(mockAccessLevel) struct SubscriptExpectations {
+                """
+                subscripts.flatMap {
+                    $0.expectationConstructor(mockTypeName)
+                        .indented(2)
+                }
+                """
+                    }
+                """
+            }
+
             """
 
                 public let recorder = Recorder()
@@ -262,6 +306,12 @@ struct MockTemplate {
                     .joined(separator: "\n")
             }
 
+            subscripts.map {
+                "\n" + $0.implementation
+                    .indented(1)
+                    .joined(separator: "\n")
+            }
+
             methods.unique(by: \.rawSignature)
                 .map { "\n" + $0.mockExpect(mockTypeName, forwarding: mocksClass) }
 
@@ -270,6 +320,12 @@ struct MockTemplate {
 
             properties.unique(by: \.setterSignature)
                 .map { "\n" + $0.mockExpectSetter(forwarding: mocksClass) }
+
+            subscripts.unique(by: \.getterSignature)
+                .map { "\n" + $0.mockExpectGetter }
+
+            subscripts.unique(by: \.setterSignature)
+                .map { "\n" + $0.mockExpectSetter }
             """
             }
             """
@@ -291,5 +347,18 @@ extension Dictionary {
             return [singleValue]
         }
         return []
+    }
+}
+
+extension Sequence {
+    @inlinable
+    func unique(by id: (Element) -> some Hashable, finalValue: (Element, Element) -> Element) -> [Element] {
+        Dictionary(
+            map { element in
+                (id(element), element)
+            },
+            uniquingKeysWith: finalValue
+        )
+        .map(\.value)
     }
 }

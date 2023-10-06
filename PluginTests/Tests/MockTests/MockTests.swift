@@ -26,6 +26,20 @@ class MockTests: XCTestCase {
         }
     }
 
+    func test_unexpectedCalls_subscriptGetter() {
+        XCTExpectFailure {
+            let mock = TestMockableMock()
+            _ = mock[1]
+        }
+    }
+
+    func test_unexpectedCalls_subscriptSetter() {
+        XCTExpectFailure {
+            let mock = TestMockableMock()
+            mock["string1"] = 1
+        }
+    }
+
     func test_unexpectedPropertyCall() {
         XCTExpectFailure {
             let mock = TestMockableMock()
@@ -49,6 +63,9 @@ class MockTests: XCTestCase {
         mock.expect(.readwriteProperty) { 2 }
         mock.expect(set: .readwriteProperty, to: 3) { _ in }
         mock.expect(.forceUnwrapped) { nil }
+
+        mock.expect(.subscript[1]) { _ in "2" }
+        mock.expect(set: .subscript["1"], to: 2)
 
         mock.expect(.forceUnwrappedResult()) { nil }
         mock.expect(.noParamsVoid()) {}
@@ -80,9 +97,46 @@ class MockTests: XCTestCase {
         mock.expect(.`func`()) {}
         mock.expect(.withSelf(.any)) { $0 }
 
-        XCTExpectFailure {
+        var issueDescription = ""
+        let options = XCTExpectedFailure.Options()
+        options.issueMatcher = { issue in
+            issueDescription = issue.compactDescription
+            return true
+        }
+
+        XCTExpectFailure(options: options) {
             mock.verify()
         }
+
+        XCTAssertEqual(issueDescription, """
+        failed - Missing expected calls:
+          property
+          readwriteProperty
+          readwriteProperty = 3
+          forceUnwrapped
+          [key: 1]
+          [key: "1"] = 2
+          forceUnwrappedResult()
+          noParamsVoid()
+          noParamsVoidAsync()
+          noParamsVoidAsyncThrowing()
+          noParamsResult()
+          noParamsResult()
+          noParamsArrayResult()
+          noParamsDictionaryResult()
+          noParamsClosureResult()
+          noParamsResultAsync()
+          noParamsAsyncThrowingResult()
+          withOptionalClosure(<any>)
+          withParamsVoid(int: 1, label: "label", "string", nil, Optional(1), 2, [2], ["1": 2], <any>)
+          withParamsVoidAsync(int: 1, label: "label", "string", nil)
+          withParamsVoidAsyncThrowing(int: 1, label: "label", "string", nil)
+          withParamsResult(int: 1, label: "label", "string")
+          withParamsResultAsync(int: 1, label: "label", "string")
+          withParamsAsyncThrowingResult(int: 1, label: "label", "string")
+          `func`()
+          withSelf(<any>)
+        """)
 
         mock.verify() // Should reset expectations after verification
     }
@@ -94,6 +148,9 @@ class MockTests: XCTestCase {
         mock.expect(.readwriteProperty) { 2 }
         mock.expect(set: .readwriteProperty, to: 3) { _ in }
         mock.expect(.forceUnwrapped) { nil }
+
+        mock.expect(.subscript[1]) { _ in "2" }
+        mock.expect(set: .subscript["1"], to: 2)
 
         mock.expect(.forceUnwrappedResult()) { nil }
         mock.expect(.noParamsVoid()) {}
@@ -158,6 +215,9 @@ class MockTests: XCTestCase {
             XCTAssertEqual($0, "some")
         }
 
+        mock.expect(.subscript[1]) { _ in "2" }
+        mock.expect(set: .subscript["1"], to: 2) { _, _ in }
+
         mock.expect(.forceUnwrappedResult()) { nil }
         mock.expect(.newAPI())
         mock.expect(.noParamsVoid()) {}
@@ -207,6 +267,9 @@ class MockTests: XCTestCase {
         mock.readwriteProperty = 3
         XCTAssertNil(mock.forceUnwrapped)
         mock.forceUnwrapped = "some"
+
+        XCTAssertEqual(mock[1], "2")
+        mock["1"] = 2
 
         XCTAssertNil(mock.forceUnwrappedResult())
         mock.newAPI()

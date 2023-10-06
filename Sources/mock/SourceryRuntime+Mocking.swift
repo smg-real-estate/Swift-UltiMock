@@ -305,6 +305,10 @@ extension MethodParameter {
         "\(definitionName): \(isEscapingClosure ? "@escaping " : "")\(typeName.name.replacingOccurrences(of: "Self", with: mockTypeName))"
     }
 
+    var implementationDefinition: String {
+        "\(definitionName): \(isEscapingClosure ? "@escaping " : "")\(typeName.name)"
+    }
+
     func expectationConstructorDefinition(_ mockTypeName: String) -> String {
         let typeName = typeName.name(convertingImplicitOptional: true)
             .replacingOccurrences(of: "Self", with: mockTypeName)
@@ -634,6 +638,248 @@ extension Variable {
                 file: StaticString = #filePath,
                 line: UInt = #line,
                 perform: @escaping \(setterPerformDefinition(forwarding: forwarding))\(defaultSetterPerformClosure(forwarding: forwarding))
+            ) {
+                _record(expectation.setterExpectation(newValue.anyParameter), file, line, perform)
+            }
+        """
+    }
+}
+
+extension Subscript {
+    var getterIdentifier: String {
+        "subscript_get_by_\(parametersPart)_\(returnTypePart)"
+    }
+
+    var setterIdentifier: String {
+        "subscript_set_by_\(parametersPart)_\(returnTypePart)"
+    }
+
+    var parametersPart: String {
+        parameters.map {
+            "\($0.argumentLabel?.trimmedBackticks ?? "")_\($0.name.trimmedBackticks)_\($0.argumentTypePart)"
+        }
+        .joined(separator: "_")
+    }
+
+    var getterSignature: String {
+        getterPerformDefinition()
+    }
+
+    var setterSignature: String? {
+        isReadOnly ? nil : setterPerformDefinition
+    }
+
+    @ArrayBuilder<String>
+    var definitions: [String] {
+        getterDefinition
+        if !isReadOnly {
+            setterDefinition
+        }
+    }
+
+    var getterDefinition: String {
+        """
+        static var \(getterIdentifier): MockMethod {
+            .init {\(parameters.isEmpty ? " _ in" : "")
+                \"[\(parameters.enumerated().map { $0.element.description(at: $0.offset) }.joined(separator: ", "))]\"
+            }
+        }
+        """
+    }
+
+    var setterDefinition: String {
+        """
+        static var \(setterIdentifier): MockMethod {
+            .init {
+                \"[\(parameters.enumerated().map { $0.element.description(at: $0.offset) }.joined(separator: ", "))] = \\($0.last! ?? "nil")\"
+            }
+        }
+        """
+    }
+
+    var returnTypePart: String {
+        returnTypeName.escapedIdentifierName()
+    }
+
+    var isReadOnly: Bool {
+        writeAccess.isEmpty || writeAccess == "private"
+    }
+
+    var getterAccessLevel: String {
+        readAccess.replacingOccurrences(of: "open", with: "public")
+    }
+
+    var setterAccessLevel: String {
+        writeAccess.replacingOccurrences(of: "open", with: "public")
+    }
+
+    var implementationAccessLevel: String {
+        getterAccessLevel + (isReadOnly || setterAccessLevel.isEmpty || setterAccessLevel == getterAccessLevel
+            ? ""
+            : " \(setterAccessLevel)(set)")
+    }
+
+    var implementationAttributes: [String] {
+        attributes.values.flatMap { $0 }
+            .filter {
+                $0.name != "NSCopying"
+            }
+            .map(\.description)
+    }
+
+    func fullDefinition(indentation: String) -> String {
+        (implementationAttributes +
+            ["\(implementationAccessLevel) subscript(\(parametersDefinition)) -> \(returnTypeName)"])
+            .joined(separator: "\n" + indentation)
+    }
+
+    var parametersDefinition: String {
+        parameters.map(\.implementationDefinition).joined(separator: ", ")
+    }
+
+    @ArrayBuilder<String>
+    var implementation: [String] {
+        """
+        \(fullDefinition(indentation: "    ")) {
+        """
+        if isReadOnly {
+            getter.indented(1)
+        } else {
+            "    get {"
+            getter.indented(2)
+            "    }"
+            "    set {"
+            setter.indented(2)
+            "    }"
+        }
+        """
+        }
+        """
+    }
+
+    @ArrayBuilder<String>
+    var getter: [String] {
+        """
+        let perform = _perform(
+            Methods.\(getterIdentifier),
+            [\(recordedParameters)]
+        ) as! \(getterPerformDefinition())
+        return perform(\(forwardedParameters))
+        """
+    }
+
+    var setter: String {
+        """
+        let perform = _perform(
+            Methods.\(setterIdentifier),
+            [\(recordedParameters), newValue]
+        ) as! \(setterPerformDefinition)
+        return perform(\(forwardedParameters), newValue)
+        """
+    }
+
+    var forwardedLabeledParameters: String {
+        "\(parameters.map { "\($0.argumentLabel.map { $0 + ": " } ?? "")\($0.name)" }.joined(separator: ", "))"
+    }
+
+    var forwardedParameters: String {
+        parameters.map(\.forwardedString)
+            .joined(separator: ", ")
+    }
+
+    var recordedParameters: String {
+        parameters.map(\.forwardedName)
+            .joined(separator: ", ")
+    }
+
+    func parameterDefinitions(named: Bool) -> [String] {
+        parameters.map {
+            (named ? "\($0.name): " : "")
+                + $0.typeName.name(convertingImplicitOptional: true)
+                .replacingOccurrences(of: "some ", with: "any ")
+        }
+    }
+
+    func postParametersDefinition(inClosure: Bool) -> String {
+        var returnType = returnTypeName.name(convertingImplicitOptional: inClosure)
+            .components(separatedBy: "where")[0]
+            .trimmed
+
+        return "-> \(returnType)"
+    }
+
+    func getterPerformDefinition(namedParameters: Bool = true) -> String {
+        let parameters = parameterDefinitions(named: namedParameters).map { "_ \($0)" }
+        return "(\(parameters.joined(separator: ", "))) \(postParametersDefinition(inClosure: true))"
+    }
+
+    var setterPerformDefinition: String {
+        let type = returnTypeName.actualName(convertingImplicitOptional: true)
+        let parameters = parameterDefinitions(named: false) + ["_ newValue: \(type)"]
+        return "(\(parameters.joined(separator: ", "))) -> Void"
+    }
+
+    func expectationDefinitionParameters(_ mockTypeName: String) -> String {
+        parameters.map {
+            $0.expectationConstructorDefinition(mockTypeName)
+        }
+        .joined(separator: ", ")
+    }
+
+    @ArrayBuilder<String>
+    func expectationConstructor(_ mockTypeName: String) -> [String] {
+        """
+        \(implementationAccessLevel) subscript(\(expectationDefinitionParameters(mockTypeName))) -> \(mockTypeName).SubscriptExpectation<\(getterSignature)> {
+            .init(
+                method: Methods.\(getterIdentifier),
+                parameters: [\(parameters.map { "\($0.forwardedName).anyParameter" }.joined(separator: ", "))]
+            )
+        }
+        """
+        if let setterSignature {
+            """
+            \(implementationAccessLevel) subscript(\(expectationDefinitionParameters(mockTypeName))) -> \(mockTypeName).SubscriptExpectation<\(setterSignature)> {
+                .init(
+                    method: Methods.\(setterIdentifier),
+                    parameters: [\(parameters.map { "\($0.forwardedName).anyParameter" }.joined(separator: ", "))]
+                )
+            }
+            """
+        }
+    }
+
+    var defaultSetterPerformClosure: String {
+        " = { \(parameterPlaceholders), _ in  }"
+    }
+
+    var parameterPlaceholders: String {
+        " \(parameters.map { _ in "_" }.joined(separator: ", "))"
+    }
+
+    var mockExpectGetter: String {
+        """
+            public func expect(
+                _ expectation: SubscriptExpectation<\(getterSignature)>,
+                file: StaticString = #filePath,
+                line: UInt = #line,
+                perform: @escaping \(getterPerformDefinition())
+            ) {
+                _record(expectation.getterExpectation, file, line, perform)
+            }
+        """
+    }
+
+    var mockExpectSetter: String {
+        guard let setterSignature else {
+            return ""
+        }
+        return """
+            public func expect(
+                set expectation: SubscriptExpectation<\(setterSignature)>,
+                to newValue: Parameter<\(returnTypeName.name(convertingImplicitOptional: true))>,
+                file: StaticString = #filePath,
+                line: UInt = #line,
+                perform: @escaping \(setterPerformDefinition)\(defaultSetterPerformClosure)
             ) {
                 _record(expectation.setterExpectation(newValue.anyParameter), file, line, perform)
             }

@@ -146,6 +146,24 @@ A setter expectation has a dedicated constructor:
 mock.expect(set: .count, to: 3)
 ``` 
 
+## Subscript expectations
+Just like the properties, **UltiMock** supports both getter and setter subscript expectations.
+
+A getter expectation is similar to a method expectation but uses a `subscript` accessor property 
+and an actual subscript syntax:
+```swift
+mock.expect(.subscript[3]) { _ in "3" }
+// same as:
+mock.expect(.subscript[.value(3)]) { _ in "3" }
+``` 
+
+A setter expectation has a dedicated constructor:
+```swift
+mock.expect(set: .subscript[3], to: "3")
+// same as:
+mock.expect(set: .subscript[.value(3)], to: .value("3")) { key, newValue in }
+``` 
+
 ## Expectation perform closure
 You may use a perform closure for stubbing a return value or for other needs:
 ```swift

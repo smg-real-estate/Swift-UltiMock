@@ -29,6 +29,8 @@ class InternalSubclassOfAPublicClass: PublicMockableClass {}
 protocol BaseGenericProtocol<Base> {
     associatedtype Base
     var base: Base { get set }
+
+    subscript(key: Int) -> String { get }
 }
 
 // sourcery:AutoMockable
@@ -39,4 +41,12 @@ protocol RefinedGenericProtocol<A>: BaseGenericProtocol
     where Base: Identifiable, Base.ID == A {
     associatedtype A
     associatedtype B where B == Base
+
+    var a: A { get set }
+
+    subscript(key: A) -> B { get set }
+    func value(for key: A) -> B
+
+    // Subscript overriding
+    subscript(key: Int) -> String { get set }
 }
