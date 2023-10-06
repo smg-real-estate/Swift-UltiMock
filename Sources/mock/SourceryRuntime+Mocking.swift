@@ -478,7 +478,7 @@ extension Variable {
     func getterPerformDefinition(forwarding: Bool, _ namespacedTypes: [String: String] = [:]) -> String {
         let parameters = forwarding ? ["_ forwardToOriginal: " + getterPerformDefinition(forwarding: false, namespacedTypes)] : []
         let returnType = typeName.actualName(convertingImplicitOptional: true)
-        return "(\(parameters.joined(separator: ", "))) -> \(namespacedTypes[returnType, default: returnType])"
+        return "(\(parameters.joined(separator: ", "))) \(getterSpecifiers)-> \(namespacedTypes[returnType, default: returnType])"
     }
 
     func setterPerformDefinition(forwarding: Bool, _ namespacedTypes: [String: String] = [:]) -> String {
@@ -529,18 +529,45 @@ extension Variable {
     }
 
     @ArrayBuilder<String>
+    var getterSpecifiersArray: [String] {
+        if isAsync {
+            "async"
+        }
+        if `throws` {
+            "throws"
+        }
+        ""
+    }
+
+    var getterSpecifiers: String {
+        getterSpecifiersArray.joined(separator: " ")
+    }
+
+    @ArrayBuilder<String>
+    var callAttributesArray: [String] {
+        if `throws` {
+            "try"
+        }
+        if isAsync {
+            "await"
+        }
+        ""
+    }
+
+    var callAttributes: String {
+        callAttributesArray.joined(separator: " ")
+    }
+
+    @ArrayBuilder<String>
     func implementation(override: Bool) -> [String] {
         """
         \(fullDefinition(override: override, indentation: "    ")) {
         """
-        if isReadOnly {
-            getter(override: override)
-                .indented(1)
-        } else {
-            "    get {"
-            getter(override: override)
-                .indented(2)
-            "    }"
+        "    get \(getterSpecifiers){"
+        getter(override: override)
+            .indented(2)
+        "    }"
+        if !isReadOnly {
             "    set {"
             setter(override: override)
                 .indented(2)
@@ -562,7 +589,7 @@ extension Variable {
         }
         """
         let perform = _perform(Methods.\(getterIdentifier)) as! \(getterPerformDefinition(forwarding: override))
-        return perform(\(override ? "{ super.\(name) }" : ""))
+        return \(callAttributes)perform(\(override ? "{ super.\(name) }" : ""))
         """
     }
 

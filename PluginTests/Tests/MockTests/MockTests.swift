@@ -60,6 +60,9 @@ class MockTests: XCTestCase {
         let mock = TestMockableMock()
 
         mock.expect(.property) { OnlyProperty(value: 1) }
+        mock.expect(.throwingProperty) { 11 }
+        mock.expect(.asyncProperty) { 12 }
+        mock.expect(.asyncThrowingProperty) { 13 }
         mock.expect(.readwriteProperty) { 2 }
         mock.expect(set: .readwriteProperty, to: 3) { _ in }
         mock.expect(.forceUnwrapped) { nil }
@@ -111,6 +114,9 @@ class MockTests: XCTestCase {
         XCTAssertEqual(issueDescription, """
         failed - Missing expected calls:
           property
+          throwingProperty
+          asyncProperty
+          asyncThrowingProperty
           readwriteProperty
           readwriteProperty = 3
           forceUnwrapped
@@ -145,6 +151,9 @@ class MockTests: XCTestCase {
         let mock = TestMockableMock()
 
         mock.expect(.property) { .init(value: 1) }
+        mock.expect(.throwingProperty) { 11 }
+        mock.expect(.asyncProperty) { 12 }
+        mock.expect(.asyncThrowingProperty) { 13 }
         mock.expect(.readwriteProperty) { 2 }
         mock.expect(set: .readwriteProperty, to: 3) { _ in }
         mock.expect(.forceUnwrapped) { nil }
@@ -206,6 +215,9 @@ class MockTests: XCTestCase {
         let mock = TestMockableMock()
 
         mock.expect(.property) { .init(value: 1) }
+        mock.expect(.throwingProperty) { throw SimpleError("throwingProperty_error") }
+        mock.expect(.asyncProperty) { 12 }
+        mock.expect(.asyncThrowingProperty) { throw SimpleError("asyncThrowingProperty_error") }
         mock.expect(.readwriteProperty) { 2 }
         mock.expect(set: .readwriteProperty, to: 3) {
             XCTAssertEqual($0, 3)
@@ -262,7 +274,24 @@ class MockTests: XCTestCase {
             })) { _, _ in 5 }
         }
 
+        // Expectations fulfillments
         XCTAssertEqual(mock.property, OnlyProperty(value: 1))
+
+        XCTAssertThrowsError(try mock.throwingProperty) { error in
+            XCTAssertEqual(error as? SimpleError, SimpleError("throwingProperty_error"))
+        }
+
+        let asyncPropertyResult = await mock.asyncProperty
+        XCTAssertEqual(asyncPropertyResult, 12)
+
+        let asyncThrowingPropertyError = await catchError {
+            _ = try await mock.asyncThrowingProperty
+        }
+        XCTAssertEqual(
+            asyncThrowingPropertyError as? SimpleError,
+            SimpleError("asyncThrowingProperty_error")
+        )
+
         XCTAssertEqual(mock.readwriteProperty, 2)
         mock.readwriteProperty = 3
         XCTAssertNil(mock.forceUnwrapped)

@@ -13,6 +13,9 @@ public struct OnlyProperty: Equatable {
 // sourcery:AutoMockable
 public protocol TestMockable {
     var property: OnlyProperty { get }
+    var throwingProperty: Int { get throws }
+    var asyncProperty: Int { get async }
+    var asyncThrowingProperty: Int { get async throws }
     var readwriteProperty: Int { get set }
     var forceUnwrapped: String! { get set }
 
