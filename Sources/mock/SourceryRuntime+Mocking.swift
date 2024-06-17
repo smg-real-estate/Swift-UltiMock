@@ -302,7 +302,7 @@ extension MethodParameter {
     }
 
     func implementationDefinition(_ mockTypeName: String) -> String {
-        "\(definitionName): \(isEscapingClosure ? "@escaping " : "")\(typeName.name.replacingOccurrences(of: "Self", with: mockTypeName))"
+        "\(definitionName): \(isEscapingClosure ? "@escaping " : "")\(typeName.fixedName.replacingOccurrences(of: "Self", with: mockTypeName))"
     }
 
     var implementationDefinition: String {
@@ -392,7 +392,7 @@ extension SourceryRuntime.`Type` {
 
 extension SourceryRuntime.TypeName {
     func name(convertingImplicitOptional: Bool) -> String {
-        convertingImplicitOptional && isImplicitlyUnwrappedOptional ? unwrappedTypeName + "?" : name
+        convertingImplicitOptional && isImplicitlyUnwrappedOptional ? unwrappedTypeName + "?" : fixedName
     }
 
     func actualName(convertingImplicitOptional: Bool) -> String {
@@ -415,6 +415,14 @@ extension SourceryRuntime.TypeName {
             .replacingOccurrences(of: ".", with: "_")
             .replacingOccurrences(of: ",", with: "_")
             .replacingOccurrences(of: "==", with: "_eq_")
+    }
+
+    var fixedName: String {
+        if isOptional, let term = unwrappedTypeName.hasPrefix("any ") ? unwrappedTypeName : closure?.asFixedSource {
+            "(\(term))?"
+        } else {
+            closure?.asFixedSource ?? name
+        }
     }
 }
 
@@ -447,7 +455,7 @@ extension Variable {
 
     func fullDefinition(override: Bool, indentation: String) -> String {
         (implementationAttributes +
-            ["\(implementationAccessLevel)\(override ? " override" : "") var \(name): \(typeName)"])
+            ["\(implementationAccessLevel)\(override ? " override" : "") var \(name): \(typeName.fixedName)"])
             .joined(separator: "\n" + indentation)
     }
 
@@ -932,6 +940,12 @@ extension `Type` {
                     partialResult[right] = left
                 }
             }
+    }
+}
+
+extension ClosureType {
+    var asFixedSource: String {
+        "(\(parameters.map(\.typeName.fixedName).joined(separator: ", ")))\(asyncKeyword != nil ? " \(asyncKeyword!)" : "")\(throwsOrRethrowsKeyword != nil ? " \(throwsOrRethrowsKeyword!)" : "") -> \(returnTypeName.asSource)"
     }
 }
 
