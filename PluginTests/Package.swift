@@ -19,6 +19,9 @@ let package = Package(
                 .product(name: "XFoundation", package: "Swift-XFoundation")
             ],
             path: "Tests/TestMocks",
+            swiftSettings: [
+                .unsafeFlags(["-warnings-as-errors"])
+            ],
             plugins: [
                 .plugin(name: "MockGenerationPlugin", package: "UltiMock")
             ]

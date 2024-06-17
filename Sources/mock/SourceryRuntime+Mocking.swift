@@ -165,21 +165,19 @@ extension SourceryRuntime.Method {
     }
 
     func mockExpect(_ mockTypeName: String, forwarding: Bool) -> String {
-        (
-            expectationAttributes +
-                [
-                    """
-                        \(implementationAccessLevel) func expect\(genericClause)(
-                            _ expectation: MethodExpectation<\(signature(mockTypeName, substituteReturnSelf: true))>,
-                            file: StaticString = #filePath,
-                            line: UInt = #line,
-                            perform: @escaping \(closureDefinition(mockTypeName, true, forwarding: forwarding))\(defaultPerformClosure(forwarding: forwarding))
-                        ) {
-                            _record(expectation.expectation, file, line, perform)
-                        }
-                    """
-                ]
-        ).joined(separator: "\n")
+        [
+            """
+                \(implementationAccessLevel) func expect\(genericClause)(
+                    _ expectation: MethodExpectation<\(signature(mockTypeName, substituteReturnSelf: true))>,
+                    file: StaticString = #filePath,
+                    line: UInt = #line,
+                    perform: @escaping \(closureDefinition(mockTypeName, true, forwarding: forwarding))\(defaultPerformClosure(forwarding: forwarding))
+                ) {
+                    _record(expectation.expectation, file, line, perform)
+                }
+            """
+        ]
+            .joined(separator: "\n")
     }
 
     func defaultPerformClosure(forwarding: Bool) -> String {
@@ -223,7 +221,7 @@ extension SourceryRuntime.Method {
     }
 
     func forwardedParameters(callToSuper: Bool) -> String {
-        forwardedParameters(prepending: callToSuper ? ["super.\(selectorName)"] : [])
+        forwardedParameters(prepending: callToSuper ? [selectorName == "`self`" ? "{ self }" : "super.\(selectorName)"] : [])
     }
 
     var forwardedLabeledParameters: String {

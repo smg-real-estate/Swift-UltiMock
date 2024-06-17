@@ -67,6 +67,9 @@ public protocol TestMockable {
     func generic<P1: Equatable, P2>(parameter1: P1, _ parameter2: P2) -> Int where P2: Hashable
     @available(macOS 13, iOS 16, *)
     func generic(some: some TestGenericProtocol<Int>, any: any TestGenericProtocol<String>) -> Int
+
+    @discardableResult
+    func discardableResult() -> String
 }
 
 public protocol TestGenericProtocol<T> {
