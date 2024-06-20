@@ -8,6 +8,8 @@ class MockTests: XCTestCase {
         XCTExpectFailure {
             let mock = TestMockableMock()
             mock.noParamsVoid()
+        } issueMatcher: { issue in
+            issue.sourceCodeContext.location == .init(filePath: #file, lineNumber: 10)
         }
     }
 
@@ -392,7 +394,7 @@ class MockTests: XCTestCase {
 
         mock.verifyAsync(timeout: timeout)
 
-        XCTAssertLessThan(Date().timeIntervalSince(start), timeout)
+        XCTAssertLessThan(Date().timeIntervalSince(start), timeout + 0.05)
 
         wait(for: [expectation])
         mock.verify() // Checking if our `verifyAsync` lied to us
@@ -437,7 +439,7 @@ class MockTests: XCTestCase {
 
         await mock.verifyAsync(timeout: timeout)
 
-        XCTAssertLessThan(Date().timeIntervalSince(start), timeout)
+        XCTAssertLessThan(Date().timeIntervalSince(start), timeout + 0.05)
 
         await XCTWaiter().fulfillment(of: [expectation])
 

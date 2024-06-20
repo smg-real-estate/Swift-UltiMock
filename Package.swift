@@ -1,4 +1,4 @@
-// swift-tools-version:5.7
+// swift-tools-version:5.9
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import Foundation
@@ -30,7 +30,8 @@ let package = Package(
     targets: [
         .target(
             name: "UltiMock",
-            dependencies: ["XCTestExtensions"]
+            dependencies: ["XCTestExtensions"],
+            swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]
         ),
         .target(name: "XCTestExtensions"),
         .executableTarget(
@@ -40,7 +41,8 @@ let package = Package(
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "SourceKittenFramework", package: "SourceKitten"),
                 .product(name: "XFoundation-static", package: "Swift-XFoundation")
-            ]
+            ],
+            swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]
         ),
         .plugin(
             name: "MockGenerationPlugin",

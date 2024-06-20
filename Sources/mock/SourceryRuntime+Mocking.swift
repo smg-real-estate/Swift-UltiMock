@@ -834,7 +834,7 @@ extension Subscript {
     }
 
     func postParametersDefinition(inClosure: Bool) -> String {
-        var returnType = returnTypeName.name(convertingImplicitOptional: inClosure)
+        let returnType = returnTypeName.name(convertingImplicitOptional: inClosure)
             .components(separatedBy: "where")[0]
             .trimmed
 

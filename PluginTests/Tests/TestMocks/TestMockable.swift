@@ -11,7 +11,7 @@ public struct OnlyProperty: Equatable {
 }
 
 // sourcery:AutoMockable
-public protocol TestMockable {
+public protocol TestMockable: Sendable {
     var property: OnlyProperty { get }
     var throwingProperty: Int { get throws }
     var asyncProperty: Int { get async }

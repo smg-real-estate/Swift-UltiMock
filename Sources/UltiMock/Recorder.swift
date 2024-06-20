@@ -1,40 +1,52 @@
 import os
 import XCTest
 
-public final class Recorder {
-    private let protectedStubs = AllocatedUnfairLock(uncheckedState: [Stub]())
-    private var onEmpty: (() -> Void)?
+public final class Recorder: Sendable {
+    private struct State {
+        var stubs: [Stub] = []
+        var onEmpty: (() -> Void)?
+
+        mutating func next() -> Stub? {
+            stubs.isEmpty ? nil : stubs.removeFirst()
+        }
+
+        mutating func reset() {
+            onEmpty = nil
+            stubs.removeAll()
+        }
+    }
+
+    private let state = AllocatedUnfairLock(uncheckedState: State())
 
     public init() {}
 
     public var stubs: [Stub] {
-        protectedStubs.withLock { $0 }
+        state.withLock(\.stubs)
     }
 
     public func record(_ stub: Stub) {
-        protectedStubs.withLock { stubs in
-            stubs.append(stub)
+        state.withLock {
+            $0.stubs.append(stub)
         }
     }
 
     public func next() -> Stub? {
-        protectedStubs.withLock { stubs in
-            stubs.isEmpty ? nil : stubs.removeFirst()
+        state.withLock {
+            $0.next()
         }
     }
 
     public func checkVerification() {
-        protectedStubs.withLock { stubs in
-            if stubs.isEmpty {
-                onEmpty?()
+        state.withLock {
+            if $0.stubs.isEmpty {
+                $0.onEmpty?()
             }
         }
     }
 
     func reset() {
-        onEmpty = nil
-        protectedStubs.withLock { stubs in
-            stubs.removeAll()
+        state.withLock {
+            $0.reset()
         }
     }
 
@@ -53,12 +65,14 @@ public final class Recorder {
         }
 
         let expectation = XCTestExpectation(description: "Mock verify \(file):\(line)")
-        guard onEmpty == nil else {
-            XCTFail("Attempt to verify the mock multiple times.", file: file, line: line)
-            return
-        }
-        onEmpty = {
-            expectation.fulfill()
+        state.withLock {
+            guard $0.onEmpty == nil else {
+                XCTFail("Attempt to verify the mock multiple times.", file: file, line: line)
+                return
+            }
+            $0.onEmpty = {
+                expectation.fulfill()
+            }
         }
         XCTWaiter().wait(for: [expectation], timeout: timeout)
         verify(file: file, line: line)

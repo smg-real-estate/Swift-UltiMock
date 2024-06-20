@@ -68,8 +68,10 @@ struct MockTemplate {
                     }
                     .sorted(by: \.name, <)
 
+                let sendable = type.based["Sendable"].map { ", @unchecked \($0)" } ?? ""
+
                 """
-                \(type.mockClassAccessLevel) class \(mockTypeName)\(type.genericParameters(associatedTypes)): \(type.name), Mock {
+                \(type.mockClassAccessLevel) class \(mockTypeName)\(type.genericParameters(associatedTypes)): \(type.name)\(sendable), Mock {
                 """
                 for associatedType in associatedTypes {
                     "    \(mockAccessLevel) typealias \(associatedType.name) = \(associatedType.name)"
