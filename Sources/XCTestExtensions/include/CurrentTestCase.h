@@ -8,4 +8,7 @@
 @import Foundation;
 @import XCTest;
 
-extern XCTestCase* _Nullable XCTCurrentTestCase;
+@interface CurrentTestCaseObserver : NSObject <XCTestObservation>
+@property(class, readonly) XCTestCase* _Nullable currentTestCase;
+@end
+

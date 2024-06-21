@@ -1,6 +1,6 @@
 import os
 import XCTest
-@preconcurrency import XCTestExtensions
+import XCTestExtensions
 
 public protocol Mock {
     var recorder: Recorder { get }
@@ -71,7 +71,7 @@ public extension Recorder {
 }
 
 public func handleFatalFailure(_ message: String, file: StaticString, line: UInt) -> Never {
-    guard let testCase = XCTCurrentTestCase else {
+    guard let testCase = CurrentTestCaseObserver.currentTestCase else {
         XCTFail("[FATAL] \(message)", file: file, line: line)
         exit(0)
     }

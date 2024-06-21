@@ -7,7 +7,7 @@
 
 #import "CurrentTestCase.h"
 
-@interface CurrentTestCaseObserver : NSObject <XCTestObservation>
+@interface CurrentTestCaseObserver () <XCTestObservation>
 @end
 
 XCTestCase *XCTCurrentTestCase;
@@ -19,6 +19,10 @@ static CurrentTestCaseObserver *observer;
 + (void)load {
     observer = [CurrentTestCaseObserver new];
     [XCTestObservationCenter.sharedTestObservationCenter addTestObserver: observer];
+}
+
++ (XCTestCase *)currentTestCase {
+    return XCTCurrentTestCase;
 }
 
 - (void)testCaseWillStart:(XCTestCase *)testCase {
