@@ -73,15 +73,6 @@
       }
     },
     {
-      "identity" : "sourcery",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/krzysztofzablocki/Sourcery",
-      "state" : {
-        "branch" : "2.0.2",
-        "revision" : "d441f56ba972d04014c6de0f48ac17861ce629f3"
-      }
-    },
-    {
       "identity" : "spectre",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/kylef/Spectre.git",

@@ -29,3 +29,4 @@
 --enable spaceAroundBraces,spaceInsideBraces,redundantSelf,numberFormatting,unusedArguments,sortedImports,indent,trailingCommas,wrapArguments
 --disable wrapMultilineStatementBraces,redundantBackticks
 --exclude **/*.generated.swift
+--exclude Submodules/*

@@ -27,7 +27,7 @@ extension SourceryRuntime.Method {
     func parameterDefinitions(named: Bool, _ mockTypeName: String) -> [String] {
         parameters.map {
             (named ? "\($0.name): " : "")
-                + $0.typeName.name(convertingImplicitOptional: true)
+                + $0.typeName.actualTypeNameExceptSelf.name(convertingImplicitOptional: true)
                 .replacingOccurrences(of: "Self", with: mockTypeName)
                 .replacingOccurrences(of: "some ", with: "any ")
         }
@@ -44,7 +44,8 @@ extension SourceryRuntime.Method {
     }
 
     func postParametersDefinition(_ selfSubstitute: String? = nil, inClosure: Bool) -> String {
-        var returnType = returnTypeName.name(convertingImplicitOptional: inClosure)
+        var returnType = returnTypeName.actualTypeNameExceptSelf
+            .name(convertingImplicitOptional: inClosure)
             .components(separatedBy: "where")[0]
             .trimmed
 
@@ -389,6 +390,10 @@ extension SourceryRuntime.`Type` {
 }
 
 extension SourceryRuntime.TypeName {
+    var actualTypeNameExceptSelf: TypeName {
+        name == "Self" ? self : actualTypeName ?? self
+    }
+
     func name(convertingImplicitOptional: Bool) -> String {
         convertingImplicitOptional && isImplicitlyUnwrappedOptional ? unwrappedTypeName + "?" : fixedName
     }

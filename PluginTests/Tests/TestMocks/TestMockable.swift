@@ -70,6 +70,9 @@ public protocol TestMockable: Sendable {
 
     @discardableResult
     func discardableResult() -> String
+
+    func closureAliasResult(_ closure: @escaping ClosureAlias<Int>) -> ClosureAlias<Int>
+    func closureAliasResultEquivalent(_ closure: @escaping (Int) -> Void) -> (Int) -> Void
 }
 
 public protocol TestGenericProtocol<T> {
@@ -203,3 +206,5 @@ extension TestMockableClass {}
 
 // sourcery:AutoMockable
 extension Servicing {}
+
+public typealias ClosureAlias<T> = (T) -> Void

@@ -15,8 +15,12 @@ jobs:
     runs-on: macos-14
 
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      - name: "Fetch submodules"
+        run: |
+          git submodule sync
+          git submodule update --init --recursive
+
       - uses: maxim-lobanov/setup-xcode@v1.5.1
         with:
           xcode-version: '15.4.0'

@@ -1,0 +1,3 @@
+[submodule "Submodules/Sourcery"]
+	path = Submodules/Sourcery
+	url = https://github.com/smg-real-estate/Sourcery.git

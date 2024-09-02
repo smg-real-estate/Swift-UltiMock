@@ -24,7 +24,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/smg-real-estate/Swift-XFoundation.git", from: "0.1.1"),
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.2.1"),
-        .package(url: "https://github.com/krzysztofzablocki/Sourcery", revision: "2.0.2"),
+        .package(name: "Sourcery", path: "Submodules/Sourcery"),
         .package(url: "https://github.com/jpsim/SourceKitten", from: "0.32.0"),
         .package(url: "https://github.com/freddi-kit/ArtifactBundleGen.git", from: "0.0.6")
     ],
