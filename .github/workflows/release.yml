@@ -1,0 +1,106 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version'
+        required: true
+env:
+  ARTIFACTS_BUDLE_NAME: "ultimock.artifactbundle"
+  RELEASE_REPO: "Swift-UltiMock-Binary"
+
+jobs:
+  release:
+    runs-on: macos-14
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: "Fetch submodules"
+        run: |
+          git submodule sync
+          git submodule update --init --recursive
+
+      - uses: maxim-lobanov/setup-xcode@v1.6.0
+        with:
+          xcode-version: '15.4.0'
+
+      - name: Auth
+        run: git config --global url."https://oauth2:${DEPENDENCIES_ACCESS_TOKEN}@github.com/".insteadOf "https://github.com/"
+        env:
+          DEPENDENCIES_ACCESS_TOKEN: ${{ secrets.DEPENDENCIES_ACCESS_TOKEN }}
+
+      - name: Build arm64
+        run: swift build -c release --arch arm64
+
+      - name: Build x86_64
+        run: swift build -c release --arch x86_64
+
+      - name: Prepare artifacts bundle
+        run: |
+          mkdir -p ${{ env.ARTIFACTS_BUDLE_NAME }}/arm64-apple-macosx/bin
+          cp .build/arm64-apple-macosx/release/mock ${{ env.ARTIFACTS_BUDLE_NAME }}/arm64-apple-macosx/bin/mock
+          mkdir -p ${{ env.ARTIFACTS_BUDLE_NAME }}/x86_64-apple-macosx/bin
+          cp .build/x86_64-apple-macosx/release/mock ${{ env.ARTIFACTS_BUDLE_NAME }}/x86_64-apple-macosx/bin/mock
+          echo '{
+            "schemaVersion" : "1.0",
+            "artifacts" : {
+              "mock" : {
+                "version" : "${{ github.event.inputs.version }}",
+                "variants" : [
+                  {
+                    "supportedTriples" : [
+                      "x86_64-apple-macosx"
+                    ],
+                    "path" : "x86_64-apple-macosx/bin/mock"
+                  },
+                  {
+                    "supportedTriples" : [
+                      "arm64-apple-macosx"
+                    ],
+                    "path" : "arm64-apple-macosx/bin/mock"
+                  }
+                ],
+                "type" : "executable"
+              }
+            }
+          }' > ${{ env.ARTIFACTS_BUDLE_NAME }}/info.json
+          zip -r ${{ env.ARTIFACTS_BUDLE_NAME }}.zip ${{ env.ARTIFACTS_BUDLE_NAME }}
+
+      - uses: actions/create-github-app-token@v1.9.3
+        id: release-bot
+        with:
+          app-id: ${{ vars.RELEASER_APP_ID }}
+          private-key: ${{ secrets.RELEASER_APP_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Create release
+        id: create-release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: "${{ env.ARTIFACTS_BUDLE_NAME }}.zip"
+          repository: "${{ github.repository_owner }}/${{ env.RELEASE_REPO }}"
+          token: ${{ steps.release-bot.outputs.token }}
+
+      - name: Update Package.swift
+        run: |
+          git clone https://github.com/smg-real-estate/${{ env.RELEASE_REPO }} --depth 1
+          cd ${{ env.RELEASE_REPO }}
+          sed -e '1h;2,$H;$!d;g' -re 's|(\.binaryTarget\(.*name: "ultimock".*url: ").*(.zip")|\1${{ fromJSON(steps.create-release.outputs.assets)[0].url }}\2|g' -i '' Package.swift
+          sed -e '1h;2,$H;$!d;g' -re "s/(\.binaryTarget\(.*name: \"ultimock\".*checksum: \")[a-z,0-9]*/\1$(swift package compute-checksum ../${{ env.ARTIFACTS_BUDLE_NAME }}.zip)/g" -i '' Package.swift
+          git submodule update --init
+          cd UltiMock
+          git checkout ${{ github.sha }}
+          cd ..
+          git add .
+          git commit -m "Release ${{ github.event.inputs.version }}"
+          git push "https://oauth2:${PUSH_TOKEN}@github.com/smg-real-estate/${{ env.RELEASE_REPO }}.git"
+          cd ..
+        env:
+          PUSH_TOKEN: ${{ steps.release-bot.outputs.token }}
+
+      - name: Tag
+        run: |
+          git tag ${{ github.event.inputs.version }}
+          git push --tags
