@@ -86,6 +86,7 @@ class MockTests: XCTestCase {
         mock.expect(.noParamsAsyncThrowingResult()) { 3 }
 
         mock.expect(.withOptionalClosure(.any)) { $0?(1) }
+        mock.expect(.withAnnotatedClosure(.any)) { _ in }
 
         mock.expect(
             .withParamsVoid(
@@ -136,6 +137,7 @@ class MockTests: XCTestCase {
           noParamsResultAsync()
           noParamsAsyncThrowingResult()
           withOptionalClosure(<any>)
+          withAnnotatedClosure(<any>)
           withParamsVoid(int: 1, label: "label", "string", nil, Optional(1), 2, [2], ["1": 2], <any>)
           withParamsVoidAsync(int: 1, label: "label", "string", nil)
           withParamsVoidAsyncThrowing(int: 1, label: "label", "string", nil)
@@ -177,6 +179,7 @@ class MockTests: XCTestCase {
         mock.expect(.noParamsAsyncThrowingResult()) { 3 }
 
         mock.expect(.withOptionalClosure(.any)) { $0?(1) }
+        mock.expect(.withAnnotatedClosure(.any)) { _ in }
 
         mock.expect(.withParamsVoid(int: 1, label: "label", "string", nil, .value(1), 2, [2], ["1": 2], .any)) { _, _, _, _, _, _, _, _, _ in }
         mock.expect(.withParamsVoidAsync(int: 1, label: "label", "string", nil)) { _, _, _, _ in }
@@ -249,6 +252,11 @@ class MockTests: XCTestCase {
         mock.expect(.noParamsAsyncThrowingResult()) { 3 }
 
         mock.expect(.withOptionalClosure(.any)) { $0?(1) }
+        mock.expect(.withAnnotatedClosure(.any)) { closure in
+            Task { @MainActor in
+                closure?(2)
+            }
+        }
 
         mock.expect(.withParamsVoid(int: 1, label: "label", "string", nil, .value(1), 2, [2], ["1": 2], .any)) {
             XCTAssertEqual($0, 1)
@@ -323,6 +331,10 @@ class MockTests: XCTestCase {
 
         mock.withOptionalClosure {
             XCTAssertEqual($0, 1)
+        }
+
+        mock.withAnnotatedClosure {
+            XCTAssertEqual($0, 2)
         }
 
         var int = 2
@@ -492,4 +504,4 @@ class MockTests: XCTestCase {
 }
 
 // Ensure the mock class is `open`
-final class ExtendedTestMockableMock: TestMockableMock {}
+final class ExtendedTestMockableMock: TestMockableMock, @unchecked Sendable {}

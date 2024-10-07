@@ -422,7 +422,7 @@ extension SourceryRuntime.TypeName {
 
     var fixedName: String {
         if isOptional, let term = unwrappedTypeName.hasPrefix("any ") ? unwrappedTypeName : closure?.asFixedSource {
-            "(\(term))?"
+            "(\((attributes.flatMap(\.value).map(\.asSource).sorted() + [term]).joined(separator: " ")))?"
         } else {
             closure?.asFixedSource ?? name
         }

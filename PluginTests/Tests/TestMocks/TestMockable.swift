@@ -44,6 +44,7 @@ public protocol TestMockable: Sendable {
     func withSelf(_ self: Self) -> Self
 
     func withOptionalClosure(_ closure: ((Int) -> Void)?)
+    func withAnnotatedClosure(_ closure: (@MainActor @Sendable (Int) -> Void)?)
 
     func withParamsVoid(
         int: Swift.Int,
