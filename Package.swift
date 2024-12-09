@@ -1,4 +1,4 @@
-// swift-tools-version:5.9
+// swift-tools-version: 5.10
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import Foundation
@@ -6,7 +6,10 @@ import PackageDescription
 
 let package = Package(
     name: "UltiMock",
-    platforms: [.iOS(.v15), .macOS(.v13)],
+    platforms: [
+        .iOS(.v17),
+        .macOS(.v13)
+    ],
     products: [
         .library(
             name: "UltiMock",
