@@ -62,13 +62,6 @@ jobs:
           }' > ${{ env.ARTIFACTS_BUDLE_NAME }}/info.json
           zip -r ${{ env.ARTIFACTS_BUDLE_NAME }}.zip ${{ env.ARTIFACTS_BUDLE_NAME }}
 
-      - uses: actions/create-github-app-token@v1.9.3
-        id: release-bot
-        with:
-          app-id: ${{ vars.RELEASER_APP_ID }}
-          private-key: ${{ secrets.RELEASER_APP_KEY }}
-          owner: ${{ github.repository_owner }}
-
       - name: Create release
         id: create-release
         uses: softprops/action-gh-release@v2
@@ -76,7 +69,7 @@ jobs:
           draft: true
           files: "${{ env.ARTIFACTS_BUDLE_NAME }}.zip"
           repository: "${{ github.repository_owner }}/${{ env.RELEASE_REPO }}"
-          token: ${{ steps.release-bot.outputs.token }}
+          token: ${{ secrets.RELEASE_REPO_TOKEN }}
 
       - name: Update Package.swift
         run: |
@@ -93,7 +86,7 @@ jobs:
           git push "https://oauth2:${PUSH_TOKEN}@github.com/smg-real-estate/${{ env.RELEASE_REPO }}.git"
           cd ..
         env:
-          PUSH_TOKEN: ${{ steps.release-bot.outputs.token }}
+          PUSH_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN }}
 
       - name: Tag
         run: |
