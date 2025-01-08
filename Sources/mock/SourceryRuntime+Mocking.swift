@@ -1,5 +1,5 @@
+import Foundation
 import SourceryRuntime
-import XFoundation
 
 func additionalImports(_ arguments: [String: Any]) -> [String] {
     arguments["import"]
@@ -252,8 +252,8 @@ extension SourceryRuntime.Method {
         ""
     }
 
-    @ArrayBuilder<String>
-    func implementation(_ mockTypeName: String, override: Bool) -> [String] {
+    @StringBuilder
+    func implementation(_ mockTypeName: String, override: Bool) -> String {
         """
         \(fullDefinition(mockTypeName, override: override)) {
         """
@@ -569,8 +569,8 @@ extension Variable {
         callAttributesArray.joined(separator: " ")
     }
 
-    @ArrayBuilder<String>
-    func implementation(override: Bool) -> [String] {
+    @StringBuilder
+    func implementation(override: Bool) -> String {
         """
         \(fullDefinition(override: override, indentation: "    ")) {
         """
@@ -589,8 +589,8 @@ extension Variable {
         """
     }
 
-    @ArrayBuilder<String>
-    func getter(override: Bool) -> [String] {
+    @StringBuilder
+    func getter(override: Bool) -> String {
         if override {
             """
             guard !autoForwardingEnabled else {
@@ -604,8 +604,8 @@ extension Variable {
         """
     }
 
-    @ArrayBuilder<String>
-    func setter(override: Bool) -> [String] {
+    @StringBuilder
+    func setter(override: Bool) -> String {
         if override {
             """
             guard !autoForwardingEnabled else {
@@ -775,8 +775,8 @@ extension Subscript {
         parameters.map(\.implementationDefinition).joined(separator: ", ")
     }
 
-    @ArrayBuilder<String>
-    var implementation: [String] {
+    @StringBuilder
+    var implementation: String {
         """
         \(fullDefinition(indentation: "    ")) {
         """
@@ -795,8 +795,7 @@ extension Subscript {
         """
     }
 
-    @ArrayBuilder<String>
-    var getter: [String] {
+    var getter: String {
         """
         let perform = _perform(
             Methods.\(getterIdentifier),
@@ -864,8 +863,8 @@ extension Subscript {
         .joined(separator: ", ")
     }
 
-    @ArrayBuilder<String>
-    func expectationConstructor(_ mockTypeName: String) -> [String] {
+    @StringBuilder
+    func expectationConstructor(_ mockTypeName: String) -> String {
         """
         \(implementationAccessLevel) subscript(\(expectationDefinitionParameters(mockTypeName))) -> \(mockTypeName).SubscriptExpectation<\(getterSignature)> {
             .init(
@@ -876,6 +875,7 @@ extension Subscript {
         """
         if let setterSignature {
             """
+
             \(implementationAccessLevel) subscript(\(expectationDefinitionParameters(mockTypeName))) -> \(mockTypeName).SubscriptExpectation<\(setterSignature)> {
                 .init(
                     method: Methods.\(setterIdentifier),

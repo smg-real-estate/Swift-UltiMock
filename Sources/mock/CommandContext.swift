@@ -1,8 +1,8 @@
+import Foundation
 import PathKit
 import SourceKittenFramework
 import SourceryFramework
 import SourceryRuntime
-import XFoundation
 
 struct CommandContext {
     let configuration: Configuration

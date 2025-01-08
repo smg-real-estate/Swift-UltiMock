@@ -118,15 +118,6 @@
       }
     },
     {
-      "identity" : "swift-xfoundation",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/smg-real-estate/Swift-XFoundation.git",
-      "state" : {
-        "revision" : "39a49ca54bdcaee7d9264e0777536148d316755a",
-        "version" : "0.4.2"
-      }
-    },
-    {
       "identity" : "swxmlhash",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/drmohundro/SWXMLHash.git",

@@ -22,7 +22,6 @@ let package = Package(
         )
     ],
     dependencies: [
-        .package(url: "https://github.com/smg-real-estate/Swift-XFoundation.git", from: "0.1.1"),
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.2.1"),
         .package(name: "Sourcery", path: "Submodules/Sourcery"),
         .package(url: "https://github.com/jpsim/SourceKitten", from: "0.32.0"),
@@ -40,8 +39,7 @@ let package = Package(
             dependencies: [
                 .product(name: "SourceryFramework", package: "Sourcery"),
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
-                .product(name: "SourceKittenFramework", package: "SourceKitten"),
-                .product(name: "XFoundation-static", package: "Swift-XFoundation")
+                .product(name: "SourceKittenFramework", package: "SourceKitten")
             ],
             swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]
         ),
