@@ -50,7 +50,7 @@ The `sources` parameter should contain a directory with the annotated interfaces
 3. Add `UltiMock` package plugin to your `Package.swift`:
 ```swift
     dependencies: [
-        .package(name: "UltiMock", url: "https://github.com/smg-real-estate/Swift-UltiMock", branch: "main"),
+        .package(name: "UltiMock", url: "https://github.com/smg-real-estate/Swift-UltiMock", from: "0.6.2"),
     ],
     targets: [
         .testTarget(
@@ -61,6 +61,13 @@ The `sources` parameter should contain a directory with the annotated interfaces
         )
     ]
 ```
+To reduce compiling times and avoid conflicts with macro packages you can use a binary version instead:
+```swift
+    dependencies: [
+        .package(name: "UltiMock", url: "https://github.com/smg-real-estate/Swift-UltiMock-Binary", from: "0.6.2"),
+    ],
+```
+
 4. Use the generated mocks in your tests:
 ```swift
 let storageMock = TextStorageMock()
