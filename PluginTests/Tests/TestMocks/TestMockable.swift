@@ -1,5 +1,5 @@
 import CoreLocation
-import XFoundation
+import TestPackage
 
 /// A type for distinguishing `expect` method's `perform` parameter.
 public struct OnlyProperty: Equatable {
@@ -206,6 +206,6 @@ open class TestMockableClass: TestMockableSuperclass {
 extension TestMockableClass {}
 
 // sourcery:AutoMockable
-extension Servicing {}
+extension Test3rdPartyProtocol {}
 
 public typealias ClosureAlias<T> = (T) -> Void

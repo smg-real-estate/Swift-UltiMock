@@ -9,6 +9,6 @@
     ],
     "imports" : ["CoreLocation"],
     "packageDependencies" : [
-        "XFoundation"
+        "TestPackage"
     ]
 }

@@ -1,6 +1,5 @@
 import TestMocks
 import XCTest
-import XFoundation
 
 class MockTests: XCTestCase {
     func test_unexpectedCalls1() {
@@ -9,7 +8,7 @@ class MockTests: XCTestCase {
             let mock = TestMockableMock()
             mock.noParamsVoid()
         } issueMatcher: { issue in
-            issue.sourceCodeContext.location == .init(filePath: #file, lineNumber: 10)
+            issue.sourceCodeContext.location == .init(filePath: #file, lineNumber: #line - 2)
         }
     }
 
@@ -220,9 +219,9 @@ class MockTests: XCTestCase {
         let mock = TestMockableMock()
 
         mock.expect(.property) { .init(value: 1) }
-        mock.expect(.throwingProperty) { throw SimpleError("throwingProperty_error") }
+        mock.expect(.throwingProperty) { throw TestError("throwingProperty_error") }
         mock.expect(.asyncProperty) { 12 }
-        mock.expect(.asyncThrowingProperty) { throw SimpleError("asyncThrowingProperty_error") }
+        mock.expect(.asyncThrowingProperty) { throw TestError("asyncThrowingProperty_error") }
         mock.expect(.readwriteProperty) { 2 }
         mock.expect(set: .readwriteProperty, to: 3) {
             XCTAssertEqual($0, 3)
@@ -288,19 +287,21 @@ class MockTests: XCTestCase {
         XCTAssertEqual(mock.property, OnlyProperty(value: 1))
 
         XCTAssertThrowsError(try mock.throwingProperty) { error in
-            XCTAssertEqual(error as? SimpleError, SimpleError("throwingProperty_error"))
+            XCTAssertEqual(error as? TestError, TestError("throwingProperty_error"))
         }
 
         let asyncPropertyResult = await mock.asyncProperty
         XCTAssertEqual(asyncPropertyResult, 12)
 
-        let asyncThrowingPropertyError = await catchError {
+        do {
             _ = try await mock.asyncThrowingProperty
+            XCTFail("Did not throw")
+        } catch {
+            XCTAssertEqual(
+                error as? TestError,
+                TestError("asyncThrowingProperty_error")
+            )
         }
-        XCTAssertEqual(
-            asyncThrowingPropertyError as? SimpleError,
-            SimpleError("asyncThrowingProperty_error")
-        )
 
         XCTAssertEqual(mock.readwriteProperty, 2)
         mock.readwriteProperty = 3
@@ -479,7 +480,7 @@ class MockTests: XCTestCase {
     }
 
     func test_3DPartyModuleMock_Generated() {
-        let _ = ServicingMock<Int, String>()
+        let _ = Test3rdPartyProtocolMock<Int, String>()
     }
 
     func test_threadSafety() async {
@@ -505,3 +506,15 @@ class MockTests: XCTestCase {
 
 // Ensure the mock class is `open`
 final class ExtendedTestMockableMock: TestMockableMock, @unchecked Sendable {}
+
+struct TestError: LocalizedError, Equatable {
+    private let localizedDescription: String
+
+    init(_ localizedDescription: String) {
+        self.localizedDescription = localizedDescription
+    }
+
+    var errorDescription: String? {
+        localizedDescription
+    }
+}

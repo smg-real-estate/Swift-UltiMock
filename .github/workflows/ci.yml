@@ -28,11 +28,6 @@ jobs:
       - name: Linting
         run: ./swiftformat . --lint
 
-      - name: Auth
-        run: git config --global url."https://oauth2:${DEPENDENCIES_ACCESS_TOKEN}@github.com/".insteadOf "https://github.com/"
-        env:
-          DEPENDENCIES_ACCESS_TOKEN: ${{ secrets.DEPENDENCIES_ACCESS_TOKEN }}
-
       - name: Test macOS
         run: |
           cd PluginTests

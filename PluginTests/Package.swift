@@ -8,7 +8,7 @@ let package = Package(
     platforms: [.iOS(.v16), .macOS(.v13)],
     dependencies: [
         .package(name: "UltiMock", path: "../"),
-        .package(url: "https://github.com/smg-real-estate/Swift-XFoundation.git", from: "0.1.1")
+        .package(path: "TestPackage")
     ],
     targets: [
         // We generate the mocks in a separate target to ensure the mocks are defined as `public`
@@ -16,7 +16,7 @@ let package = Package(
             name: "TestMocks",
             dependencies: [
                 "UltiMock",
-                .product(name: "XFoundation", package: "Swift-XFoundation")
+                "TestPackage"
             ],
             path: "Tests/TestMocks",
             swiftSettings: [
