@@ -1,26 +1,66 @@
 import os
+import Testing
 import XCTest
 import XCTestExtensions
 
 public protocol Mock {
     var recorder: Recorder { get }
 
-    func verify(file: StaticString, line: UInt)
+    func verify(
+        fileID: String,
+        filePath: StaticString,
+        line: UInt,
+        column: Int
+    )
 
     var isEnabled: Bool { get }
 }
 
 public extension Mock {
-    func verify(file: StaticString = #filePath, line: UInt = #line) {
-        recorder.verify(file: file, line: line)
+    func verify(
+        fileID: String = #fileID,
+        filePath: StaticString = #filePath,
+        line: UInt = #line,
+        column: Int = #column
+    ) {
+        recorder.verify(
+            fileID: fileID,
+            filePath: filePath,
+            line: line,
+            column: column
+        )
     }
 
-    func verifyAsync(timeout: TimeInterval, file: StaticString = #filePath, line: UInt = #line) {
-        recorder.verifyAsync(timeout: timeout, file: file, line: line)
+    func verifyAsync(
+        timeout: TimeInterval,
+        fileID: String = #fileID,
+        filePath: StaticString = #filePath,
+        line: UInt = #line,
+        column: Int = #column
+    ) {
+        recorder.verifyAsync(
+            timeout: timeout,
+            fileID: fileID,
+            filePath: filePath,
+            line: line,
+            column: column
+        )
     }
 
-    func verifyAsync(timeout: TimeInterval, file: StaticString = #filePath, line: UInt = #line) async {
-        recorder.verifyAsync(timeout: timeout, file: file, line: line)
+    func verifyAsync(
+        timeout: TimeInterval,
+        fileID: String = #fileID,
+        filePath: StaticString = #filePath,
+        line: UInt = #line,
+        column: Int = #column
+    ) async {
+        recorder.verifyAsync(
+            timeout: timeout,
+            fileID: fileID,
+            filePath: filePath,
+            line: line,
+            column: column
+        )
     }
 
     func resetExpectations() {
@@ -54,14 +94,25 @@ public extension Recorder {
     struct Stub {
         public let expectation: Expectation
         public let perform: Any
-        public let file: StaticString
+        public let fileID: String
+        public let filePath: StaticString
         public let line: UInt
+        public let column: Int
 
-        public init(_ expectation: Expectation, _ perform: Any, _ file: StaticString, _ line: UInt) {
+        public init(
+            _ expectation: Expectation,
+            _ perform: Any,
+            _ fileID: String,
+            _ filePath: StaticString,
+            _ line: UInt,
+            _ column: Int
+        ) {
             self.expectation = expectation
             self.perform = perform
-            self.file = file
+            self.fileID = fileID
+            self.filePath = filePath
             self.line = line
+            self.column = column
         }
 
         public func matches(_ invocation: Invocation) -> Bool {
@@ -70,9 +121,45 @@ public extension Recorder {
     }
 }
 
-public func handleFatalFailure(_ message: String, file: StaticString, line: UInt) -> Never {
+func fail(
+    _ message: String,
+    fileID: String,
+    filePath: StaticString,
+    line: UInt,
+    column: Int
+) {
+    XCTFail(message, file: filePath, line: line)
+    Issue.record(
+        "\(message)",
+        sourceLocation: .init(
+            fileID: fileID,
+            filePath: "\(filePath)",
+            line: Int(line),
+            column: column
+        )
+    )
+}
+
+private struct FatalError: Error {
+    let localizedDescription: String
+}
+
+public func handleFatalFailure(
+    _ message: String,
+    fileID: String,
+    filePath: StaticString,
+    line: UInt,
+    column: Int
+) -> Never {
     guard let testCase = CurrentTestCaseObserver.currentTestCase else {
-        XCTFail("[FATAL] \(message)", file: file, line: line)
+        let actualLine = XCTSourceCodeContext().callStack.first { frame in
+            frame.symbolInfo?.location?.fileURL.path == "\(filePath)"
+        }?.symbolInfo?.location?.lineNumber ?? Int(line)
+
+        fail("[FATAL] \(message)", fileID: fileID, filePath: filePath, line: UInt(actualLine), column: column)
+        // Extra delay for issue reporting.
+        // Not necessary after https://github.com/swiftlang/swift-evolution/blob/main/proposals/testing/0008-exit-tests.md is done.
+        sleep(1)
         exit(0)
     }
 
@@ -99,7 +186,7 @@ public func handleFatalFailure(_ message: String, file: StaticString, line: UInt
                 )
             )
         } else {
-            XCTFail(message, file: file, line: line)
+            XCTFail(message, file: filePath, line: line)
         }
         exit(0)
     }

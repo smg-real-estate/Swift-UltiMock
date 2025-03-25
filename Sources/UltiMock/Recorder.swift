@@ -50,24 +50,53 @@ public final class Recorder: Sendable {
         }
     }
 
-    func verify(file: StaticString, line: UInt) {
+    func verify(
+        fileID: String = #fileID,
+        filePath: StaticString = #filePath,
+        line: UInt = #line,
+        column: Int = #column
+    ) {
         if stubs.count > 1 {
-            XCTFail("Missing expected calls:\n\(stubs.map { "  \($0.expectation)" }.joined(separator: "\n"))", file: file, line: line)
+            fail(
+                "Missing expected calls:\n\(stubs.map { "  \($0.expectation)" }.joined(separator: "\n"))",
+                fileID: fileID,
+                filePath: filePath,
+                line: line,
+                column: column
+            )
         } else if stubs.count == 1 {
-            XCTFail("Missing expected call: \(stubs[0].expectation)", file: file, line: line)
+            fail(
+                "Missing expected call: \(stubs[0].expectation)",
+                fileID: fileID,
+                filePath: filePath,
+                line: line,
+                column: column
+            )
         }
         reset()
     }
 
-    func verifyAsync(timeout: TimeInterval, file: StaticString, line: UInt) {
+    func verifyAsync(
+        timeout: TimeInterval,
+        fileID: String = #fileID,
+        filePath: StaticString = #filePath,
+        line: UInt = #line,
+        column: Int = #column
+    ) {
         guard stubs.count > 0 else {
             return
         }
 
-        let expectation = XCTestExpectation(description: "Mock verify \(file):\(line)")
+        let expectation = XCTestExpectation(description: "Mock verify \(filePath):\(line)")
         state.withLock {
             guard $0.onEmpty == nil else {
-                XCTFail("Attempt to verify the mock multiple times.", file: file, line: line)
+                fail(
+                    "Attempt to verify the mock multiple times.",
+                    fileID: fileID,
+                    filePath: filePath,
+                    line: line,
+                    column: column
+                )
                 return
             }
             $0.onEmpty = {
@@ -75,6 +104,11 @@ public final class Recorder: Sendable {
             }
         }
         XCTWaiter().wait(for: [expectation], timeout: timeout)
-        verify(file: file, line: line)
+        verify(
+            fileID: fileID,
+            filePath: filePath,
+            line: line,
+            column: column
+        )
     }
 }

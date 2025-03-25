@@ -18,6 +18,8 @@ This makes it ⚡️ fast and suitable for running as a Swift Package build plug
 It also uses [SourceKitten](https://github.com/jpsim/SourceKitten) for generating Swift interfaces 
 for Swift and Objective-C frameworks, which allows generating mocks for SDK protocols and classes. 
 
+Works with **XCTest** and **Swift Testing**.
+
 ## Key features
 
 * Generating mocks from command-line and Swift Package build plugin

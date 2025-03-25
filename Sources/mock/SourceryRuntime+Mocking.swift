@@ -168,13 +168,23 @@ extension SourceryRuntime.Method {
     func mockExpect(_ mockTypeName: String, forwarding: Bool) -> String {
         [
             """
+                \(attributes.filter { !["discardableResult", "objc"].contains($0.key) }.values.flatMap { $0 }.map(\.description).joined(separator: "\n"))
                 \(implementationAccessLevel) func expect\(genericClause)(
                     _ expectation: MethodExpectation<\(signature(mockTypeName, substituteReturnSelf: true))>,
-                    file: StaticString = #filePath,
+                    fileID: String = #fileID,
+                    filePath: StaticString = #filePath,
                     line: UInt = #line,
+                    column: Int = #column,
                     perform: @escaping \(closureDefinition(mockTypeName, true, forwarding: forwarding))\(defaultPerformClosure(forwarding: forwarding))
                 ) {
-                    _record(expectation.expectation, file, line, perform)
+                    _record(
+                        expectation.expectation,
+                        fileID,
+                        filePath,
+                        line,
+                        column,
+                        perform
+                    )
                 }
             """
         ]
@@ -656,11 +666,20 @@ extension Variable {
         """
             public func expect(
                 _ expectation: PropertyExpectation<\(getterSignature)>,
-                file: StaticString = #filePath,
+                fileID: String = #fileID,
+                filePath: StaticString = #filePath,
                 line: UInt = #line,
+                column: Int = #column,
                 perform: @escaping \(getterPerformDefinition(forwarding: forwarding))\(defaultGetterPerformClosure(forwarding: forwarding))
             ) {
-                _record(expectation.getterExpectation, file, line, perform)
+                _record(
+                    expectation.getterExpectation,
+                    fileID,
+                    filePath, 
+                    line,
+                    column,
+                    perform
+                )
             }
         """
     }
@@ -673,11 +692,20 @@ extension Variable {
             public func expect(
                 set expectation: PropertyExpectation<\(setterSignature)>,
                 to newValue: Parameter<\(typeName.name(convertingImplicitOptional: true))>,
-                file: StaticString = #filePath,
+                fileID: String = #fileID,
+                filePath: StaticString = #filePath,
                 line: UInt = #line,
+                column: Int = #column,
                 perform: @escaping \(setterPerformDefinition(forwarding: forwarding))\(defaultSetterPerformClosure(forwarding: forwarding))
             ) {
-                _record(expectation.setterExpectation(newValue.anyParameter), file, line, perform)
+                _record(
+                    expectation.setterExpectation(newValue.anyParameter),
+                    fileID,
+                    filePath, 
+                    line,
+                    column,
+                    perform
+                )
             }
         """
     }
@@ -902,7 +930,14 @@ extension Subscript {
                 line: UInt = #line,
                 perform: @escaping \(getterPerformDefinition())
             ) {
-                _record(expectation.getterExpectation, file, line, perform)
+                _record(
+                    expectation.getterExpectation,
+                    fileID,
+                    filePath, 
+                    line,
+                    column,
+                    perform
+                )
             }
         """
     }
@@ -919,7 +954,14 @@ extension Subscript {
                 line: UInt = #line,
                 perform: @escaping \(setterPerformDefinition)\(defaultSetterPerformClosure)
             ) {
-                _record(expectation.setterExpectation(newValue.anyParameter), file, line, perform)
+                _record(
+                    expectation.setterExpectation(newValue.anyParameter),
+                    fileID,
+                    filePath, 
+                    line,
+                    column,
+                    perform
+                )
             }
         """
     }

@@ -187,16 +187,25 @@ struct MockTemplate {
 
                 public let recorder = Recorder()
 
-                private let file: StaticString
+                private let fileID: String
+                private let filePath: StaticString
                 private let line: UInt
+                private let column: Int
 
             """
 
             if type is SourceryRuntime.`Protocol` {
                 """
-                    public init(file: StaticString = #filePath, line: UInt = #line) {
-                        self.file = file
+                    public init(
+                        fileID: String = #fileID,
+                        filePath: StaticString = #filePath,
+                        line: UInt = #line,
+                        column: Int = #column
+                    ) {
+                        self.fileID = fileID
+                        self.filePath = filePath
                         self.line = line
+                        self.column = column
                     }
                 """
             }
@@ -222,9 +231,16 @@ struct MockTemplate {
             for method in initializers {
                 """
 
-                    public \(method.name.dropLast())\(method.parameters.isEmpty ? "" : ", ")file: StaticString = #filePath, line: UInt = #line) {
-                        self.file = file
+                    public \(method.name.dropLast())\(method.parameters.isEmpty ? "" : ", ")
+                        fileID: String = #fileID,
+                        filePath: StaticString = #filePath,
+                        line: UInt = #line,
+                        column: Int = #column
+                    ) {
+                        self.fileID = fileID
+                        self.filePath = filePath
                         self.line = line
+                        self.column = column
                         self.autoForwardingEnabled = true
                         super.init(\(method.forwardedLabeledParameters))
                         self.autoForwardingEnabled = false
@@ -236,9 +252,16 @@ struct MockTemplate {
             if initializers.isEmpty, type is SourceryRuntime.Class {
                 """
 
-                    \(type.mockAccessLevel) init(file: StaticString = #filePath, line: UInt = #line) {
-                        self.file = file
+                    \(type.mockAccessLevel) init(
+                        fileID: String = #fileID,
+                        filePath: StaticString = #filePath,
+                        line: UInt = #line,
+                        column: Int = #column
+                    ) {
+                        self.fileID = fileID
+                        self.filePath = filePath
                         self.line = line
+                        self.column = column
                         self.autoForwardingEnabled = true
                         super.init()
                         self.autoForwardingEnabled = false
@@ -259,11 +282,33 @@ struct MockTemplate {
 
             """
 
-                private func _record<P>(_ expectation: Recorder.Expectation, _ file: StaticString, _ line: UInt, _ perform: P) {
+                private func _record<P>(
+                    _ expectation: Recorder.Expectation, 
+                    _ fileID: String,
+                    _ filePath: StaticString,
+                    _ line: UInt,
+                    _ column: Int,
+                    _ perform: P
+                ) {
                     guard isEnabled else {
-                        handleFatalFailure("Setting expectation on disabled mock is not allowed", file: file, line: line)
+                        handleFatalFailure(
+                            "Setting expectation on disabled mock is not allowed",
+                            fileID: fileID,
+                            filePath: filePath,
+                            line: line,
+                            column: column
+                        )            
                     }
-                    recorder.record(.init(expectation, perform, file, line))
+                    recorder.record(
+                        .init(
+                            expectation, 
+                            perform,
+                            fileID,
+                            filePath, 
+                            line,
+                            column
+                        )
+                    )
                 }
 
                 private func _perform(_ method: MockMethod, _ parameters: [Any?] = []) -> Any {
@@ -272,14 +317,22 @@ struct MockTemplate {
                         parameters: parameters
                     )
                     guard let stub = recorder.next() else {
-                        handleFatalFailure("Expected no calls but received `\\(invocation)`", file: file, line: line)
+                        handleFatalFailure(
+                            "Expected no calls but received `\\(invocation)`", 
+                            fileID: fileID,
+                            filePath: filePath,
+                            line: line,
+                            column: column
+                        )
                     }
 
                     guard stub.matches(invocation) else {
                         handleFatalFailure(
                             "Unexpected call: expected `\\(stub.expectation)`, but received `\\(invocation)`",
-                            file: stub.file,
-                            line: stub.line
+                            fileID: stub.fileID,
+                            filePath: stub.filePath,
+                            line: stub.line,
+                            column: stub.column
                         )
                     }
 

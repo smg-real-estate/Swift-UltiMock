@@ -368,10 +368,6 @@ class MockTests: XCTestCase {
 
         mock.expect(.noParamsVoidAsync())
 
-        Task {
-            try? await Task.sleep(for: .milliseconds(100))
-        }
-
         let timeout: TimeInterval = 1
         let start = Date()
 
@@ -430,7 +426,7 @@ class MockTests: XCTestCase {
         mock.verify() // Checking if our `verifyAsync` lied to us
     }
 
-    func test_successfulAsyncVerifications_AyncContext() async {
+    func test_successfulAsyncVerifications_AsyncContext() async {
         let mock = TestMockableMock()
 
         mock.expect(.noParamsResultAsync()) {
