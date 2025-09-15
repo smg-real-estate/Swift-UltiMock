@@ -5,7 +5,8 @@
     "sdkModules" : [
         "ObjectiveC.NSObject",
         "CoreLocation.CLLocation",
-        "CoreLocation.CLLocationManager"
+        "CoreLocation.CLLocationManager",
+        "_LocationEssentials.CLLocationEssentials"
     ],
     "imports" : ["CoreLocation"],
     "packageDependencies" : [

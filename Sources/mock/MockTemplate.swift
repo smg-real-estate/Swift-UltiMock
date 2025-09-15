@@ -40,6 +40,7 @@ struct MockTemplate {
                     && !$0.definedInExtension
                     && !$0.isPrivate
                     && !skipped.contains($0.unbacktickedCallName)
+                    && $0.callName != "deinit"
             }
             let properties = type.allVariables.filter { !$0.isStatic && !$0.definedInExtension && !skipped.contains($0.unbacktickedName) }
             let subscripts = type.allSubscripts.unique(by: \.getterSignature) { old, new in old.isReadOnly ? new : old }

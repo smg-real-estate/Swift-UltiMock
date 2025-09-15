@@ -5,7 +5,7 @@ import UltiMock
 
 // TODO: Rewrite disabled tests using `#expect(exitsWith:)` when available.
 // See: https://github.com/swiftlang/swift-testing/pull/324
-private let enableAllTests = Date.now > (try! Date("2025-05Z", strategy: .iso8601.year().month()))
+private let enableAllTests = Date.now > (try! Date("2025-10Z", strategy: .iso8601.year().month()))
 
 struct SwiftTestingTests {
     @Test(.enabled(if: enableAllTests))

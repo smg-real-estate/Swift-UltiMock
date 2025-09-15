@@ -73,7 +73,7 @@ private extension CommandContext {
         let sdkPath = Path(try env["SDKROOT"].wrapped)
 
         return try (configuration.sdkModules ?? [])
-            .map { module in
+            .compactMap { module in
                 let request = SourceKittenFramework.Request.customRequest(request: [
                     "key.request": UID("source.request.editor.open.interface"),
                     "key.name": UUID().uuidString,
@@ -95,7 +95,16 @@ private extension CommandContext {
                     "key.synthesizedextensions": 1
                 ])
 
-                let source: String = try cast(toNSDictionary(try request.send())["key.sourcetext"])
+                let response: [String: any SourceKitRepresentable]
+
+                do {
+                    response = try request.send()
+                } catch {
+                    print("Failed to parse SDK module '\(module)': \(error)")
+                    return nil
+                }
+
+                let source: String = try cast(response["key.sourcetext"])
                 return try makeParser(for: source).parse()
             }
     }
