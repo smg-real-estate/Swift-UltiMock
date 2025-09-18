@@ -67,7 +67,8 @@ jobs:
         id: create-release
         uses: softprops/action-gh-release@v2
         with:
-          draft: true
+          prerelease: true
+          tag_name: ${{ github.event.inputs.version }}
           files: "${{ env.ARTIFACTS_BUDLE_NAME }}.zip"
           repository: "${{ github.repository_owner }}/${{ env.RELEASE_REPO }}"
           token: ${{ secrets.RELEASE_REPO_TOKEN }}
@@ -76,7 +77,7 @@ jobs:
         run: |
           git clone https://github.com/smg-real-estate/${{ env.RELEASE_REPO }} --depth 1
           cd ${{ env.RELEASE_REPO }}
-          sed -e '1h;2,$H;$!d;g' -re 's|(\.binaryTarget\(.*name: "ultimock".*url: ").*(.zip")|\1${{ fromJSON(steps.create-release.outputs.assets)[0].url }}\2|g' -i '' Package.swift
+          sed -e '1h;2,$H;$!d;g' -re 's|(\.binaryTarget\(.*name: "ultimock".*url: ").*.zip"|\1${{ fromJSON(steps.create-release.outputs.assets)[0].browser_download_url }}"|g' -i '' Package.swift
           sed -e '1h;2,$H;$!d;g' -re "s/(\.binaryTarget\(.*name: \"ultimock\".*checksum: \")[a-z,0-9]*/\1$(swift package compute-checksum ../${{ env.ARTIFACTS_BUDLE_NAME }}.zip)/g" -i '' Package.swift
           git submodule update --init
           cd UltiMock
