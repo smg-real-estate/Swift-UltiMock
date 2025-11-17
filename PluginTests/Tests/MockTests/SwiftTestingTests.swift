@@ -3,20 +3,45 @@ import Testing
 import TestMocks
 import UltiMock
 
-// TODO: Rewrite disabled tests using `#expect(exitsWith:)` when available.
-// See: https://github.com/swiftlang/swift-testing/pull/324
-private let enableAllTests = Date.now > (try! Date("2025-10Z", strategy: .iso8601.year().month()))
-
 struct SwiftTestingTests {
-    @Test(.enabled(if: enableAllTests))
-    func unexpectedCalls() {
-        withKnownIssue {
-            let mock = TestMockableMock()
-            mock.noParamsVoid()
-        } matching: { issue in
-            issue.sourceLocation?.line == #line - 3
+#if os(macOS)
+    @Test
+    func failsOnUnexpectedCalls() async throws {
+        await #expect(processExitsWith: .success) {
+            let mock = TestMockableMock(line: 10)
+            withKnownIssue {
+                mock.noParamsVoid()
+            } matching: { issue in
+                issue.sourceLocation?.line == 10
+            }
         }
     }
+
+    @Test
+    func failsWhenCalledInIncorrectOrder() async throws {
+        await #expect(processExitsWith: .success) {
+            let mock = TestMockableMock()
+
+            mock.expect(.noParamsVoid()) {}
+            mock.expect(
+                .withParamsVoid(
+                    int: 1, label: "label", "string", nil, .value(1), 2, [2], ["1": 2], .any
+                ),
+                line: 20
+            ) { _, _, _, _, _, _, _, _, _ in }
+            mock.expect(.noParamsVoid()) {}
+
+            mock.noParamsVoid()
+            withKnownIssue {
+                mock.noParamsVoid()
+                var int = 2
+                mock.withParamsVoid(int: 1, label: "label", "string", nil, 1, &int, [2], ["1": 2]) { _ in }
+            } matching: { issue in
+                issue.sourceLocation?.line == 20
+            }
+        }
+    }
+#endif
 
     @Test
     func failedVerifications() {
@@ -28,28 +53,6 @@ struct SwiftTestingTests {
             mock.verify()
         } matching: { issue in
             issue.comments.first == "Missing expected call: property"
-        }
-    }
-
-    @Test(.enabled(if: enableAllTests))
-    func failsWhenCalledInIncorrectOrder() async throws {
-        let mock = TestMockableMock()
-
-        mock.expect(.noParamsVoid()) {}
-        mock.expect(
-            .withParamsVoid(
-                int: 1, label: "label", "string", nil, .value(1), 2, [2], ["1": 2], .any
-            )
-        ) { _, _, _, _, _, _, _, _, _ in }
-        mock.expect(.noParamsVoid()) {}
-
-        withKnownIssue {
-            mock.noParamsVoid()
-            mock.noParamsVoid()
-            var int = 2
-            mock.withParamsVoid(int: 1, label: "label", "string", nil, 1, &int, [2], ["1": 2]) { _ in }
-        } matching: { _ in
-            true
         }
     }
 

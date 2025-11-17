@@ -8,7 +8,7 @@ class MockTests: XCTestCase {
             let mock = TestMockableMock()
             mock.noParamsVoid()
         } issueMatcher: { issue in
-            issue.sourceCodeContext.location == .init(filePath: #file, lineNumber: #line - 2)
+            issue.sourceCodeContext.location == .init(filePath: #filePath, lineNumber: #line - 2)
         }
     }
 

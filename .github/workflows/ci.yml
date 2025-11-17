@@ -12,7 +12,7 @@ on:
 
 jobs:
   test:
-    runs-on: macos-15
+    runs-on: macos-26
 
     steps:
       - uses: actions/checkout@v4
@@ -21,9 +21,14 @@ jobs:
           git submodule sync
           git submodule update --init --recursive
 
-      - uses: maxim-lobanov/setup-xcode@v1.5.1
+      - uses: maxim-lobanov/setup-xcode@v1.6.0
         with:
-          xcode-version: '16.4.0'
+          xcode-version: '26.1.0'
+
+#      - name: Create iOS Simulator
+#        run: |
+#          xcrun simctl create "iPhone 16" "iPhone 16" "iOS18.5" || true
+#          xcrun simctl list devices
 
       - name: Linting
         run: ./swiftformat . --lint
