@@ -28,14 +28,14 @@ struct MockGenerationPlugin: BuildToolPlugin {
             },
             target.dependencySources(matching: configuration.packageDependencies ?? [])
         ]
-            .flatMap { $0 }
+            .flatMap(\.self)
 
         let imports = [
             configuration.imports,
             configuration.packageDependencies
         ]
-            .compactMap { $0 }
-            .flatMap { $0 }
+            .compactMap(\.self)
+            .flatMap(\.self)
 
         let output = context.pluginWorkDirectory.appending(["Mock.generated.swift"])
 
@@ -54,7 +54,7 @@ struct MockGenerationPlugin: BuildToolPlugin {
 
         let arguments = [configurationPath.string]
             + options.map { ["--\($0)"] + $1 }
-            .flatMap { $0 }
+            .flatMap(\.self)
 
         return [
             .buildCommand(
@@ -75,7 +75,7 @@ struct SimpleError: LocalizedError, CustomStringConvertible {
         self.localizedDescription = localizedDescription
     }
 
-    public var errorDescription: String? {
+    var errorDescription: String? {
         localizedDescription
     }
 

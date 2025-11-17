@@ -29,11 +29,11 @@ struct CommandContext {
     }
 
     func parse() throws -> FileParserResult {
-        [
-            try parseSources(),
-            try parseSDKModules()
+        try [
+            parseSources(),
+            parseSDKModules()
         ]
-            .flatMap { $0 }
+            .flatMap(\.self)
             .reduce(FileParserResult(path: nil, module: nil, types: [], functions: [], typealiases: [])) { result, next in
                 result.typealiases += next.typealiases
                 result.types += next.types
@@ -70,16 +70,16 @@ private extension CommandContext {
             .appendingPathComponent("clang/ModuleCache")
             .path
 
-        let sdkPath = Path(try env["SDKROOT"].wrapped)
+        let sdkPath = try Path(env["SDKROOT"].wrapped)
 
         return try (configuration.sdkModules ?? [])
             .compactMap { module in
-                let request = SourceKittenFramework.Request.customRequest(request: [
+                let request = try SourceKittenFramework.Request.customRequest(request: [
                     "key.request": UID("source.request.editor.open.interface"),
                     "key.name": UUID().uuidString,
                     "key.compilerargs": [
                         "-target",
-                        try targetTriple(),
+                        targetTriple(),
                         "-sdk",
                         sdkPath.string,
                         "-I",
@@ -118,7 +118,7 @@ private extension CommandContext {
             env["LLVM_TARGET_TRIPLE_OS_VERSION"],
             env["LLVM_TARGET_TRIPLE_SUFFIX"]
         ]
-            .compactMap { $0 }
+            .compactMap(\.self)
             .joined()
     }
 }

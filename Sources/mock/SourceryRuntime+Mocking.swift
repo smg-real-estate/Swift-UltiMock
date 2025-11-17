@@ -60,7 +60,8 @@ extension SourceryRuntime.Method {
         let parameters = (forwarding ? ["_ forwardToOriginal: " + closureDefinition(
             mockTypeName,
             substituteReturnSelf,
-            forwarding: false)] : []
+            forwarding: false
+        )] : []
         )
             + parameterDefinitions(named: namedParameters, mockTypeName).map { "_ \($0)" }
         return "(\(parameters.joined(separator: ", "))) \(postParametersDefinition(substituteReturnSelf ? mockTypeName : nil, inClosure: true))"
@@ -122,9 +123,9 @@ extension SourceryRuntime.Method {
 
     var parameterPlaceholders: String {
         if parameters.isEmpty {
-            return ""
+            ""
         } else {
-            return " \(parameters.map { _ in "_" }.joined(separator: ", ")) in "
+            " \(parameters.map { _ in "_" }.joined(separator: ", ")) in "
         }
     }
 
@@ -135,9 +136,9 @@ extension SourceryRuntime.Method {
 
     var invocationDescription: String {
         if parameters.isEmpty {
-            return selectorName
+            selectorName
         } else {
-            return "\(callName)(\(parameters.map { "\($0.argumentLabel.map { $0 + ": " } ?? "")\\(\($0.name))" }.joined(separator: ", ")))"
+            "\(callName)(\(parameters.map { "\($0.argumentLabel.map { $0 + ": " } ?? "")\\(\($0.name))" }.joined(separator: ", ")))"
         }
     }
 
@@ -168,7 +169,7 @@ extension SourceryRuntime.Method {
     func mockExpect(_ mockTypeName: String, forwarding: Bool) -> String {
         [
             """
-                \(attributes.filter { !["discardableResult", "objc"].contains($0.key) }.values.flatMap { $0 }.map(\.description).joined(separator: "\n"))
+                \(attributes.filter { !["discardableResult", "objc"].contains($0.key) }.values.flatMap(\.self).map(\.description).joined(separator: "\n"))
                 \(implementationAccessLevel) func expect\(genericClause)(
                     _ expectation: MethodExpectation<\(signature(mockTypeName, substituteReturnSelf: true))>,
                     fileID: String = #fileID,
@@ -208,7 +209,7 @@ extension SourceryRuntime.Method {
 
     func fullDefinition(_ mockTypeName: String, override: Bool) -> String {
         (
-            attributes.values.flatMap { $0 }.map(\.description) +
+            attributes.values.flatMap(\.self).map(\.description) +
                 [
                     "\(implementationAccessLevel)\(override ? " override" : "") func \(shortName)("
                         + parameters.map {
@@ -237,9 +238,9 @@ extension SourceryRuntime.Method {
 
     var forwardedLabeledParameters: String {
         if parameters.isEmpty {
-            return ""
+            ""
         } else {
-            return "\(parameters.map { "\($0.argumentLabel.map { $0 + ": " } ?? "")\($0.name)" }.joined(separator: ", "))"
+            "\(parameters.map { "\($0.argumentLabel.map { $0 + ": " } ?? "")\($0.name)" }.joined(separator: ", "))"
         }
     }
 
@@ -293,7 +294,7 @@ extension SourceryRuntime.Method {
     }
 
     var expectationAttributes: [String] {
-        attributes.filter { $0.key != "objc" }.values.flatMap { $0 }.map(\.description)
+        attributes.filter { $0.key != "objc" }.values.flatMap(\.self).map(\.description)
     }
 }
 
@@ -362,7 +363,7 @@ extension SourceryRuntime.`Protocol` {
                     $0.typeName?.name,
                     conformanceConstraints[$0.name]
                 ]
-                    .compactMap { $0 }
+                    .compactMap(\.self)
                     .joined(separator: " & ")
 
                 return "\($0.name)\(conformances.isEmpty ? "" : ": \(conformances)")"
@@ -459,7 +460,7 @@ extension Variable {
     }
 
     var implementationAttributes: [String] {
-        attributes.values.flatMap { $0 }
+        attributes.values.flatMap(\.self)
             .filter {
                 $0.name != "NSCopying"
             }
@@ -786,7 +787,7 @@ extension Subscript {
     }
 
     var implementationAttributes: [String] {
-        attributes.values.flatMap { $0 }
+        attributes.values.flatMap(\.self)
             .filter {
                 $0.name != "NSCopying"
             }

@@ -12,6 +12,7 @@ struct Internal {}
 // sourcery:AutoMockable
 extension TestableMockable {}
 
+// swiftformat:disable preferFinalClasses
 public class PublicMockableClass {
     public func doSomething() {}
     public var value: Int = 0
@@ -19,6 +20,7 @@ public class PublicMockableClass {
 
 // sourcery:AutoMockable
 class InternalSubclassOfAPublicClass: PublicMockableClass {}
+// swiftformat:enable preferFinalClasses
 
 // sourcery:AutoMockable
 @objc protocol ObjCMockable {

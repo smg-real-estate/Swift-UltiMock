@@ -1,4 +1,4 @@
---swiftversion 5.7
+--swiftversion 6.2
 --allman false
 --wraparguments before-first
 --wrapparameters before-first
@@ -11,7 +11,6 @@
 --indentcase false
 --trimwhitespace always
 --patternlet hoist
---commas inline
 --semicolons inline
 --indent 4
 --comments indent
@@ -26,7 +25,7 @@
 --hexgrouping none
 --stripunusedargs closure-only
 --importgrouping testable-bottom
---enable spaceAroundBraces,spaceInsideBraces,redundantSelf,numberFormatting,unusedArguments,sortedImports,indent,trailingCommas,wrapArguments
---disable wrapMultilineStatementBraces,redundantBackticks
---exclude **/*.generated.swift
+--preserve-acronyms
+--enable spaceAroundBraces,spaceInsideBraces,redundantSelf,numberFormatting,unusedArguments,sortImports,indent,wrapArguments,preferFinalClasses,redundantThrows,redundantAsync,acronyms,noForceUnwrapInTests,wrapConditionalBodies
+--disable wrapMultilineStatementBraces,redundantBackticks,preferForLoop,trailingCommas
 --exclude Submodules/*

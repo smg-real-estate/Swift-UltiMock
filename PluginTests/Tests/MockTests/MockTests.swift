@@ -1,7 +1,7 @@
 import TestMocks
 import XCTest
 
-class MockTests: XCTestCase {
+final class MockTests: XCTestCase {
     func test_unexpectedCalls1() {
         // Failures in async methods cannot be tested this way for the time being
         XCTExpectFailure {
@@ -15,7 +15,7 @@ class MockTests: XCTestCase {
     func test_unexpectedCalls2() {
         XCTExpectFailure {
             let mock = TestMockableMock()
-            var int: Int = 2
+            var int = 2
             mock.withParamsVoid(int: 0, label: "label", "string", nil, 1, &int, [2], ["1": 2]) { _ in }
         }
     }
@@ -476,7 +476,7 @@ class MockTests: XCTestCase {
     }
 
     func test_3DPartyModuleMock_Generated() {
-        let _ = Test3rdPartyProtocolMock<Int, String>()
+        _ = Test3rdPartyProtocolMock<Int, String>()
     }
 
     func test_threadSafety() async {

@@ -1,18 +1,27 @@
 #!/bin/zsh
 
 mkdir -p .swiftformat-bin >/dev/null 2>&1
-cd .swiftformat-bin
 
-curl -LO https://github.com/nicklockwood/SwiftFormat/releases/download/0.50.7/swiftformat.zip
+# Check if swiftformat executable already exists
+if [ ! -f .swiftformat-bin/swiftformat ]; then
+    echo "SwiftFormat not found, downloading..."
+    cd .swiftformat-bin
 
-SUM="$(shasum -a 256 swiftformat.zip | head -c 64)"
-CHECKSUM="47432dd8bff867736f42255af36024709e0cc90f31a605c81b677838ac4ce616"
+    curl -LO https://github.com/nicklockwood/SwiftFormat/releases/download/0.58.5/swiftformat.zip
 
-if [ $SUM != $CHECKSUM ]; then
-    echo -n "New checksum ($SUM) does not match the expected ($CHECKSUM)"; exit 1
+    SUM="$(shasum -a 256 swiftformat.zip | head -c 64)"
+    CHECKSUM="e3d59ebbbab3567f9f460e2d24983ed44de351bd80b9eb5b3cb14d06317df05c"
+
+    if [ $SUM != $CHECKSUM ]; then
+        echo -n "New checksum ($SUM) does not match the expected ($CHECKSUM)"; exit 1
+    fi
+
+    unzip -o swiftformat.zip
+    rm swiftformat.zip  # Clean up the zip file after extraction
+    cd ..
+    echo "SwiftFormat downloaded and ready."
+else
+    echo "SwiftFormat found, using existing version."
 fi
 
-unzip -o swiftformat.zip
-
-cd ..
 ./.swiftformat-bin/swiftformat $@

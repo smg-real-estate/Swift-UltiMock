@@ -5,7 +5,7 @@ typealias AllocatedUnfairLock<State> = OSAllocatedUnfairLock<State>
 #else
 @available(iOS, introduced: 15.0, obsoleted: 16.0)
 struct AllocatedUnfairLock<State>: @unchecked Swift.Sendable {
-    internal let lock: Swift.ManagedBuffer<State, os_unfair_lock>
+    let lock: Swift.ManagedBuffer<State, os_unfair_lock>
 
     init(uncheckedState initialState: State) {
         self.lock = .create(minimumCapacity: 1) { buffer in

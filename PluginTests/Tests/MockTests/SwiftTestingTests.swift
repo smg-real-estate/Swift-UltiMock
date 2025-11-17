@@ -6,7 +6,7 @@ import UltiMock
 struct SwiftTestingTests {
 #if os(macOS)
     @Test
-    func failsOnUnexpectedCalls() async throws {
+    func failsOnUnexpectedCalls() async {
         await #expect(processExitsWith: .success) {
             let mock = TestMockableMock(line: 10)
             withKnownIssue {
@@ -18,7 +18,7 @@ struct SwiftTestingTests {
     }
 
     @Test
-    func failsWhenCalledInIncorrectOrder() async throws {
+    func failsWhenCalledInIncorrectOrder() async {
         await #expect(processExitsWith: .success) {
             let mock = TestMockableMock()
 

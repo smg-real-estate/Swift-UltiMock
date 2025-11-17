@@ -2,7 +2,7 @@ import CoreLocation
 import TestMocks
 import XCTest
 
-class OpenClassMockTests: XCTestCase {
+final class OpenClassMockTests: XCTestCase {
     func test_unexpectedCalls() {
         // Failures in async methods cannot be tested this way for the time being
         let mock = TestMockableClassMock(int: 0)

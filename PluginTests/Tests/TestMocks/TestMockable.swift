@@ -40,7 +40,7 @@ public protocol TestMockable: Sendable {
     func noParamsResultAsync() async -> Int
     func noParamsAsyncThrowingResult() async throws -> Int
 
-    func `func`() -> Void
+    func `func`()
     func withSelf(_ self: Self) -> Self
 
     func withOptionalClosure(_ closure: ((Int) -> Void)?)
@@ -65,6 +65,7 @@ public protocol TestMockable: Sendable {
     func withParamsResultAsync(int: Int, label labelString: String, _ string: String) async -> Int
     func withParamsAsyncThrowingResult(int: Int, label labelString: String, _ string: String) async throws -> Int
 
+    // swiftformat:disable:next opaqueGenericParameters
     func generic<P1: Equatable, P2>(parameter1: P1, _ parameter2: P2) -> Int where P2: Hashable
     @available(macOS 13, iOS 16, *)
     func generic(some: some TestGenericProtocol<Int>, any: any TestGenericProtocol<String>) -> Int
