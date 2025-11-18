@@ -75,7 +75,9 @@ private final class Visitor: SyntaxVisitor {
     }
 
     private func accessLevel(from modifiers: ModifierListSyntax?) -> Syntax.AccessLevel {
-        guard let modifiers else { return .internal }
+        guard let modifiers else {
+            return .internal
+        }
 
         for modifier in modifiers {
             switch modifier.name.tokenKind {
@@ -87,9 +89,9 @@ private final class Visitor: SyntaxVisitor {
                 return .private
             case .internalKeyword:
                 return .internal
-            case .identifier where modifier.name.text == "open":
+            case .contextualKeyword("open"), .identifier("open"):
                 return .open
-            case .identifier where modifier.name.text == "package":
+            case .contextualKeyword("package"), .identifier("package"):
                 return .package
             default:
                 continue
@@ -100,22 +102,26 @@ private final class Visitor: SyntaxVisitor {
     }
 
     private func inheritedTypes(from clause: TypeInheritanceClauseSyntax?) -> [String] {
-        guard let inherited = clause?.inheritedTypeCollection else { return [] }
+        guard let inherited = clause?.inheritedTypeCollection else {
+            return []
+        }
         return inherited.map { trimmedDescription(of: $0.typeName) }
     }
 
     // Extracts contiguous comment trivia into a raw string, preserving explicit line breaks.
     private func rawComment(from trivia: Trivia?) -> String? {
-        guard let trivia else { return nil }
+        guard let trivia else {
+            return nil
+        }
 
         let text = trivia.compactMap { piece -> String? in
             switch piece {
-            case .lineComment(let string),
-                 .docLineComment(let string),
-                 .blockComment(let string),
-                 .docBlockComment(let string):
+            case let .lineComment(string),
+                 let .docLineComment(string),
+                 let .blockComment(string),
+                 let .docBlockComment(string):
                 return string
-            case .newlines(let count):
+            case let .newlines(count):
                 return String(repeating: "\n", count: count)
             default:
                 return nil

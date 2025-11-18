@@ -58,7 +58,7 @@ public enum Syntax {
         }
     }
 
-    public enum AccessLevel: String, Equatable {
+    public enum AccessLevel: String, Equatable, Sendable {
         case `public`
         case `open`
         case `internal`
