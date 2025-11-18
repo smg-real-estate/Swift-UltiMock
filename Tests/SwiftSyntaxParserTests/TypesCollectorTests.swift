@@ -41,6 +41,7 @@ import Testing
             localName: "Greeter",
             accessLevel: .internal,
             inheritedTypes: [],
+            methods: [Syntax.Method(name: "greet")],
             isExtension: true,
             comment: "\n\n// Extension adds defaults\n"
         ))
@@ -103,6 +104,7 @@ import Testing
             localName: "User",
             accessLevel: .public,
             inheritedTypes: ["Codable", "Equatable"],
+            properties: [Syntax.Property(name: "name", type: "String", isVariable: false)],
             isExtension: false,
             comment: "/// A user model\n"
         ))
@@ -464,6 +466,7 @@ import Testing
             accessLevel: .internal,
             inheritedTypes: [],
             genericParameters: [Syntax.GenericParameter(name: "T")],
+            properties: [Syntax.Property(name: "value", type: "T", isVariable: false)],
             isExtension: false,
             comment: nil
         ))
@@ -488,6 +491,7 @@ import Testing
             accessLevel: .internal,
             inheritedTypes: [],
             genericParameters: [Syntax.GenericParameter(name: "Element", constraints: ["Equatable"])],
+            properties: [Syntax.Property(name: "items", type: "[Element]", isVariable: true)],
             isExtension: false,
             comment: nil
         ))
@@ -539,6 +543,7 @@ import Testing
             localName: "FinalClass",
             accessLevel: .public,
             inheritedTypes: [],
+            methods: [Syntax.Method(name: "doSomething")],
             isExtension: false,
             comment: nil
         ))
@@ -580,6 +585,7 @@ import Testing
             accessLevel: .internal,
             inheritedTypes: [],
             genericParameters: [Syntax.GenericParameter(name: "T")],
+            properties: [Syntax.Property(name: "value", type: "T", isVariable: false)],
             isExtension: false,
             comment: nil
         ))
@@ -607,6 +613,7 @@ import Testing
                 Syntax.GenericParameter(name: "Model"),
                 Syntax.GenericParameter(name: "ID")
             ],
+            properties: [Syntax.Property(name: "storage", type: "[ID: Model]", isVariable: true)],
             isExtension: false,
             comment: nil
         ))
@@ -632,6 +639,7 @@ import Testing
             localName: "Array",
             accessLevel: .internal,
             inheritedTypes: [],
+            methods: [Syntax.Method(name: "containsDuplicates", returnType: "Bool")],
             isExtension: true,
             comment: nil
         ))
@@ -655,6 +663,7 @@ import Testing
             localName: "ObjCMockable",
             accessLevel: .internal,
             inheritedTypes: [],
+            methods: [Syntax.Method(name: "doSomething", parameters: [Syntax.Method.Parameter(label: "with", name: "int", type: "Int")])],
             isExtension: false,
             comment: nil
         ))
@@ -679,6 +688,7 @@ import Testing
             localName: "ModernFeature",
             accessLevel: .public,
             inheritedTypes: [],
+            methods: [Syntax.Method(name: "doSomething")],
             isExtension: false,
             comment: nil
         ))
@@ -704,6 +714,7 @@ import Testing
             localName: "FrozenStruct",
             accessLevel: .public,
             inheritedTypes: [],
+            properties: [Syntax.Property(name: "value", type: "Int", isVariable: false)],
             isExtension: false,
             comment: nil
         ))
@@ -728,6 +739,10 @@ import Testing
             localName: "InternalMockable",
             accessLevel: .internal,
             inheritedTypes: [],
+            methods: [
+                Syntax.Method(name: "doSomething", parameters: [Syntax.Method.Parameter(label: "with", name: "internal", type: "Internal")]),
+                Syntax.Method(name: "doSomething", parameters: [Syntax.Method.Parameter(label: "withAny", name: "any", type: "Any")])
+            ],
             isExtension: false,
             comment: nil
         ))

@@ -13,12 +13,21 @@ public struct TypesCollector {
 
 private final class Visitor: SyntaxVisitor {
     private(set) var types: [Syntax.TypeInfo] = []
+    private var currentTypeMethods: [Syntax.Method] = []
+    private var currentTypeProperties: [Syntax.Property] = []
+    private var currentTypeSubscripts: [Syntax.Subscript] = []
+    private var currentTypeTypealiases: [Syntax.Typealias] = []
 
     init() {
         super.init(viewMode: .fixedUp)
     }
 
     override func visit(_ node: StructDeclSyntax) -> SyntaxVisitorContinueKind {
+        currentTypeMethods = []
+        currentTypeProperties = []
+        currentTypeSubscripts = []
+        currentTypeTypealiases = []
+        
         appendType(
             kind: .struct,
             name: node.identifier.text,
@@ -30,7 +39,37 @@ private final class Visitor: SyntaxVisitor {
         return .visitChildren
     }
 
+    override func visitPost(_ node: StructDeclSyntax) {
+        if var lastType = types.last {
+            types.removeLast()
+            lastType = Syntax.TypeInfo(
+                kind: lastType.kind,
+                name: lastType.name,
+                localName: lastType.localName,
+                accessLevel: lastType.accessLevel,
+                inheritedTypes: lastType.inheritedTypes,
+                genericParameters: lastType.genericParameters,
+                methods: currentTypeMethods,
+                properties: currentTypeProperties,
+                subscripts: currentTypeSubscripts,
+                typealiases: currentTypeTypealiases,
+                isExtension: lastType.isExtension,
+                comment: lastType.comment
+            )
+            types.append(lastType)
+        }
+        currentTypeMethods = []
+        currentTypeProperties = []
+        currentTypeSubscripts = []
+        currentTypeTypealiases = []
+    }
+
     override func visit(_ node: ClassDeclSyntax) -> SyntaxVisitorContinueKind {
+        currentTypeMethods = []
+        currentTypeProperties = []
+        currentTypeSubscripts = []
+        currentTypeTypealiases = []
+        
         appendType(
             kind: .class,
             name: node.identifier.text,
@@ -42,7 +81,37 @@ private final class Visitor: SyntaxVisitor {
         return .visitChildren
     }
 
+    override func visitPost(_ node: ClassDeclSyntax) {
+        if var lastType = types.last {
+            types.removeLast()
+            lastType = Syntax.TypeInfo(
+                kind: lastType.kind,
+                name: lastType.name,
+                localName: lastType.localName,
+                accessLevel: lastType.accessLevel,
+                inheritedTypes: lastType.inheritedTypes,
+                genericParameters: lastType.genericParameters,
+                methods: currentTypeMethods,
+                properties: currentTypeProperties,
+                subscripts: currentTypeSubscripts,
+                typealiases: currentTypeTypealiases,
+                isExtension: lastType.isExtension,
+                comment: lastType.comment
+            )
+            types.append(lastType)
+        }
+        currentTypeMethods = []
+        currentTypeProperties = []
+        currentTypeSubscripts = []
+        currentTypeTypealiases = []
+    }
+
     override func visit(_ node: EnumDeclSyntax) -> SyntaxVisitorContinueKind {
+        currentTypeMethods = []
+        currentTypeProperties = []
+        currentTypeSubscripts = []
+        currentTypeTypealiases = []
+        
         appendType(
             kind: .enum,
             name: node.identifier.text,
@@ -54,7 +123,37 @@ private final class Visitor: SyntaxVisitor {
         return .visitChildren
     }
 
+    override func visitPost(_ node: EnumDeclSyntax) {
+        if var lastType = types.last {
+            types.removeLast()
+            lastType = Syntax.TypeInfo(
+                kind: lastType.kind,
+                name: lastType.name,
+                localName: lastType.localName,
+                accessLevel: lastType.accessLevel,
+                inheritedTypes: lastType.inheritedTypes,
+                genericParameters: lastType.genericParameters,
+                methods: currentTypeMethods,
+                properties: currentTypeProperties,
+                subscripts: currentTypeSubscripts,
+                typealiases: currentTypeTypealiases,
+                isExtension: lastType.isExtension,
+                comment: lastType.comment
+            )
+            types.append(lastType)
+        }
+        currentTypeMethods = []
+        currentTypeProperties = []
+        currentTypeSubscripts = []
+        currentTypeTypealiases = []
+    }
+
     override func visit(_ node: ProtocolDeclSyntax) -> SyntaxVisitorContinueKind {
+        currentTypeMethods = []
+        currentTypeProperties = []
+        currentTypeSubscripts = []
+        currentTypeTypealiases = []
+        
         appendType(
             kind: .protocol,
             name: node.identifier.text,
@@ -66,7 +165,37 @@ private final class Visitor: SyntaxVisitor {
         return .visitChildren
     }
 
+    override func visitPost(_ node: ProtocolDeclSyntax) {
+        if var lastType = types.last {
+            types.removeLast()
+            lastType = Syntax.TypeInfo(
+                kind: lastType.kind,
+                name: lastType.name,
+                localName: lastType.localName,
+                accessLevel: lastType.accessLevel,
+                inheritedTypes: lastType.inheritedTypes,
+                genericParameters: lastType.genericParameters,
+                methods: currentTypeMethods,
+                properties: currentTypeProperties,
+                subscripts: currentTypeSubscripts,
+                typealiases: currentTypeTypealiases,
+                isExtension: lastType.isExtension,
+                comment: lastType.comment
+            )
+            types.append(lastType)
+        }
+        currentTypeMethods = []
+        currentTypeProperties = []
+        currentTypeSubscripts = []
+        currentTypeTypealiases = []
+    }
+
     override func visit(_ node: ExtensionDeclSyntax) -> SyntaxVisitorContinueKind {
+        currentTypeMethods = []
+        currentTypeProperties = []
+        currentTypeSubscripts = []
+        currentTypeTypealiases = []
+        
         appendType(
             kind: .extension,
             name: trimmedDescription(of: node.extendedType),
@@ -76,6 +205,127 @@ private final class Visitor: SyntaxVisitor {
             isExtension: true
         )
         return .visitChildren
+    }
+
+    override func visitPost(_ node: ExtensionDeclSyntax) {
+        if var lastType = types.last {
+            types.removeLast()
+            lastType = Syntax.TypeInfo(
+                kind: lastType.kind,
+                name: lastType.name,
+                localName: lastType.localName,
+                accessLevel: lastType.accessLevel,
+                inheritedTypes: lastType.inheritedTypes,
+                genericParameters: lastType.genericParameters,
+                methods: currentTypeMethods,
+                properties: currentTypeProperties,
+                subscripts: currentTypeSubscripts,
+                typealiases: currentTypeTypealiases,
+                isExtension: lastType.isExtension,
+                comment: lastType.comment
+            )
+            types.append(lastType)
+        }
+        currentTypeMethods = []
+        currentTypeProperties = []
+        currentTypeSubscripts = []
+        currentTypeTypealiases = []
+    }
+
+    override func visit(_ node: FunctionDeclSyntax) -> SyntaxVisitorContinueKind {
+        let parameters = node.signature.input.parameterList.map { parameter in
+            let label: String? = if let firstName = parameter.firstName {
+                firstName.text
+            } else {
+                nil
+            }
+            let name = parameter.secondName?.text ?? parameter.firstName?.text ?? ""
+            let type: String? = if let paramType = parameter.type {
+                trimmedDescription(of: paramType)
+            } else {
+                nil
+            }
+            return Syntax.Method.Parameter(label: label, name: name, type: type)
+        }
+
+        let returnType: String? = if let output = node.signature.output {
+            trimmedDescription(of: output.returnType)
+        } else {
+            nil
+        }
+
+        let method = Syntax.Method(
+            name: node.identifier.text,
+            parameters: parameters,
+            returnType: returnType
+        )
+        currentTypeMethods.append(method)
+        
+        return .skipChildren
+    }
+
+    override func visit(_ node: VariableDeclSyntax) -> SyntaxVisitorContinueKind {
+        let isVariable = node.letOrVarKeyword.tokenKind == .varKeyword
+        
+        for binding in node.bindings {
+            guard let pattern = binding.pattern.as(IdentifierPatternSyntax.self) else {
+                continue
+            }
+
+            let propertyName = pattern.identifier.text
+            let typeAnnotation: String? = if let annotation = binding.typeAnnotation {
+                trimmedDescription(of: annotation.type)
+            } else {
+                nil
+            }
+
+            let property = Syntax.Property(
+                name: propertyName,
+                type: typeAnnotation,
+                isVariable: isVariable
+            )
+            currentTypeProperties.append(property)
+        }
+
+        return .skipChildren
+    }
+
+    override func visit(_ node: SubscriptDeclSyntax) -> SyntaxVisitorContinueKind {
+        let parameters = node.indices.parameterList.map { parameter in
+            let label: String? = if let firstName = parameter.firstName {
+                firstName.text
+            } else {
+                nil
+            }
+            let name = parameter.secondName?.text ?? parameter.firstName?.text ?? ""
+            let type: String? = if let paramType = parameter.type {
+                trimmedDescription(of: paramType)
+            } else {
+                nil
+            }
+            return Syntax.Method.Parameter(label: label, name: name, type: type)
+        }
+
+        let returnType = trimmedDescription(of: node.result.returnType)
+
+        let subscriptInfo = Syntax.Subscript(
+            parameters: parameters,
+            returnType: returnType
+        )
+        currentTypeSubscripts.append(subscriptInfo)
+
+        return .skipChildren
+    }
+
+    override func visit(_ node: TypealiasDeclSyntax) -> SyntaxVisitorContinueKind {
+        let target = trimmedDescription(of: node.initializer.value)
+        let typealiasInfo = Syntax.Typealias(
+            name: node.identifier.text,
+            target: target
+        )
+        currentTypeTypealiases.append(typealiasInfo)
+
+        return .skipChildren
     }
 
     private func accessLevel(from modifiers: ModifierListSyntax?) -> Syntax.AccessLevel {
