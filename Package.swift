@@ -1,4 +1,4 @@
-// swift-tools-version:5.9
+// swift-tools-version:6.0
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import Foundation
@@ -25,7 +25,8 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.2.1"),
         .package(name: "Sourcery", path: "Submodules/Sourcery"),
         .package(url: "https://github.com/jpsim/SourceKitten", from: "0.32.0"),
-        .package(url: "https://github.com/freddi-kit/ArtifactBundleGen.git", from: "0.0.6")
+        .package(url: "https://github.com/freddi-kit/ArtifactBundleGen.git", from: "0.0.6"),
+        .package(url: "https://github.com/apple/swift-syntax.git", from: "508.0.0")
     ],
     targets: [
         .target(
@@ -34,6 +35,13 @@ let package = Package(
             swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]
         ),
         .target(name: "XCTestExtensions"),
+        .target(
+            name: "UltiMockSwiftSyntaxParser",
+            dependencies: [
+                .product(name: "SwiftSyntax", package: "swift-syntax")
+            ],
+            path: "Sources/SwiftSyntaxParser"
+        ),
         .executableTarget(
             name: "mock",
             dependencies: [
@@ -47,6 +55,13 @@ let package = Package(
             name: "MockGenerationPlugin",
             capability: .buildTool(),
             dependencies: ["mock"]
+        ),
+        .testTarget(
+            name: "SwiftSyntaxParserTests",
+            dependencies: [
+                "UltiMockSwiftSyntaxParser",
+                .product(name: "SwiftParser", package: "swift-syntax")
+            ]
         )
     ]
 )
