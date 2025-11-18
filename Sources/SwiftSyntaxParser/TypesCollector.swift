@@ -24,6 +24,7 @@ private final class Visitor: SyntaxVisitor {
             name: node.identifier.text,
             modifiers: node.modifiers,
             inheritanceClause: node.inheritanceClause,
+            genericParameters: genericParameters(from: node.genericParameterClause),
             commentTrivia: node.leadingTrivia
         )
         return .visitChildren
@@ -35,6 +36,7 @@ private final class Visitor: SyntaxVisitor {
             name: node.identifier.text,
             modifiers: node.modifiers,
             inheritanceClause: node.inheritanceClause,
+            genericParameters: genericParameters(from: node.genericParameterClause),
             commentTrivia: node.leadingTrivia
         )
         return .visitChildren
@@ -46,6 +48,7 @@ private final class Visitor: SyntaxVisitor {
             name: node.identifier.text,
             modifiers: node.modifiers,
             inheritanceClause: node.inheritanceClause,
+            genericParameters: genericParameters(from: node.genericParameters),
             commentTrivia: node.leadingTrivia
         )
         return .visitChildren
@@ -57,6 +60,7 @@ private final class Visitor: SyntaxVisitor {
             name: node.identifier.text,
             modifiers: node.modifiers,
             inheritanceClause: node.inheritanceClause,
+            genericParameters: primaryAssociatedTypes(from: node.primaryAssociatedTypeClause),
             commentTrivia: node.leadingTrivia
         )
         return .visitChildren
@@ -108,6 +112,34 @@ private final class Visitor: SyntaxVisitor {
         return inherited.map { trimmedDescription(of: $0.typeName) }
     }
 
+    private func genericParameters(from clause: GenericParameterClauseSyntax?) -> [Syntax.GenericParameter] {
+        guard let parameters = clause?.genericParameterList else {
+            return []
+        }
+
+        return parameters.map { parameter in
+            let constraints: [String] = if let inheritedType = parameter.inheritedType {
+                [trimmedDescription(of: inheritedType)]
+            } else {
+                []
+            }
+            return Syntax.GenericParameter(
+                name: parameter.name.text,
+                constraints: constraints
+            )
+        }
+    }
+
+    private func primaryAssociatedTypes(from clause: PrimaryAssociatedTypeClauseSyntax?) -> [Syntax.GenericParameter] {
+        guard let types = clause?.primaryAssociatedTypeList else {
+            return []
+        }
+
+        return types.map { type in
+            Syntax.GenericParameter(name: type.name.text)
+        }
+    }
+
     // Extracts contiguous comment trivia into a raw string, preserving explicit line breaks.
     private func rawComment(from trivia: Trivia?) -> String? {
         guard let trivia else {
@@ -140,6 +172,7 @@ private final class Visitor: SyntaxVisitor {
         name: String,
         modifiers: ModifierListSyntax?,
         inheritanceClause: TypeInheritanceClauseSyntax?,
+        genericParameters: [Syntax.GenericParameter] = [],
         commentTrivia: Trivia?,
         isExtension: Bool = false
     ) {
@@ -149,6 +182,7 @@ private final class Visitor: SyntaxVisitor {
             localName: localName(for: name),
             accessLevel: accessLevel(from: modifiers),
             inheritedTypes: inheritedTypes(from: inheritanceClause),
+            genericParameters: genericParameters,
             isExtension: isExtension,
             comment: rawComment(from: commentTrivia)
         )

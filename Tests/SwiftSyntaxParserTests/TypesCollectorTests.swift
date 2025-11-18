@@ -392,4 +392,370 @@ import Testing
             )
         ])
     }
+
+    @Test
+    func `collect returns protocol with generic parameters`() throws {
+        let source = Parser.parse(source:
+            """
+            protocol BaseGenericProtocol<Base> {
+                associatedtype Base
+            }
+            """
+        )
+
+        let types = collector.collect(from: source)
+        let type = try #require(types.first)
+        #expect(type == Syntax.TypeInfo(
+            kind: .protocol,
+            name: "BaseGenericProtocol",
+            localName: "BaseGenericProtocol",
+            accessLevel: .internal,
+            inheritedTypes: [],
+            genericParameters: [Syntax.GenericParameter(name: "Base")],
+            isExtension: false,
+            comment: nil
+        ))
+    }
+
+    @Test
+    func `collect returns protocol with multiple generic parameters`() throws {
+        let source = Parser.parse(source:
+            """
+            public protocol Dictionary<Key, Value> {
+                associatedtype Key
+                associatedtype Value
+            }
+            """
+        )
+
+        let types = collector.collect(from: source)
+        let type = try #require(types.first)
+        #expect(type == Syntax.TypeInfo(
+            kind: .protocol,
+            name: "Dictionary",
+            localName: "Dictionary",
+            accessLevel: .public,
+            inheritedTypes: [],
+            genericParameters: [
+                Syntax.GenericParameter(name: "Key"),
+                Syntax.GenericParameter(name: "Value")
+            ],
+            isExtension: false,
+            comment: nil
+        ))
+    }
+
+    @Test
+    func `collect returns struct with generic parameters`() throws {
+        let source = Parser.parse(source:
+            """
+            struct Container<T> {
+                let value: T
+            }
+            """
+        )
+
+        let types = collector.collect(from: source)
+        let type = try #require(types.first)
+        #expect(type == Syntax.TypeInfo(
+            kind: .struct,
+            name: "Container",
+            localName: "Container",
+            accessLevel: .internal,
+            inheritedTypes: [],
+            genericParameters: [Syntax.GenericParameter(name: "T")],
+            isExtension: false,
+            comment: nil
+        ))
+    }
+
+    @Test
+    func `collect returns class with generic parameters and constraints`() throws {
+        let source = Parser.parse(source:
+            """
+            class Stack<Element: Equatable> {
+                var items: [Element] = []
+            }
+            """
+        )
+
+        let types = collector.collect(from: source)
+        let type = try #require(types.first)
+        #expect(type == Syntax.TypeInfo(
+            kind: .class,
+            name: "Stack",
+            localName: "Stack",
+            accessLevel: .internal,
+            inheritedTypes: [],
+            genericParameters: [Syntax.GenericParameter(name: "Element", constraints: ["Equatable"])],
+            isExtension: false,
+            comment: nil
+        ))
+    }
+
+    @Test
+    func `collect returns enum with generic parameters`() throws {
+        let source = Parser.parse(source:
+            """
+            enum Result<Success, Failure: Error> {
+                case success(Success)
+                case failure(Failure)
+            }
+            """
+        )
+
+        let types = collector.collect(from: source)
+        let type = try #require(types.first)
+        #expect(type == Syntax.TypeInfo(
+            kind: .enum,
+            name: "Result",
+            localName: "Result",
+            accessLevel: .internal,
+            inheritedTypes: [],
+            genericParameters: [
+                Syntax.GenericParameter(name: "Success"),
+                Syntax.GenericParameter(name: "Failure", constraints: ["Error"])
+            ],
+            isExtension: false,
+            comment: nil
+        ))
+    }
+
+    @Test
+    func `collect returns final class`() throws {
+        let source = Parser.parse(source:
+            """
+            public final class FinalClass {
+                func doSomething() {}
+            }
+            """
+        )
+
+        let types = collector.collect(from: source)
+        let type = try #require(types.first)
+        #expect(type == Syntax.TypeInfo(
+            kind: .class,
+            name: "FinalClass",
+            localName: "FinalClass",
+            accessLevel: .public,
+            inheritedTypes: [],
+            isExtension: false,
+            comment: nil
+        ))
+    }
+
+    @Test
+    func `collect returns protocol with where clause on inherited type`() throws {
+        let source = Parser.parse(source:
+            """
+            protocol RefinedGenericProtocol<A>: BaseGenericProtocol
+                where Base: Identifiable, Base.ID == A {
+                associatedtype A
+            }
+            """
+        )
+
+        let types = collector.collect(from: source)
+        let type = try #require(types.first)
+        #expect(type.inheritedTypes == ["BaseGenericProtocol"])
+        #expect(type.genericParameters == [Syntax.GenericParameter(name: "A")])
+    }
+
+    @Test
+    func `collect returns struct with where clause on generic parameter`() throws {
+        let source = Parser.parse(source:
+            """
+            struct Container<T> where T: Equatable {
+                let value: T
+            }
+            """
+        )
+
+        let types = collector.collect(from: source)
+        let type = try #require(types.first)
+        #expect(type == Syntax.TypeInfo(
+            kind: .struct,
+            name: "Container",
+            localName: "Container",
+            accessLevel: .internal,
+            inheritedTypes: [],
+            genericParameters: [Syntax.GenericParameter(name: "T")],
+            isExtension: false,
+            comment: nil
+        ))
+    }
+
+    @Test
+    func `collect returns class with complex where clause`() throws {
+        let source = Parser.parse(source:
+            """
+            class Repository<Model, ID> where Model: Identifiable, Model.ID == ID, ID: Hashable {
+                var storage: [ID: Model] = [:]
+            }
+            """
+        )
+
+        let types = collector.collect(from: source)
+        let type = try #require(types.first)
+        #expect(type == Syntax.TypeInfo(
+            kind: .class,
+            name: "Repository",
+            localName: "Repository",
+            accessLevel: .internal,
+            inheritedTypes: [],
+            genericParameters: [
+                Syntax.GenericParameter(name: "Model"),
+                Syntax.GenericParameter(name: "ID")
+            ],
+            isExtension: false,
+            comment: nil
+        ))
+    }
+
+    @Test
+    func `collect returns extension with where clause`() throws {
+        let source = Parser.parse(source:
+            """
+            extension Array where Element: Equatable {
+                func containsDuplicates() -> Bool {
+                    return count != Set(self).count
+                }
+            }
+            """
+        )
+
+        let types = collector.collect(from: source)
+        let type = try #require(types.first)
+        #expect(type == Syntax.TypeInfo(
+            kind: .extension,
+            name: "Array",
+            localName: "Array",
+            accessLevel: .internal,
+            inheritedTypes: [],
+            isExtension: true,
+            comment: nil
+        ))
+    }
+
+    @Test
+    func `collect returns protocol with objc attribute`() throws {
+        let source = Parser.parse(source:
+            """
+            @objc protocol ObjCMockable {
+                func doSomething(with int: Int)
+            }
+            """
+        )
+
+        let types = collector.collect(from: source)
+        let type = try #require(types.first)
+        #expect(type == Syntax.TypeInfo(
+            kind: .protocol,
+            name: "ObjCMockable",
+            localName: "ObjCMockable",
+            accessLevel: .internal,
+            inheritedTypes: [],
+            isExtension: false,
+            comment: nil
+        ))
+    }
+
+    @Test
+    func `collect returns class with available attribute`() throws {
+        let source = Parser.parse(source:
+            """
+            @available(iOS 13.0, *)
+            public class ModernFeature {
+                func doSomething() {}
+            }
+            """
+        )
+
+        let types = collector.collect(from: source)
+        let type = try #require(types.first)
+        #expect(type == Syntax.TypeInfo(
+            kind: .class,
+            name: "ModernFeature",
+            localName: "ModernFeature",
+            accessLevel: .public,
+            inheritedTypes: [],
+            isExtension: false,
+            comment: nil
+        ))
+    }
+
+    @Test
+    func `collect returns struct with multiple attributes`() throws {
+        let source = Parser.parse(source:
+            """
+            @available(iOS 13.0, *)
+            @frozen
+            public struct FrozenStruct {
+                let value: Int
+            }
+            """
+        )
+
+        let types = collector.collect(from: source)
+        let type = try #require(types.first)
+        #expect(type == Syntax.TypeInfo(
+            kind: .struct,
+            name: "FrozenStruct",
+            localName: "FrozenStruct",
+            accessLevel: .public,
+            inheritedTypes: [],
+            isExtension: false,
+            comment: nil
+        ))
+    }
+
+    @Test
+    func `collect returns protocol with reserved keyword parameter names`() throws {
+        let source = Parser.parse(source:
+            """
+            protocol InternalMockable {
+                func doSomething(with internal: Internal)
+                func doSomething(withAny any: Any)
+            }
+            """
+        )
+
+        let types = collector.collect(from: source)
+        let type = try #require(types.first)
+        #expect(type == Syntax.TypeInfo(
+            kind: .protocol,
+            name: "InternalMockable",
+            localName: "InternalMockable",
+            accessLevel: .internal,
+            inheritedTypes: [],
+            isExtension: false,
+            comment: nil
+        ))
+    }
+
+    @Test
+    func `collect returns generic type with nested member constraint`() throws {
+        let source = Parser.parse(source:
+            """
+            protocol RefinedGenericProtocol<A>: BaseGenericProtocol
+                where Base: Identifiable, Base.ID == A {
+                associatedtype A
+                associatedtype B where B == Base
+            }
+            """
+        )
+
+        let types = collector.collect(from: source)
+        let type = try #require(types.first)
+        #expect(type == Syntax.TypeInfo(
+            kind: .protocol,
+            name: "RefinedGenericProtocol",
+            localName: "RefinedGenericProtocol",
+            accessLevel: .internal,
+            inheritedTypes: ["BaseGenericProtocol"],
+            genericParameters: [Syntax.GenericParameter(name: "A")],
+            isExtension: false,
+            comment: nil
+        ))
+    }
 }
