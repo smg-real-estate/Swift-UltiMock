@@ -3,8 +3,6 @@ import SourceryRuntime
 
 struct MockTemplate {
     let types: Types
-    let type: [String: Type]
-    let functions: [SourceryMethod]
     let imports: [String]
     let testableImports: [String]
 
