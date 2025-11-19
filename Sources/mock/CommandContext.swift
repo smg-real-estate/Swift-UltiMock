@@ -1,8 +1,9 @@
 import Foundation
 import PathKit
 import SourceKittenFramework
-import SourceryFramework
-import SourceryRuntime
+import SwiftParser
+import SwiftSyntax
+import UltiMockSwiftSyntaxParser
 
 struct CommandContext {
     let configuration: Configuration
@@ -17,34 +18,28 @@ struct CommandContext {
         self.configuration = try JSONDecoder().decode(Configuration.self, from: configurationData)
         self.sources = (sources.isEmpty ? configuration.sources : sources)
             .map {
-                Path($0, relativeTo: root)
+                root + Path($0)
             }
 
         let outputPath = try (output ?? configuration.output).map {
-            Path($0, relativeTo: root)
+            root + Path($0)
         }
         .unwrap("The output path is missing. Use `output` argument or configuration field.")
 
         self.outputPath = outputPath.isDirectory ? outputPath + mockFilename : outputPath
     }
 
-    func parse() throws -> FileParserResult {
+    func parse() throws -> [UltiMockSwiftSyntaxParser.Syntax.TypeInfo] {
         try [
             parseSources(),
             parseSDKModules()
         ]
             .flatMap(\.self)
-            .reduce(FileParserResult(path: nil, module: nil, types: [], functions: [], typealiases: [])) { result, next in
-                result.typealiases += next.typealiases
-                result.types += next.types
-                result.functions += next.functions
-                return result
-            }
     }
 }
 
 private extension CommandContext {
-    func parseSources() throws -> [FileParserResult] {
+    func parseSources() throws -> [UltiMockSwiftSyntaxParser.Syntax.TypeInfo] {
         let sourceFiles = try sources
             .flatMap { path in
                 path.isDirectory ? try path.recursiveChildren() : [path]
@@ -53,15 +48,17 @@ private extension CommandContext {
                 !path.isDirectory && path.extension == "swift" && !path.string.hasSuffix("generated.swift")
             }
 
+        let collector = TypesCollector()
+
         return try sourceFiles
-            .map { filePath -> FileParserResult in
+            .flatMap { filePath -> [UltiMockSwiftSyntaxParser.Syntax.TypeInfo] in
                 let content = try filePath.read(.utf8)
-                let parser = try makeParser(for: content)
-                return try parser.parse()
+                let source = Parser.parse(source: content)
+                return collector.collect(from: source)
             }
     }
 
-    func parseSDKModules() throws -> [FileParserResult] {
+    func parseSDKModules() throws -> [UltiMockSwiftSyntaxParser.Syntax.TypeInfo] {
         // Required for running in sandbox environment
         setenv("IN_PROCESS_SOURCEKIT", "YES", 1)
         //        setenv("SOURCEKIT_LOGGING", "3", 1)
@@ -71,9 +68,10 @@ private extension CommandContext {
             .path
 
         let sdkPath = try Path(env["SDKROOT"].wrapped)
+        let collector = TypesCollector()
 
         return try (configuration.sdkModules ?? [])
-            .compactMap { module in
+            .flatMap { module -> [UltiMockSwiftSyntaxParser.Syntax.TypeInfo] in
                 let request = try SourceKittenFramework.Request.customRequest(request: [
                     "key.request": UID("source.request.editor.open.interface"),
                     "key.name": UUID().uuidString,
@@ -101,11 +99,12 @@ private extension CommandContext {
                     response = try request.send()
                 } catch {
                     print("Failed to parse SDK module '\(module)': \(error)")
-                    return nil
+                    return []
                 }
 
-                let source: String = try cast(response["key.sourcetext"])
-                return try makeParser(for: source).parse()
+                let sourceText: String = try cast(response["key.sourcetext"])
+                let source = Parser.parse(source: sourceText)
+                return collector.collect(from: source)
             }
     }
 
@@ -127,7 +126,7 @@ func systemArchitectureIdentifier() throws -> String {
     var systemInfo = utsname()
 
     guard uname(&systemInfo) == EXIT_SUCCESS else {
-        throw "Unable to detect target architecture"
+        throw SimpleError("Unable to detect target architecture")
     }
 
     let data = Data(bytes: &systemInfo.machine, count: Int(_SYS_NAMELEN))

@@ -27,7 +27,7 @@ private final class Visitor: SyntaxVisitor {
         currentTypeProperties = []
         currentTypeSubscripts = []
         currentTypeTypealiases = []
-        
+
         appendType(
             kind: .struct,
             name: node.identifier.text,
@@ -69,7 +69,7 @@ private final class Visitor: SyntaxVisitor {
         currentTypeProperties = []
         currentTypeSubscripts = []
         currentTypeTypealiases = []
-        
+
         appendType(
             kind: .class,
             name: node.identifier.text,
@@ -111,7 +111,7 @@ private final class Visitor: SyntaxVisitor {
         currentTypeProperties = []
         currentTypeSubscripts = []
         currentTypeTypealiases = []
-        
+
         appendType(
             kind: .enum,
             name: node.identifier.text,
@@ -153,7 +153,7 @@ private final class Visitor: SyntaxVisitor {
         currentTypeProperties = []
         currentTypeSubscripts = []
         currentTypeTypealiases = []
-        
+
         appendType(
             kind: .protocol,
             name: node.identifier.text,
@@ -195,7 +195,7 @@ private final class Visitor: SyntaxVisitor {
         currentTypeProperties = []
         currentTypeSubscripts = []
         currentTypeTypealiases = []
-        
+
         appendType(
             kind: .extension,
             name: trimmedDescription(of: node.extendedType),
@@ -260,13 +260,13 @@ private final class Visitor: SyntaxVisitor {
             returnType: returnType
         )
         currentTypeMethods.append(method)
-        
+
         return .skipChildren
     }
 
     override func visit(_ node: VariableDeclSyntax) -> SyntaxVisitorContinueKind {
         let isVariable = node.letOrVarKeyword.tokenKind == .varKeyword
-        
+
         for binding in node.bindings {
             guard let pattern = binding.pattern.as(IdentifierPatternSyntax.self) else {
                 continue

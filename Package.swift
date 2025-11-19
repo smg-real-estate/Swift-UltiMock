@@ -26,7 +26,8 @@ let package = Package(
         .package(name: "Sourcery", path: "Submodules/Sourcery"),
         .package(url: "https://github.com/jpsim/SourceKitten", from: "0.32.0"),
         .package(url: "https://github.com/freddi-kit/ArtifactBundleGen.git", from: "0.0.6"),
-        .package(url: "https://github.com/apple/swift-syntax.git", from: "508.0.0")
+        .package(url: "https://github.com/apple/swift-syntax.git", from: "508.0.0"),
+        .package(url: "https://github.com/kylef/PathKit.git", exact: "1.0.1")
     ],
     targets: [
         .target(
@@ -45,9 +46,11 @@ let package = Package(
         .executableTarget(
             name: "mock",
             dependencies: [
-                .product(name: "SourceryFramework", package: "Sourcery"),
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
-                .product(name: "SourceKittenFramework", package: "SourceKitten")
+                .product(name: "SourceKittenFramework", package: "SourceKitten"),
+                .product(name: "SwiftParser", package: "swift-syntax"),
+                .product(name: "PathKit", package: "PathKit"),
+                "UltiMockSwiftSyntaxParser"
             ],
             swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]
         ),

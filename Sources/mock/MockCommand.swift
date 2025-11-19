@@ -1,6 +1,6 @@
 import ArgumentParser
 import Foundation
-import SourceryRuntime
+import UltiMockSwiftSyntaxParser
 
 let configFilename = "mock.json"
 let mockFilename = "Mock.generated.swift"
@@ -32,19 +32,10 @@ struct MockCommand: ParsableCommand {
         let start = Date()
         let context = try CommandContext(configurationPath, sources, output)
 
-        let parsingResult = try context.parse()
-
-        let (types, functions, typealiases) = Composer.uniqueTypesAndFunctions(parsingResult)
-
-        let sourceryContext = TemplateContext(
-            parserResult: parsingResult,
-            types: Types(types: types, typealiases: typealiases),
-            functions: functions,
-            arguments: [:]
-        )
+        let types = try context.parse()
 
         let mockSource = MockTemplate(
-            types: sourceryContext.types.types,
+            types: types,
             imports: imports.isEmpty ? context.configuration.imports ?? [] : imports,
             testableImports: testableImports
         )

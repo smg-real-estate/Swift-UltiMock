@@ -1,8 +1,8 @@
 import Foundation
-import SourceryRuntime
+import UltiMockSwiftSyntaxParser
 
 struct MockTemplate {
-    let types: [Type]
+    let types: [Syntax.TypeInfo]
     let imports: [String]
     let testableImports: [String]
 
@@ -46,13 +46,12 @@ struct MockTemplate {
             let mockAccessLevel = type.mockAccessLevel
             let mockTypeName = "\(type.name)Mock"
 
-            let namespacedTypes: [String: String] = (type as? SourceryRuntime.`Protocol`)?.associatedTypes
-                .values
-                .reduce(into: [:]) { partialResult, type in
-                    partialResult[type.name] = "\(mockTypeName).\(type.name)"
-                } ?? [:]
+            let namespacedTypes: [String: String] = (type.kind == .protocol) ? type.associatedTypes
+                .reduce(into: [:]) { partialResult, pair in
+                    partialResult[pair.key] = "\(mockTypeName).\(pair.key)"
+                } : [:]
 
-            if let type = type as? SourceryRuntime.`Protocol` {
+            if type.kind == .protocol {
                 let refinedAssociatedTypes = type.refinedAssociatedTypes
                 let associatedTypes = type.associatedTypes
                     .values
@@ -90,7 +89,7 @@ struct MockTemplate {
                 .flatMap(\.definitions)
                 .indented(2)
 
-            let mocksClass = type is SourceryRuntime.Class
+            let mocksClass = type.kind == .class
 
             """
                 }
@@ -193,7 +192,7 @@ struct MockTemplate {
 
             """
 
-            if type is SourceryRuntime.`Protocol` {
+            if type.kind == .protocol {
                 """
                     public init(
                         fileID: String = #fileID,
@@ -248,7 +247,7 @@ struct MockTemplate {
             }
 
             // Defining default initializer
-            if initializers.isEmpty, type is SourceryRuntime.Class {
+            if initializers.isEmpty, type.kind == .class {
                 """
 
                     \(type.mockAccessLevel) init(
