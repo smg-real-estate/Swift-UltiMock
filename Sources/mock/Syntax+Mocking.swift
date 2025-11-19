@@ -1,6 +1,41 @@
 import Foundation
 import UltiMockSwiftSyntaxParser
 
+/// Sanitizes a Swift type string to be usable as part of an identifier (enum case name).
+/// Removes or replaces characters that are invalid in Swift identifiers.
+func sanitizeTypeForIdentifier(_ type: String) -> String {
+    type
+        // Remove attribute keywords
+        .replacingOccurrences(of: "@escaping ", with: "")
+        .replacingOccurrences(of: "@Sendable ", with: "")
+        .replacingOccurrences(of: "@MainActor ", with: "")
+        .replacingOccurrences(of: "@autoclosure ", with: "")
+        .replacingOccurrences(of: "inout ", with: "")
+        // Remove 'some' and 'any' keywords
+        .replacingOccurrences(of: "some ", with: "")
+        .replacingOccurrences(of: "any ", with: "")
+        // Replace optional markers
+        .replacingOccurrences(of: "!", with: "_ImplicitlyUnwrapped")
+        .replacingOccurrences(of: "?", with: "_Optional")
+        // Replace arrows and other operators
+        .replacingOccurrences(of: "->", with: "_to_")
+        .replacingOccurrences(of: " ", with: "")
+        // Replace dots with underscores
+        .replacingOccurrences(of: ".", with: "_")
+        // Replace colons with underscores
+        .replacingOccurrences(of: ":", with: "_")
+        // Replace brackets and parentheses
+        .replacingOccurrences(of: "[", with: "_Array_")
+        .replacingOccurrences(of: "]", with: "_")
+        .replacingOccurrences(of: "(", with: "_")
+        .replacingOccurrences(of: ")", with: "_")
+        .replacingOccurrences(of: "<", with: "_")
+        .replacingOccurrences(of: ">", with: "_")
+        .replacingOccurrences(of: ",", with: "_")
+        // Remove any trailing underscores
+        .trimmingCharacters(in: CharacterSet(charactersIn: "_"))
+}
+
 extension Syntax.TypeInfo {
     var allMethods: [Syntax.Method] {
         methods
@@ -52,6 +87,15 @@ extension Syntax.TypeInfo {
         }
         let params = associatedTypesList.map(\.name).joined(separator: ", ")
         return "<\(params)>"
+    }
+}
+
+extension Syntax.Method.Parameter {
+    var definitionName: String {
+        if let label = label, label == name {
+            return label
+        }
+        return "\(label ?? "_") \(name)"
     }
 }
 
@@ -148,13 +192,14 @@ extension Syntax.Method {
 
     var parametersPart: String {
         parameters.map {
-            "\($0.label ?? "")_\($0.name)_\($0.type ?? "")"
+            let sanitizedType = sanitizeTypeForIdentifier($0.type ?? "")
+            return "\($0.label ?? "")_\($0.name)_\(sanitizedType)"
         }
         .joined(separator: "_")
     }
 
     var returnTypePart: String {
-        (returnType ?? "Void").replacingOccurrences(of: " ", with: "")
+        sanitizeTypeForIdentifier(returnType ?? "Void")
     }
 
     var methodIdentifier: String {
@@ -173,7 +218,22 @@ extension Syntax.Method {
     }
 
     var definition: String {
-        "    case \(methodIdentifier)"
+        let paramDescriptions = parameters.enumerated().map { index, param in
+            let value = param.type == "String"
+                ? "\\\"\\($0[\(index)]!)\\\""
+                : "\\($0[\(index)] ?? \"nil\")"
+            return "\(param.label.map { "\($0): " } ?? "")\(value)"
+        }.joined(separator: ", ")
+        
+        let descriptionClosure = parameters.isEmpty 
+            ? "_ in \"\(name)\""
+            : "\"\(name)(\(paramDescriptions))\""
+        
+        return """
+            static var \(methodIdentifier): MockMethod {
+                    .init { \(descriptionClosure) }
+                }
+        """
     }
 
     func expectationConstructor(_ mockTypeName: String, forwarding: Bool) -> String {
@@ -190,7 +250,7 @@ extension Syntax.Method {
 
     func implementation(_ mockTypeName: String, override: Bool) -> String {
         let overrideKw = override ? "override " : ""
-        let paramList = parameters.map { ($0.label.map { "\($0) " } ?? "") + "\($0.name): \($0.type ?? "")" }.joined(separator: ", ")
+        let paramList = parameters.map { "\($0.definitionName): \($0.type ?? "")" }.joined(separator: ", ")
         let performParams = parameters.map(\.name).joined(separator: ", ")
         let asyncKw = isAsync ? "async " : ""
         let throwsKw = `throws` ? "throws " : ""
@@ -236,17 +296,31 @@ extension Syntax.Property {
     }
 
     var getterSignature: String {
-        "getter_\(name)_\(type ?? "")"
+        let sanitizedType = sanitizeTypeForIdentifier(type ?? "")
+        return "getter_\(name)_\(sanitizedType)"
     }
 
     var setterSignature: String {
-        "setter_\(name)_\(type ?? "")"
+        let sanitizedType = sanitizeTypeForIdentifier(type ?? "")
+        return "setter_\(name)_\(sanitizedType)"
     }
 
     var definitions: [String] {
-        var result = ["    case \(getterSignature)"]
+        var result = [
+            """
+            static var \(getterSignature): MockMethod {
+                        .init { _ in "\(name)" }
+                    }
+            """
+        ]
         if isVariable {
-            result.append("    case \(setterSignature)")
+            result.append(
+                """
+                static var \(setterSignature): MockMethod {
+                            .init { "\(name) = \\($0[0] ?? \"nil\")" }
+                        }
+                """
+            )
         }
         return result
     }
@@ -310,19 +384,45 @@ extension Syntax.Subscript {
     }
 
     var getterSignature: String {
-        let params = parameters.map { "\($0.name)_\($0.type ?? "")" }.joined(separator: "_")
-        return "subscript_getter_\(params)_\(returnType ?? "")"
+        let params = parameters.map {
+            let sanitizedType = sanitizeTypeForIdentifier($0.type ?? "")
+            return "\($0.name)_\(sanitizedType)"
+        }.joined(separator: "_")
+        let sanitizedReturnType = sanitizeTypeForIdentifier(returnType ?? "")
+        return "subscript_getter_\(params)_\(sanitizedReturnType)"
     }
 
     var setterSignature: String {
-        let params = parameters.map { "\($0.name)_\($0.type ?? "")" }.joined(separator: "_")
-        return "subscript_setter_\(params)_\(returnType ?? "")"
+        let params = parameters.map {
+            let sanitizedType = sanitizeTypeForIdentifier($0.type ?? "")
+            return "\($0.name)_\(sanitizedType)"
+        }.joined(separator: "_")
+        let sanitizedReturnType = sanitizeTypeForIdentifier(returnType ?? "")
+        return "subscript_setter_\(params)_\(sanitizedReturnType)"
     }
 
     var definitions: [String] {
-        var result = ["    case \(getterSignature)"]
+        let getterParamDescriptions = parameters.enumerated().map { index, _ in
+            "\\($0[\(index)] ?? \"nil\")"
+        }.joined(separator: ", ")
+        
+        var result = [
+            """
+            static var \(getterSignature): MockMethod {
+                        .init { "subscript(\(getterParamDescriptions))" }
+                    }
+            """
+        ]
+        
         if !isReadOnly {
-            result.append("    case \(setterSignature)")
+            let setterParamCount = parameters.count
+            result.append(
+                """
+                static var \(setterSignature): MockMethod {
+                            .init { "subscript(\(getterParamDescriptions)) = \\($0[\(setterParamCount)] ?? \"nil\")" }
+                        }
+                """
+            )
         }
         return result
     }
