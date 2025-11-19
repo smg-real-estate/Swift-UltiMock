@@ -167,13 +167,28 @@ public enum Syntax {
         }
         
         public var fixedName: String {
-            // Remove @escaping and similar attributes from the type name
-            // These attributes should be in the signature, not in the Parameter<...> type
+            // Remove @escaping from the type name since it belongs in the signature
+            // Other attributes like @MainActor, @Sendable, @autoclosure etc. should remain
+            // as they're part of the type itself
+            let escapingAttributes = attributes.filter { $0.name == "escaping" }
+            if escapingAttributes.isEmpty {
+                return name
+            }
+            
+            // Remove only @escaping from the name
+            var cleanName = name
+            for attr in escapingAttributes {
+                cleanName = cleanName.replacingOccurrences(of: "@\(attr.name)", with: "").trimmingCharacters(in: .whitespaces)
+            }
+            return cleanName
+        }
+        
+        public var nameWithoutAttributes: String {
+            // Remove ALL attributes from the type name for use in Parameter<...>
             if attributes.isEmpty {
                 return name
             }
             
-            // If we have attributes, reconstruct the name without them
             var cleanName = name
             for attr in attributes {
                 cleanName = cleanName.replacingOccurrences(of: "@\(attr.name)", with: "").trimmingCharacters(in: .whitespaces)
@@ -186,24 +201,18 @@ public enum Syntax {
         public static func parse(_ typeString: String) -> TypeName {
             let trimmed = typeString.trimmingCharacters(in: .whitespaces)
             
-            // Extract attributes like @escaping
+            // Extract ONLY @escaping attribute (parameter-level attribute)
+            // Other attributes like @MainActor, @Sendable are type-level and should remain in the name
             var attributes: [Attribute] = []
             var workingString = trimmed
             
-            // Check for @escaping and other attributes
-            while let atIndex = workingString.firstIndex(of: "@") {
-                let afterAt = workingString[atIndex...].dropFirst()
-                let attrName = afterAt.prefix(while: { $0.isLetter || $0 == "_" })
-                if !attrName.isEmpty {
-                    attributes.append(Attribute(name: String(attrName)))
-                    // Remove the attribute from the working string
-                    let endIndex = workingString.index(atIndex, offsetBy: 1 + attrName.count)
-                    let prefix = String(workingString[..<atIndex])
-                    let suffix = String(workingString[endIndex...].drop(while: { $0.isWhitespace }))
-                    workingString = prefix + suffix
-                } else {
-                    break
-                }
+            // Only extract @escaping
+            if let escapingRange = workingString.range(of: "@escaping") {
+                attributes.append(Attribute(name: "escaping"))
+                // Remove @escaping from the working string
+                let prefix = String(workingString[..<escapingRange.lowerBound])
+                let suffix = String(workingString[escapingRange.upperBound...].drop(while: { $0.isWhitespace }))
+                workingString = (prefix + suffix).trimmingCharacters(in: .whitespaces)
             }
             
             // Now handle optionality

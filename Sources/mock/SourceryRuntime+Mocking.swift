@@ -330,7 +330,8 @@ extension Syntax.Method.Parameter {
     }
 
     func expectationConstructorDefinition(_ mockTypeName: String) -> String {
-        let typeName = typeName.name(convertingImplicitOptional: true)
+        let typeName = typeName.nameWithoutAttributes
+            .replacingOccurrences(of: "!", with: "?") // Convert implicit optionals
             .replacingOccurrences(of: "Self", with: mockTypeName)
             .replacingOccurrences(of: "inout ", with: "")
         return "\(definitionName): Parameter<\(typeName)>"
@@ -426,6 +427,7 @@ extension Syntax.TypeName {
     func escapedIdentifierName() -> String {
         name
             .replacingOccurrences(of: "->", with: "_ret_")
+            .replacingOccurrences(of: "@", with: "_at_")
             .replacingOccurrences(of: " ", with: "")
             .replacingOccurrences(of: "<", with: "_lab_")
             .replacingOccurrences(of: ">", with: "_rab_")

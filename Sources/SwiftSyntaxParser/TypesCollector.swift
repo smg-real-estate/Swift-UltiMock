@@ -17,6 +17,8 @@ private final class Visitor: SyntaxVisitor {
     private var currentTypeProperties: [Syntax.Property] = []
     private var currentTypeSubscripts: [Syntax.Subscript] = []
     private var currentTypeTypealiases: [Syntax.Typealias] = []
+    private var currentTypeAccessLevel: Syntax.AccessLevel = .internal
+    private var currentTypeKind: Syntax.TypeInfo.Kind = .struct
 
     init() {
         super.init(viewMode: .fixedUp)
@@ -27,6 +29,8 @@ private final class Visitor: SyntaxVisitor {
         currentTypeProperties = []
         currentTypeSubscripts = []
         currentTypeTypealiases = []
+        currentTypeKind = .struct
+        currentTypeAccessLevel = accessLevel(from: node.modifiers)
 
         appendType(
             kind: .struct,
@@ -70,6 +74,8 @@ private final class Visitor: SyntaxVisitor {
         currentTypeProperties = []
         currentTypeSubscripts = []
         currentTypeTypealiases = []
+        currentTypeKind = .class
+        currentTypeAccessLevel = accessLevel(from: node.modifiers)
 
         appendType(
             kind: .class,
@@ -113,13 +119,14 @@ private final class Visitor: SyntaxVisitor {
         currentTypeProperties = []
         currentTypeSubscripts = []
         currentTypeTypealiases = []
+        currentTypeKind = .enum
+        currentTypeAccessLevel = accessLevel(from: node.modifiers)
 
         appendType(
             kind: .enum,
             name: node.identifier.text,
             modifiers: node.modifiers,
             inheritanceClause: node.inheritanceClause,
-            genericParameters: genericParameters(from: node.genericParameters),
             commentTrivia: node.leadingTrivia
         )
         return .visitChildren
@@ -156,13 +163,14 @@ private final class Visitor: SyntaxVisitor {
         currentTypeProperties = []
         currentTypeSubscripts = []
         currentTypeTypealiases = []
+        currentTypeKind = .protocol
+        currentTypeAccessLevel = accessLevel(from: node.modifiers)
 
         appendType(
             kind: .protocol,
             name: node.identifier.text,
             modifiers: node.modifiers,
             inheritanceClause: node.inheritanceClause,
-            genericParameters: primaryAssociatedTypes(from: node.primaryAssociatedTypeClause),
             commentTrivia: node.leadingTrivia
         )
         return .visitChildren
@@ -199,6 +207,8 @@ private final class Visitor: SyntaxVisitor {
         currentTypeProperties = []
         currentTypeSubscripts = []
         currentTypeTypealiases = []
+        currentTypeKind = .extension
+        currentTypeAccessLevel = accessLevel(from: node.modifiers)
 
         appendType(
             kind: .extension,
@@ -281,7 +291,7 @@ private final class Visitor: SyntaxVisitor {
             name: node.identifier.text,
             parameters: parameters,
             returnType: returnType,
-            accessLevel: accessLevel(from: node.modifiers).rawValue,
+            accessLevel: effectiveMemberAccessLevel(from: node.modifiers).rawValue,
             genericParameters: methodGenericParameters,
             genericRequirements: methodGenericRequirements
         )
@@ -292,7 +302,7 @@ private final class Visitor: SyntaxVisitor {
 
     override func visit(_ node: VariableDeclSyntax) -> SyntaxVisitorContinueKind {
         let isVariable = node.letOrVarKeyword.tokenKind == .varKeyword
-        let propAccessLevel = accessLevel(from: node.modifiers).rawValue
+        let propAccessLevel = effectiveMemberAccessLevel(from: node.modifiers).rawValue
 
         for binding in node.bindings {
             guard let pattern = binding.pattern.as(IdentifierPatternSyntax.self) else {
@@ -306,12 +316,37 @@ private final class Visitor: SyntaxVisitor {
                 nil
             }
 
+            // Determine write access based on accessor block
+            let writeAccessLevel: String
+            if let accessor = binding.accessor {
+                if case let .accessors(accessorBlock) = accessor {
+                    // Check if there's a setter
+                    let hasSetter = accessorBlock.accessors.contains(where: { accessor in
+                        let kind = accessor.accessorKind.text
+                        return kind == "set" || kind == "_modify"
+                    })
+                    
+                    if hasSetter {
+                        writeAccessLevel = propAccessLevel
+                    } else {
+                        writeAccessLevel = "" // No write access (read-only with { get })
+                    }
+                } else {
+                    // Has getter/setter code block, not just accessors
+                    // Assume it's a computed property if there's a code block and it's a var
+                    writeAccessLevel = isVariable ? propAccessLevel : ""
+                }
+            } else {
+                // No accessor block means stored property - has write access if it's var
+                writeAccessLevel = isVariable ? propAccessLevel : ""
+            }
+
             let property = Syntax.Property(
                 name: propertyName,
                 type: typeAnnotation,
                 isVariable: isVariable,
                 readAccess: propAccessLevel,
-                writeAccess: propAccessLevel
+                writeAccess: writeAccessLevel
             )
             currentTypeProperties.append(property)
         }
@@ -336,7 +371,7 @@ private final class Visitor: SyntaxVisitor {
         }
 
         let returnType = trimmedDescription(of: node.result.returnType)
-        let subscriptAccessLevel = accessLevel(from: node.modifiers).rawValue
+        let subscriptAccessLevel = effectiveMemberAccessLevel(from: node.modifiers).rawValue
 
         let subscriptInfo = Syntax.Subscript(
             parameters: parameters,
@@ -385,6 +420,24 @@ private final class Visitor: SyntaxVisitor {
         }
 
         return .internal
+    }
+    
+    // For protocol members without explicit access modifiers, inherit the protocol's access level
+    private func effectiveMemberAccessLevel(from modifiers: ModifierListSyntax?) -> Syntax.AccessLevel {
+        let explicitLevel = accessLevel(from: modifiers)
+        
+        // If the member has an explicit access level, use it
+        if let modifiers = modifiers, !modifiers.isEmpty {
+            return explicitLevel
+        }
+        
+        // For protocol members without explicit modifiers, use the protocol's access level
+        if currentTypeKind == .protocol {
+            return currentTypeAccessLevel
+        }
+        
+        // For other types, use internal as default
+        return explicitLevel
     }
 
     private func inheritedTypes(from clause: TypeInheritanceClauseSyntax?) -> [String] {
