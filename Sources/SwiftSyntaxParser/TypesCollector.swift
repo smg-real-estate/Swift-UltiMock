@@ -259,10 +259,31 @@ private final class Visitor: SyntaxVisitor {
             nil
         }
 
+        let methodGenericParameters = genericParameters(from: node.genericParameterClause)
+        
+        let methodGenericRequirements: [Syntax.GenericRequirement]
+        if let whereClause = node.genericWhereClause {
+            methodGenericRequirements = whereClause.requirementList.compactMap { requirement in
+                guard let conformanceRequirement = requirement.body.as(ConformanceRequirementSyntax.self) else {
+                    return nil
+                }
+                return Syntax.GenericRequirement(
+                    leftTypeName: trimmedDescription(of: conformanceRequirement.leftTypeIdentifier),
+                    rightTypeName: trimmedDescription(of: conformanceRequirement.rightTypeIdentifier),
+                    relationshipSyntax: ":"
+                )
+            }
+        } else {
+            methodGenericRequirements = []
+        }
+
         let method = Syntax.Method(
             name: node.identifier.text,
             parameters: parameters,
-            returnType: returnType
+            returnType: returnType,
+            accessLevel: accessLevel(from: node.modifiers).rawValue,
+            genericParameters: methodGenericParameters,
+            genericRequirements: methodGenericRequirements
         )
         currentTypeMethods.append(method)
 
@@ -271,6 +292,7 @@ private final class Visitor: SyntaxVisitor {
 
     override func visit(_ node: VariableDeclSyntax) -> SyntaxVisitorContinueKind {
         let isVariable = node.letOrVarKeyword.tokenKind == .varKeyword
+        let propAccessLevel = accessLevel(from: node.modifiers).rawValue
 
         for binding in node.bindings {
             guard let pattern = binding.pattern.as(IdentifierPatternSyntax.self) else {
@@ -287,7 +309,9 @@ private final class Visitor: SyntaxVisitor {
             let property = Syntax.Property(
                 name: propertyName,
                 type: typeAnnotation,
-                isVariable: isVariable
+                isVariable: isVariable,
+                readAccess: propAccessLevel,
+                writeAccess: propAccessLevel
             )
             currentTypeProperties.append(property)
         }
@@ -312,10 +336,13 @@ private final class Visitor: SyntaxVisitor {
         }
 
         let returnType = trimmedDescription(of: node.result.returnType)
+        let subscriptAccessLevel = accessLevel(from: node.modifiers).rawValue
 
         let subscriptInfo = Syntax.Subscript(
             parameters: parameters,
-            returnType: returnType
+            returnType: returnType,
+            readAccess: subscriptAccessLevel,
+            writeAccess: subscriptAccessLevel
         )
         currentTypeSubscripts.append(subscriptInfo)
 

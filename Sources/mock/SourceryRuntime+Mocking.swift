@@ -34,6 +34,12 @@ extension Syntax.Method {
     }
 
     var whereConstraints: String? {
+        // First check if we have generic requirements
+        if !genericRequirements.isEmpty {
+            return genericRequirements.map { "\($0.leftTypeName): \($0.rightTypeName)" }.joined(separator: ", ")
+        }
+        
+        // Fallback to parsing from return type for backward compatibility
         let components = returnTypeName.name
             .components(separatedBy: "where")
 
@@ -87,28 +93,32 @@ extension Syntax.Method {
     }
 
     var methodIdentifier: String {
-        "\(unbacktickedCallName)_\(isAsync ? "async" : "sync")\(parametersPart)_ret_\(returnTypePart)"
+        let whereClause = genericRequirements.isEmpty ? "" : "where" + genericRequirements.map { req in
+            let left = req.leftTypeName.replacingOccurrences(of: ":", with: "_col_")
+            let right = req.rightTypeName.replacingOccurrences(of: ":", with: "_col_")
+            return "\(left)_col_\(right)"
+        }.joined(separator: "_")
+        return "\(unbacktickedCallName)_\(isAsync ? "async" : "sync")\(parametersPart)_ret_\(returnTypePart)\(whereClause)"
     }
 
     var genericTypeNames: [String] {
-        guard let genericClauseIndex = shortName.firstIndex(of: "<") else {
-            return []
-        }
-
-        return shortName.suffix(from: genericClauseIndex)
-            .trimmingCharacters(in: ["<", ">"])
-            .components(separatedBy: ",")
-            .map {
-                $0.components(separatedBy: ":")[0].trimmed
-            }
+        genericParameters.map(\.name)
     }
 
     var genericClause: String {
-        guard let genericClauseIndex = shortName.firstIndex(of: "<") else {
+        guard !genericParameters.isEmpty else {
             return ""
         }
-
-        return String(shortName.suffix(from: genericClauseIndex))
+        
+        let params = genericParameters.map { param in
+            if param.constraints.isEmpty {
+                return param.name
+            } else {
+                return "\(param.name): \(param.constraints.joined(separator: " & "))"
+            }
+        }.joined(separator: ", ")
+        
+        return "<\(params)>"
     }
 
     var definition: String {
@@ -154,7 +164,7 @@ extension Syntax.Method {
             expectationAttributes +
                 [
                     """
-                    \(implementationAccessLevel) static func \(shortName)(\(expectationDefinitionParameters(mockTypeName))) -> Self
+                    \(implementationAccessLevel) static func \(shortName)\(genericClause)(\(expectationDefinitionParameters(mockTypeName))) -> Self
                     where Signature == \(signature(mockTypeName, substituteReturnSelf: true))\(whereConstraints.map { ", \($0)" } ?? "") {
                         .init(
                             method: Methods.\(methodIdentifier),
@@ -211,7 +221,7 @@ extension Syntax.Method {
         (
             attributes.values.flatMap(\.self).map(\.description) +
                 [
-                    "\(implementationAccessLevel)\(override ? " override" : "") func \(shortName)("
+                    "\(implementationAccessLevel)\(override ? " override" : "") func \(shortName)\(genericClause)("
                         + parameters.map {
                             $0.implementationDefinition(mockTypeName)
                         }
@@ -796,7 +806,7 @@ extension Syntax.Subscript {
 
     func fullDefinition(indentation: String) -> String {
         (implementationAttributes +
-            ["\(implementationAccessLevel) subscript(\(parametersDefinition)) -> \(returnTypeName)"])
+            ["\(implementationAccessLevel) subscript(\(parametersDefinition)) -> \(returnTypeName.fixedName)"])
             .joined(separator: "\n" + indentation)
     }
 

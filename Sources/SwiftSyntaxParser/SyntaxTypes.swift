@@ -166,8 +166,88 @@ public enum Syntax {
             return ClosureType(description: desc)
         }
         
-        public var fixedName: String { name }
+        public var fixedName: String {
+            // Remove @escaping and similar attributes from the type name
+            // These attributes should be in the signature, not in the Parameter<...> type
+            if attributes.isEmpty {
+                return name
+            }
+            
+            // If we have attributes, reconstruct the name without them
+            var cleanName = name
+            for attr in attributes {
+                cleanName = cleanName.replacingOccurrences(of: "@\(attr.name)", with: "").trimmingCharacters(in: .whitespaces)
+            }
+            return cleanName
+        }
         public var asSource: String { name }
+        
+        // Helper to parse a type string and detect optionals and implicit optionals
+        public static func parse(_ typeString: String) -> TypeName {
+            let trimmed = typeString.trimmingCharacters(in: .whitespaces)
+            
+            // Extract attributes like @escaping
+            var attributes: [Attribute] = []
+            var workingString = trimmed
+            
+            // Check for @escaping and other attributes
+            while let atIndex = workingString.firstIndex(of: "@") {
+                let afterAt = workingString[atIndex...].dropFirst()
+                let attrName = afterAt.prefix(while: { $0.isLetter || $0 == "_" })
+                if !attrName.isEmpty {
+                    attributes.append(Attribute(name: String(attrName)))
+                    // Remove the attribute from the working string
+                    let endIndex = workingString.index(atIndex, offsetBy: 1 + attrName.count)
+                    let prefix = String(workingString[..<atIndex])
+                    let suffix = String(workingString[endIndex...].drop(while: { $0.isWhitespace }))
+                    workingString = prefix + suffix
+                } else {
+                    break
+                }
+            }
+            
+            // Now handle optionality
+            let cleanedString = workingString.trimmingCharacters(in: .whitespaces)
+            
+            // Check for implicit optional (!)
+            if cleanedString.hasSuffix("!") {
+                let unwrapped = String(cleanedString.dropLast())
+                return TypeName(
+                    name: cleanedString,
+                    isOptional: false,
+                    isImplicitlyUnwrappedOptional: true,
+                    unwrappedTypeName: unwrapped,
+                    isVoid: unwrapped == "Void" || unwrapped == "()",
+                    isClosure: unwrapped.contains("->"),
+                    attributes: attributes
+                )
+            }
+            
+            // Check for optional (?)
+            if cleanedString.hasSuffix("?") {
+                let unwrapped = String(cleanedString.dropLast())
+                return TypeName(
+                    name: cleanedString,
+                    isOptional: true,
+                    isImplicitlyUnwrappedOptional: false,
+                    unwrappedTypeName: unwrapped,
+                    isVoid: unwrapped == "Void" || unwrapped == "()",
+                    isClosure: unwrapped.contains("->"),
+                    attributes: attributes
+                )
+            }
+            
+            // Regular type
+            return TypeName(
+                name: cleanedString,
+                isOptional: false,
+                isImplicitlyUnwrappedOptional: false,
+                unwrappedTypeName: cleanedString,
+                isVoid: cleanedString == "Void" || cleanedString == "()",
+                isClosure: cleanedString.contains("->"),
+                attributes: attributes
+            )
+        }
     }
     
     public struct ClosureType: Equatable {
@@ -250,7 +330,10 @@ public enum Syntax {
             
             public var argumentLabel: String? { label }
             public var typeName: TypeName {
-                TypeName(name: type ?? "Unknown", isOptional: isOptional, isClosure: isClosure)
+                guard let type = type else {
+                    return TypeName(name: "Unknown")
+                }
+                return TypeName.parse(type)
             }
         }
 
@@ -268,6 +351,8 @@ public enum Syntax {
         public let isClass: Bool
         public let isInitializer: Bool
         public let isRequired: Bool
+        public let genericParameters: [GenericParameter]
+        public let genericRequirements: [GenericRequirement]
 
         public init(
             name: String,
@@ -283,7 +368,9 @@ public enum Syntax {
             isStatic: Bool = false,
             isClass: Bool = false,
             isInitializer: Bool = false,
-            isRequired: Bool = false
+            isRequired: Bool = false,
+            genericParameters: [GenericParameter] = [],
+            genericRequirements: [GenericRequirement] = []
         ) {
             self.name = name
             self.parameters = parameters
@@ -299,6 +386,8 @@ public enum Syntax {
             self.isClass = isClass
             self.isInitializer = isInitializer
             self.isRequired = isRequired
+            self.genericParameters = genericParameters
+            self.genericRequirements = genericRequirements
         }
         
         public var shortName: String { name }
@@ -308,7 +397,10 @@ public enum Syntax {
             callName.replacingOccurrences(of: "`", with: "")
         }
         public var returnTypeName: TypeName {
-            TypeName(name: returnType ?? "Void", isVoid: returnType == nil || returnType == "Void" || returnType == "()")
+            guard let returnType = returnType else {
+                return TypeName(name: "Void", isVoid: true)
+            }
+            return TypeName.parse(returnType)
         }
         public var definedInType: TypeInfo? { nil }
     }
@@ -353,7 +445,10 @@ public enum Syntax {
         }
         
         public var typeName: TypeName {
-            TypeName(name: type ?? "Unknown")
+            guard let type = type else {
+                return TypeName(name: "Unknown")
+            }
+            return TypeName.parse(type)
         }
         public var definedInType: TypeInfo? { nil }
         public var unbacktickedName: String {
@@ -386,7 +481,10 @@ public enum Syntax {
         }
         
         public var returnTypeName: TypeName {
-            TypeName(name: returnType ?? "Unknown")
+            guard let returnType = returnType else {
+                return TypeName(name: "Unknown")
+            }
+            return TypeName.parse(returnType)
         }
     }
 
