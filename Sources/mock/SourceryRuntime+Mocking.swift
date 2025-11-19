@@ -417,7 +417,18 @@ extension Syntax.TypeName {
     }
 
     func name(convertingImplicitOptional: Bool) -> String {
-        convertingImplicitOptional && isImplicitlyUnwrappedOptional ? unwrappedTypeName + "?" : fixedName
+        let baseName = convertingImplicitOptional && isImplicitlyUnwrappedOptional ? unwrappedTypeName + "?" : fixedName
+        // Normalize module-qualified standard library types
+        return baseName
+            .replacingOccurrences(of: "Swift.Int", with: "Int")
+            .replacingOccurrences(of: "Swift.String", with: "String")
+            .replacingOccurrences(of: "Swift.Bool", with: "Bool")
+            .replacingOccurrences(of: "Swift.Double", with: "Double")
+            .replacingOccurrences(of: "Swift.Float", with: "Float")
+            .replacingOccurrences(of: "Swift.Array", with: "Array")
+            .replacingOccurrences(of: "Swift.Dictionary", with: "Dictionary")
+            .replacingOccurrences(of: "Swift.Set", with: "Set")
+            .replacingOccurrences(of: "Swift.Optional", with: "Optional")
     }
 
     func actualName(convertingImplicitOptional: Bool) -> String {

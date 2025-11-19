@@ -183,13 +183,27 @@ public enum Syntax {
             return cleanName
         }
         
+        public var normalizedName: String {
+            // Normalize module-qualified standard library types
+            name
+                .replacingOccurrences(of: "Swift.Int", with: "Int")
+                .replacingOccurrences(of: "Swift.String", with: "String")
+                .replacingOccurrences(of: "Swift.Bool", with: "Bool")
+                .replacingOccurrences(of: "Swift.Double", with: "Double")
+                .replacingOccurrences(of: "Swift.Float", with: "Float")
+                .replacingOccurrences(of: "Swift.Array", with: "Array")
+                .replacingOccurrences(of: "Swift.Dictionary", with: "Dictionary")
+                .replacingOccurrences(of: "Swift.Set", with: "Set")
+                .replacingOccurrences(of: "Swift.Optional", with: "Optional")
+        }
+        
         public var nameWithoutAttributes: String {
             // Remove ALL attributes from the type name for use in Parameter<...>
             if attributes.isEmpty {
-                return name
+                return normalizedName
             }
             
-            var cleanName = name
+            var cleanName = normalizedName
             for attr in attributes {
                 cleanName = cleanName.replacingOccurrences(of: "@\(attr.name)", with: "").trimmingCharacters(in: .whitespaces)
             }
