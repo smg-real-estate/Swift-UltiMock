@@ -53,6 +53,7 @@ private final class Visitor: SyntaxVisitor {
                 properties: currentTypeProperties,
                 subscripts: currentTypeSubscripts,
                 typealiases: currentTypeTypealiases,
+                annotations: lastType.annotations,
                 isExtension: lastType.isExtension,
                 comment: lastType.comment
             )
@@ -95,6 +96,7 @@ private final class Visitor: SyntaxVisitor {
                 properties: currentTypeProperties,
                 subscripts: currentTypeSubscripts,
                 typealiases: currentTypeTypealiases,
+                annotations: lastType.annotations,
                 isExtension: lastType.isExtension,
                 comment: lastType.comment
             )
@@ -137,6 +139,7 @@ private final class Visitor: SyntaxVisitor {
                 properties: currentTypeProperties,
                 subscripts: currentTypeSubscripts,
                 typealiases: currentTypeTypealiases,
+                annotations: lastType.annotations,
                 isExtension: lastType.isExtension,
                 comment: lastType.comment
             )
@@ -179,6 +182,7 @@ private final class Visitor: SyntaxVisitor {
                 properties: currentTypeProperties,
                 subscripts: currentTypeSubscripts,
                 typealiases: currentTypeTypealiases,
+                annotations: lastType.annotations,
                 isExtension: lastType.isExtension,
                 comment: lastType.comment
             )
@@ -221,6 +225,7 @@ private final class Visitor: SyntaxVisitor {
                 properties: currentTypeProperties,
                 subscripts: currentTypeSubscripts,
                 typealiases: currentTypeTypealiases,
+                annotations: lastType.annotations,
                 isExtension: lastType.isExtension,
                 comment: lastType.comment
             )
@@ -433,11 +438,46 @@ private final class Visitor: SyntaxVisitor {
             accessLevel: accessLevel(from: modifiers),
             inheritedTypes: inheritedTypes(from: inheritanceClause),
             genericParameters: genericParameters,
+            annotations: parseAnnotations(from: rawComment(from: commentTrivia)),
             isExtension: isExtension,
             comment: rawComment(from: commentTrivia)
         )
 
         types.append(type)
+    }
+
+    private func parseAnnotations(from comment: String?) -> [String: String] {
+        guard let comment = comment else { return [:] }
+        
+        var annotations: [String: String] = [:]
+        let lines = comment.components(separatedBy: .newlines)
+        
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            
+            // Check if line contains sourcery annotation
+            guard trimmed.contains("sourcery:") else { continue }
+            
+            // Extract the part after "sourcery:"
+            guard let sourceryRange = trimmed.range(of: "sourcery:") else { continue }
+            let annotationContent = String(trimmed[sourceryRange.upperBound...]).trimmingCharacters(in: .whitespaces)
+            
+            // Skip empty annotations
+            guard !annotationContent.isEmpty else { continue }
+            
+            // Parse key=value or just key
+            if let equalIndex = annotationContent.firstIndex(of: "=") {
+                let key = String(annotationContent[..<equalIndex]).trimmingCharacters(in: .whitespaces)
+                let value = String(annotationContent[annotationContent.index(after: equalIndex)...]).trimmingCharacters(in: .whitespaces)
+                if !key.isEmpty {
+                    annotations[key] = value
+                }
+            } else {
+                annotations[annotationContent] = annotationContent
+            }
+        }
+        
+        return annotations
     }
 
     private func trimmedDescription(of syntax: SyntaxProtocol) -> String {

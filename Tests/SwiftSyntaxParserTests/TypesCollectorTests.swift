@@ -773,4 +773,122 @@ import Testing
             comment: nil
         ))
     }
+
+    @Test
+    func `collect parses AutoMockable annotation from protocol`() throws {
+        let source = Parser.parse(source:
+            """
+            // sourcery:AutoMockable
+            protocol TestProtocol {
+                func test()
+            }
+            """
+        )
+
+        let types = collector.collect(from: source)
+        let type = try #require(types.first)
+        #expect(type.annotations["AutoMockable"] == "AutoMockable")
+    }
+
+    @Test
+    func `collect parses AutoMockable annotation from class`() throws {
+        let source = Parser.parse(source:
+            """
+            // sourcery:AutoMockable
+            open class TestClass {
+                func test() {}
+            }
+            """
+        )
+
+        let types = collector.collect(from: source)
+        let type = try #require(types.first)
+        #expect(type.annotations["AutoMockable"] == "AutoMockable")
+    }
+
+    @Test
+    func `collect parses AutoMockable annotation from extension`() throws {
+        let source = Parser.parse(source:
+            """
+            // sourcery:AutoMockable
+            extension TestProtocol {}
+            """
+        )
+
+        let types = collector.collect(from: source)
+        let type = try #require(types.first)
+        #expect(type.annotations["AutoMockable"] == "AutoMockable")
+    }
+
+    @Test
+    func `collect parses annotation with key-value pair`() throws {
+        let source = Parser.parse(source:
+            """
+            // sourcery:AutoMockable
+            // sourcery:skip = ["method1", "method2"]
+            protocol TestProtocol {
+                func method1()
+                func method2()
+            }
+            """
+        )
+
+        let types = collector.collect(from: source)
+        let type = try #require(types.first)
+        #expect(type.annotations["AutoMockable"] == "AutoMockable")
+        #expect(type.annotations["skip"] == #"["method1", "method2"]"#)
+    }
+
+    @Test
+    func `collect parses multiple annotations`() throws {
+        let source = Parser.parse(source:
+            """
+            // sourcery:AutoMockable
+            // sourcery:typealias = "A = Int"
+            // sourcery:typealias = "B = String"
+            protocol TestProtocol {
+                associatedtype A
+                associatedtype B
+            }
+            """
+        )
+
+        let types = collector.collect(from: source)
+        let type = try #require(types.first)
+        #expect(type.annotations["AutoMockable"] == "AutoMockable")
+        #expect(type.annotations["typealias"] != nil)
+    }
+
+    @Test
+    func `collect ignores non-sourcery comments`() throws {
+        let source = Parser.parse(source:
+            """
+            // Regular comment
+            /// Documentation comment
+            protocol TestProtocol {
+                func test()
+            }
+            """
+        )
+
+        let types = collector.collect(from: source)
+        let type = try #require(types.first)
+        #expect(type.annotations.isEmpty)
+    }
+
+    @Test
+    func `collect parses annotation with doc comment prefix`() throws {
+        let source = Parser.parse(source:
+            """
+            /// sourcery:AutoMockable
+            protocol TestProtocol {
+                func test()
+            }
+            """
+        )
+
+        let types = collector.collect(from: source)
+        let type = try #require(types.first)
+        #expect(type.annotations["AutoMockable"] == "AutoMockable")
+    }
 }
