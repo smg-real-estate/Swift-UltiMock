@@ -23,7 +23,6 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.2.1"),
-        .package(name: "Sourcery", path: "Submodules/Sourcery"),
         .package(url: "https://github.com/jpsim/SourceKitten", from: "0.32.0"),
         .package(url: "https://github.com/freddi-kit/ArtifactBundleGen.git", from: "0.0.6"),
         .package(url: "https://github.com/apple/swift-syntax.git", from: "508.0.0"),
