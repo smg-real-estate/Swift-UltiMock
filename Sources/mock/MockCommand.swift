@@ -43,5 +43,6 @@ struct MockCommand: ParsableCommand {
 
         try context.outputPath.write(mockSource)
         print("Generated mock at '\(context.outputPath)'\n in \(-start.timeIntervalSinceNow)s.")
+        print(env)
     }
 }
