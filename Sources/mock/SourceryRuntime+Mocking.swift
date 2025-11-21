@@ -1,5 +1,5 @@
 import Foundation
-import UltiMockSwiftSyntaxParser
+import SyntaxParser
 
 func additionalImports(_ arguments: [String: Any]) -> [String] {
     arguments["import"]

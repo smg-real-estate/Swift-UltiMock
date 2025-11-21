@@ -3,7 +3,7 @@ import PathKit
 import SourceKittenFramework
 import SwiftParser
 import SwiftSyntax
-import UltiMockSwiftSyntaxParser
+import SyntaxParser
 
 struct CommandContext {
     let configuration: Configuration
@@ -29,7 +29,7 @@ struct CommandContext {
         self.outputPath = outputPath.isDirectory ? outputPath + mockFilename : outputPath
     }
 
-    func parse() throws -> [UltiMockSwiftSyntaxParser.Syntax.TypeInfo] {
+    func parse() throws -> [SyntaxParser.Syntax.TypeInfo] {
         let rawTypes = try [
             parseSources(),
             parseSDKModules()
@@ -41,7 +41,7 @@ struct CommandContext {
 }
 
 private extension CommandContext {
-    func parseSources() throws -> [UltiMockSwiftSyntaxParser.Syntax.TypeInfo] {
+    func parseSources() throws -> [SyntaxParser.Syntax.TypeInfo] {
         let sourceFiles = try sources
             .flatMap { path in
                 path.isDirectory ? try path.recursiveChildren() : [path]
@@ -53,14 +53,14 @@ private extension CommandContext {
         let collector = TypesCollector()
 
         return try sourceFiles
-            .flatMap { filePath -> [UltiMockSwiftSyntaxParser.Syntax.TypeInfo] in
+            .flatMap { filePath -> [SyntaxParser.Syntax.TypeInfo] in
                 let content = try filePath.read(.utf8)
                 let source = Parser.parse(source: content)
                 return collector.collect(from: source)
             }
     }
 
-    func parseSDKModules() throws -> [UltiMockSwiftSyntaxParser.Syntax.TypeInfo] {
+    func parseSDKModules() throws -> [SyntaxParser.Syntax.TypeInfo] {
         // Required for running in sandbox environment
         setenv("IN_PROCESS_SOURCEKIT", "YES", 1)
         //        setenv("SOURCEKIT_LOGGING", "3", 1)
@@ -73,7 +73,7 @@ private extension CommandContext {
         let collector = TypesCollector()
 
         return try (configuration.sdkModules ?? [])
-            .flatMap { module -> [UltiMockSwiftSyntaxParser.Syntax.TypeInfo] in
+            .flatMap { module -> [SyntaxParser.Syntax.TypeInfo] in
                 let request = try SourceKittenFramework.Request.customRequest(request: [
                     "key.request": UID("source.request.editor.open.interface"),
                     "key.name": UUID().uuidString,

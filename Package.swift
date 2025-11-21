@@ -37,11 +37,10 @@ let package = Package(
         ),
         .target(name: "XCTestExtensions"),
         .target(
-            name: "UltiMockSwiftSyntaxParser",
+            name: "SyntaxParser",
             dependencies: [
                 .product(name: "SwiftSyntax", package: "swift-syntax")
-            ],
-            path: "Sources/SwiftSyntaxParser"
+            ]
         ),
         .executableTarget(
             name: "mock",
@@ -50,7 +49,7 @@ let package = Package(
                 .product(name: "SourceKittenFramework", package: "SourceKitten"),
                 .product(name: "SwiftParser", package: "swift-syntax"),
                 .product(name: "PathKit", package: "PathKit"),
-                "UltiMockSwiftSyntaxParser"
+                "SyntaxParser"
             ],
             swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]
         ),
@@ -60,9 +59,9 @@ let package = Package(
             dependencies: ["mock"]
         ),
         .testTarget(
-            name: "SwiftSyntaxParserTests",
+            name: "SyntaxParserTests",
             dependencies: [
-                "UltiMockSwiftSyntaxParser",
+                "SyntaxParser",
                 .product(name: "SwiftParser", package: "swift-syntax")
             ]
         )

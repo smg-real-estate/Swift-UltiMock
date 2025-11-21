@@ -1,5 +1,5 @@
 import Foundation
-import UltiMockSwiftSyntaxParser
+import SyntaxParser
 
 struct MockTemplate {
     let types: [Syntax.TypeInfo]

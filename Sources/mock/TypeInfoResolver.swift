@@ -1,4 +1,4 @@
-import UltiMockSwiftSyntaxParser
+import SyntaxParser
 
 struct TypeInfoResolver {
     func resolve(_ types: [Syntax.TypeInfo]) -> [Syntax.TypeInfo] {

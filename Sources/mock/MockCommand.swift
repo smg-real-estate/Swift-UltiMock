@@ -1,6 +1,6 @@
 import ArgumentParser
 import Foundation
-import UltiMockSwiftSyntaxParser
+import SyntaxParser
 
 let configFilename = "mock.json"
 let mockFilename = "Mock.generated.swift"
