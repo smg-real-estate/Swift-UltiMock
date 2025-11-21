@@ -5,13 +5,13 @@ struct MockTemplate {
     let types: [Syntax.TypeInfo]
     let imports: [String]
     let testableImports: [String]
-    
+
     func renderImports() -> [String] {
         let regularImports = Set(["XCTest", "UltiMock"] + imports).subtracting(testableImports).sorted()
         let testables = Set(testableImports).sorted()
-        
+
         return regularImports.map { "import \($0)" } +
-               testables.map { "@testable import \($0)" }
+            testables.map { "@testable import \($0)" }
     }
 
     @StringBuilder
@@ -57,10 +57,8 @@ struct MockTemplate {
 
             if type.kind == .protocol {
                 let refinedAssociatedTypes = type.refinedAssociatedTypes
-                let declaredAssociatedTypes = type.associatedTypes
-                var knownAssociatedTypeNames = Set(declaredAssociatedTypes.map(\.name))
 
-                let associatedTypes = declaredAssociatedTypes
+                let associatedTypes = type.associatedTypes
                     .filter {
                         typeAliases.values.contains($0.name)
                             || refinedAssociatedTypes[$0.name] == nil
@@ -220,11 +218,11 @@ struct MockTemplate {
             }
 
             let requiredInitializers = type.implements.values
-                .flatMap { $0.methods }
-                .filter { $0.isInitializer }
+                .flatMap(\.methods)
+                .filter(\.isInitializer)
                 + type.allMethods
-                .filter { $0.isInitializer }
-                .filter { $0.isRequired }
+                .filter(\.isInitializer)
+                .filter(\.isRequired)
 
             for method in requiredInitializers {
                 """
@@ -502,26 +500,26 @@ private struct PropertyGetterVariant {
     var specifierClause: String {
         switch (isAsync, isThrowing) {
         case (false, false):
-            return ""
+            ""
         case (false, true):
-            return " throws"
+            " throws"
         case (true, false):
-            return " async"
+            " async"
         case (true, true):
-            return " async throws"
+            " async throws"
         }
     }
 
     var defaultForwardInvocation: String {
         switch (isAsync, isThrowing) {
         case (false, false):
-            return "$0()"
+            "$0()"
         case (false, true):
-            return "try $0()"
+            "try $0()"
         case (true, false):
-            return "await $0()"
+            "await $0()"
         case (true, true):
-            return "try await $0()"
+            "try await $0()"
         }
     }
 }

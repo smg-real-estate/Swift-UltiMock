@@ -104,7 +104,7 @@ import Testing
             localName: "User",
             accessLevel: .public,
             inheritedTypes: ["Codable", "Equatable"],
-                properties: [Syntax.Property(name: "name", type: "String", isVariable: false, writeAccess: "")],
+            properties: [Syntax.Property(name: "name", type: "String", isVariable: false, writeAccess: "")],
             isExtension: false,
             comment: "/// A user model\n"
         ))

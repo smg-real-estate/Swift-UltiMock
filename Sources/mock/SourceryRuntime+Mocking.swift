@@ -39,15 +39,15 @@ extension Syntax.Method {
             return genericRequirements.map { requirement in
                 switch requirement.relationshipSyntax {
                 case ":", "layout":
-                    return "\(requirement.leftTypeName): \(requirement.rightTypeName)"
+                    "\(requirement.leftTypeName): \(requirement.rightTypeName)"
                 case "==":
-                    return "\(requirement.leftTypeName) == \(requirement.rightTypeName)"
+                    "\(requirement.leftTypeName) == \(requirement.rightTypeName)"
                 default:
-                    return "\(requirement.leftTypeName): \(requirement.rightTypeName)"
+                    "\(requirement.leftTypeName): \(requirement.rightTypeName)"
                 }
             }.joined(separator: ", ")
         }
-        
+
         // Fallback to parsing from return type for backward compatibility
         let components = returnTypeName.name
             .components(separatedBy: "where")
@@ -136,15 +136,15 @@ extension Syntax.Method {
         guard !genericParameters.isEmpty else {
             return ""
         }
-        
+
         let params = genericParameters.map { param in
             if param.constraints.isEmpty {
-                return param.name
+                param.name
             } else {
-                return "\(param.name): \(param.constraints.joined(separator: " & "))"
+                "\(param.name): \(param.constraints.joined(separator: " & "))"
             }
         }.joined(separator: ", ")
-        
+
         return "<\(params)>"
     }
 
@@ -1077,7 +1077,7 @@ extension String {
     var backticked: Self {
         "`\(self)`"
     }
-    
+
     var trimmed: Self {
         trimmingCharacters(in: .whitespacesAndNewlines)
     }

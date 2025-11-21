@@ -154,7 +154,9 @@ private extension TypeInfoResolver {
             var seenAssociatedNames = Set(associatedTypes.map(\.name))
 
             for inheritedName in type.inheritedTypes {
-                guard let inherited = resolve(name: inheritedName) else { continue }
+                guard let inherited = resolve(name: inheritedName) else {
+                    continue
+                }
                 methods.append(contentsOf: inherited.methods)
                 properties.append(contentsOf: inherited.properties)
                 subscripts.append(contentsOf: inherited.subscripts)

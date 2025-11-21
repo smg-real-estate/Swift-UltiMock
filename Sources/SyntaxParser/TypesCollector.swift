@@ -89,7 +89,9 @@ private final class Visitor: SyntaxVisitor {
     }
 
     private func popAliasScope() {
-        guard aliasScopeStack.count > 1 else { return }
+        guard aliasScopeStack.count > 1 else {
+            return
+        }
         aliasScopeStack.removeLast()
     }
 
@@ -251,7 +253,7 @@ private final class Visitor: SyntaxVisitor {
             fallbackAliases: globalAliasFallbacks
         )
         let methodModifiers = makeModifiers(from: node.modifiers)
-        let modifierNames = Set(methodModifiers.map { $0.name })
+        let modifierNames = Set(methodModifiers.map(\.name))
 
         let method = Syntax.Method(
             name: node.identifier.text,
@@ -303,7 +305,7 @@ private final class Visitor: SyntaxVisitor {
         }
 
         let methodModifiers = makeModifiers(from: node.modifiers)
-        let modifierNames = Set(methodModifiers.map { $0.name })
+        let modifierNames = Set(methodModifiers.map(\.name))
 
         let initializer = Syntax.Method(
             name: initializerName(from: node),
@@ -336,7 +338,7 @@ private final class Visitor: SyntaxVisitor {
         let propAccessLevel = effectiveMemberAccessLevel(from: node.modifiers).rawValue
         let attributes = parseAttributes(node.attributes)
         let propertyModifiers = makeModifiers(from: node.modifiers)
-        let modifierNames = Set(propertyModifiers.map { $0.name })
+        let modifierNames = Set(propertyModifiers.map(\.name))
         let isStatic = modifierNames.contains("static") || modifierNames.contains("class")
         let setterAccessOverride = setterAccessLevel(from: node.modifiers)
 
@@ -480,19 +482,19 @@ private final class Visitor: SyntaxVisitor {
     private func accessLevel(for tokenKind: TokenKind) -> Syntax.AccessLevel? {
         switch tokenKind {
         case .publicKeyword:
-            return .public
+            .public
         case .fileprivateKeyword:
-            return .fileprivate
+            .fileprivate
         case .privateKeyword:
-            return .private
+            .private
         case .internalKeyword:
-            return .internal
+            .internal
         case .contextualKeyword("open"), .identifier("open"):
-            return .open
+            .open
         case .contextualKeyword("package"), .identifier("package"):
-            return .package
+            .package
         default:
-            return nil
+            nil
         }
     }
 
@@ -536,21 +538,21 @@ private final class Visitor: SyntaxVisitor {
 
         return .skipChildren
     }
-    
+
     // For protocol members without explicit access modifiers, inherit the protocol's access level
     private func effectiveMemberAccessLevel(from modifiers: ModifierListSyntax?) -> Syntax.AccessLevel {
         let explicitLevel = accessLevel(from: modifiers)
-        
+
         // If the member has an explicit access level, use it
-        if let modifiers = modifiers, !modifiers.isEmpty {
+        if let modifiers, !modifiers.isEmpty {
             return explicitLevel
         }
-        
+
         // For protocol members without explicit modifiers, use the protocol's access level
         if currentTypeKind == .protocol {
             return currentTypeAccessLevel
         }
-        
+
         // For other types, use internal as default
         return explicitLevel
     }
@@ -672,7 +674,9 @@ private final class Visitor: SyntaxVisitor {
     }
 
     private func parseAnnotations(from comment: String?) -> [String: [String]] {
-        guard let comment else { return [:] }
+        guard let comment else {
+            return [:]
+        }
 
         var annotations: [String: [String]] = [:]
         let lines = comment.components(separatedBy: .newlines)
@@ -681,17 +685,23 @@ private final class Visitor: SyntaxVisitor {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             guard trimmed.contains("sourcery:"),
                   let sourceryRange = trimmed.range(of: "sourcery:")
-            else { continue }
+            else {
+                continue
+            }
 
             let annotationContent = String(trimmed[sourceryRange.upperBound...]).trimmingCharacters(in: .whitespaces)
-            guard !annotationContent.isEmpty else { continue }
+            guard !annotationContent.isEmpty else {
+                continue
+            }
 
             if let equalIndex = annotationContent.firstIndex(of: "=") {
                 let key = String(annotationContent[..<equalIndex]).trimmingCharacters(in: .whitespaces)
                 let rawValue = String(annotationContent[annotationContent.index(after: equalIndex)...])
                     .trimmingCharacters(in: .whitespaces)
                 let values = parseAnnotationValues(rawValue)
-                guard !key.isEmpty, !values.isEmpty else { continue }
+                guard !key.isEmpty, !values.isEmpty else {
+                    continue
+                }
                 annotations[key, default: []].append(contentsOf: values)
             } else {
                 annotations[annotationContent, default: []].append(annotationContent)
@@ -755,7 +765,9 @@ private final class Visitor: SyntaxVisitor {
         var getterThrows = false
 
         for accessorDecl in accessorBlock.accessors {
-            guard accessorDecl.accessorKind.text == "get" else { continue }
+            guard accessorDecl.accessorKind.text == "get" else {
+                continue
+            }
             if let asyncKeyword = accessorDecl.asyncKeyword, asyncKeyword.presence == .present {
                 let keywordText = asyncKeyword.text
                 if keywordText == "async" || keywordText == "reasync" {
@@ -772,12 +784,12 @@ private final class Visitor: SyntaxVisitor {
             }
         }
 
-        if (!getterIsAsync || !getterThrows) {
+        if !getterIsAsync || !getterThrows {
             let accessorText = accessorBlock.description
-            if !getterIsAsync && accessorText.contains("async") {
+            if !getterIsAsync, accessorText.contains("async") {
                 getterIsAsync = true
             }
-            if !getterThrows && accessorText.contains("throws") {
+            if !getterThrows, accessorText.contains("throws") {
                 getterThrows = true
             }
         }
@@ -793,7 +805,9 @@ private struct AliasDefinition {
 }
 
 private func makeAliasFallbacks(from definitions: [AliasDefinition]) -> [String: String] {
-    guard !definitions.isEmpty else { return [:] }
+    guard !definitions.isEmpty else {
+        return [:]
+    }
 
     var map: [String: AliasDefinition] = [:]
     for definition in definitions {
@@ -892,7 +906,7 @@ private final class AliasTableBuilder: SyntaxVisitor {
 
     override func visit(_ node: TypealiasDeclSyntax) -> SyntaxVisitorContinueKind {
         let target = TypeSyntax(node.initializer.value)
-        let generics = node.genericParameterClause?.genericParameterList.map { $0.name.text } ?? []
+        let generics = node.genericParameterClause?.genericParameterList.map(\.name.text) ?? []
         let alias = AliasDefinition(name: node.identifier.text, genericParameters: generics, target: target)
         aliasesByScope[currentScopeKey, default: []].append(alias)
         return .skipChildren
@@ -983,7 +997,7 @@ private func stripAttributes(from type: TypeSyntax, foundInout: inout Bool) -> T
 private func resolveAliases(in type: TypeSyntax, aliases: [String: AliasDefinition]) -> TypeSyntax? {
     var current = type
     var changed = false
-    for _ in 0..<8 {
+    for _ in 0 ..< 8 {
         let resolver = AliasResolver(aliases: aliases)
         let rewritten = resolver.visit(current)
         if resolver.didRewrite {
@@ -1091,20 +1105,20 @@ private func genericRequirements(from clause: GenericWhereClauseSyntax?) -> [Syn
 
     return clause.requirementList.compactMap { requirement in
         switch requirement.body {
-        case .conformanceRequirement(let requirement):
-            return Syntax.GenericRequirement(
+        case let .conformanceRequirement(requirement):
+            Syntax.GenericRequirement(
                 leftTypeName: trimmedDescription(of: requirement.leftTypeIdentifier),
                 rightTypeName: trimmedDescription(of: requirement.rightTypeIdentifier),
                 relationshipSyntax: ":"
             )
-        case .sameTypeRequirement(let requirement):
-            return Syntax.GenericRequirement(
+        case let .sameTypeRequirement(requirement):
+            Syntax.GenericRequirement(
                 leftTypeName: trimmedDescription(of: requirement.leftTypeIdentifier),
                 rightTypeName: trimmedDescription(of: requirement.rightTypeIdentifier),
                 relationshipSyntax: "=="
             )
-        case .layoutRequirement(let requirement):
-            return Syntax.GenericRequirement(
+        case let .layoutRequirement(requirement):
+            Syntax.GenericRequirement(
                 leftTypeName: trimmedDescription(of: requirement.typeIdentifier),
                 rightTypeName: trimmedDescription(of: requirement),
                 relationshipSyntax: "layout"

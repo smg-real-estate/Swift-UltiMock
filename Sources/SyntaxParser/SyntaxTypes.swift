@@ -62,7 +62,7 @@ public enum Syntax {
             self.associatedTypes = associatedTypes
             self.genericRequirements = genericRequirements
         }
-        
+
         // Computed properties for template compatibility
         public var allMethods: [Method] { methods }
         public var allVariables: [Property] { properties }
@@ -72,58 +72,60 @@ public enum Syntax {
                 result[type] = type
             }
         }
+
         public var implements: [String: TypeInfo] {
             // Simplified - returns empty. In full SourceryRuntime this would resolve inherited protocol types
             [:]
         }
+
         public var supertype: TypeInfo? {
             // Simplified - would need type resolution to implement properly
             nil
         }
     }
-    
+
     public struct AssociatedType: Equatable {
         public let name: String
         public let typeNameString: String?
-        
+
         public init(name: String, typeNameString: String? = nil) {
             self.name = name
             self.typeNameString = typeNameString
         }
-        
+
         public var typeName: TypeName? {
             typeNameString.map { TypeName(name: $0) }
         }
     }
-    
+
     public struct GenericRequirement: Equatable {
         public let leftTypeName: String
         public let rightTypeName: String
         public let relationshipSyntax: String
-        
+
         public init(leftTypeName: String, rightTypeName: String, relationshipSyntax: String) {
             self.leftTypeName = leftTypeName
             self.rightTypeName = rightTypeName
             self.relationshipSyntax = relationshipSyntax
         }
-        
+
         public var leftType: TypeName {
             TypeName(name: leftTypeName)
         }
-        
+
         public var rightType: TypeNameContainer {
             TypeNameContainer(typeName: TypeName(name: rightTypeName))
         }
     }
-    
+
     public struct TypeNameContainer: Equatable {
         public let typeName: TypeName
-        
+
         public init(typeName: TypeName) {
             self.typeName = typeName
         }
     }
-    
+
     public struct TypeName: Equatable {
         public let name: String
         public let isOptional: Bool
@@ -134,7 +136,7 @@ public enum Syntax {
         public let isClosure: Bool
         public let closureDescription: String?
         public let attributes: [Attribute]
-        
+
         public init(
             name: String,
             isOptional: Bool = false,
@@ -156,16 +158,18 @@ public enum Syntax {
             self.closureDescription = closureDescription
             self.attributes = attributes
         }
-        
+
         public var actualTypeName: TypeName? {
             actualTypeNameString.map { TypeName(name: $0) }
         }
-        
+
         public var closure: ClosureType? {
-            guard isClosure, let desc = closureDescription else { return nil }
+            guard isClosure, let desc = closureDescription else {
+                return nil
+            }
             return ClosureType(description: desc)
         }
-        
+
         public var fixedName: String {
             // Remove @escaping from the type name since it belongs in the signature
             // Other attributes like @MainActor, @Sendable, @autoclosure etc. should remain
@@ -174,7 +178,7 @@ public enum Syntax {
             if escapingAttributes.isEmpty {
                 return name
             }
-            
+
             // Remove only @escaping from the name
             var cleanName = name
             for attr in escapingAttributes {
@@ -182,7 +186,7 @@ public enum Syntax {
             }
             return cleanName
         }
-        
+
         public var normalizedName: String {
             // Normalize module-qualified standard library types
             name
@@ -196,30 +200,31 @@ public enum Syntax {
                 .replacingOccurrences(of: "Swift.Set", with: "Set")
                 .replacingOccurrences(of: "Swift.Optional", with: "Optional")
         }
-        
+
         public var nameWithoutAttributes: String {
             // Remove ALL attributes from the type name for use in Parameter<...>
             if attributes.isEmpty {
                 return normalizedName
             }
-            
+
             var cleanName = normalizedName
             for attr in attributes {
                 cleanName = cleanName.replacingOccurrences(of: "@\(attr.name)", with: "").trimmingCharacters(in: .whitespaces)
             }
             return cleanName
         }
+
         public var asSource: String { name }
-        
+
         // Helper to parse a type string and detect optionals and implicit optionals
         public static func parse(_ typeString: String, actualTypeNameString: String? = nil) -> TypeName {
             let trimmed = typeString.trimmingCharacters(in: .whitespaces)
-            
+
             // Extract ONLY @escaping attribute (parameter-level attribute)
             // Other attributes like @MainActor, @Sendable are type-level and should remain in the name
             var attributes: [Attribute] = []
             var workingString = trimmed
-            
+
             // Only extract @escaping
             if let escapingRange = workingString.range(of: "@escaping") {
                 attributes.append(Attribute(name: "escaping"))
@@ -228,10 +233,10 @@ public enum Syntax {
                 let suffix = String(workingString[escapingRange.upperBound...].drop(while: { $0.isWhitespace }))
                 workingString = (prefix + suffix).trimmingCharacters(in: .whitespaces)
             }
-            
+
             // Now handle optionality
             let cleanedString = workingString.trimmingCharacters(in: .whitespaces)
-            
+
             // Check for implicit optional (!)
             if cleanedString.hasSuffix("!") {
                 let unwrapped = String(cleanedString.dropLast())
@@ -246,7 +251,7 @@ public enum Syntax {
                     attributes: attributes
                 )
             }
-            
+
             // Check for optional (?)
             if cleanedString.hasSuffix("?") {
                 let unwrapped = String(cleanedString.dropLast())
@@ -261,7 +266,7 @@ public enum Syntax {
                     attributes: attributes
                 )
             }
-            
+
             // Regular type
             return TypeName(
                 name: cleanedString,
@@ -275,36 +280,36 @@ public enum Syntax {
             )
         }
     }
-    
+
     public struct ClosureType: Equatable {
         public let description: String
-        
+
         public init(description: String) {
             self.description = description
         }
-        
+
         public var asFixedSource: String { description }
     }
-    
+
     public struct Attribute: Equatable {
         public let name: String
         public let arguments: [String: String]
         public let description: String
-        
+
         public init(name: String, arguments: [String: String] = [:], description: String? = nil) {
             self.name = name
             self.arguments = arguments
             self.description = description ?? "@\(name)"
         }
-        
+
         public var key: String { name }
         public var value: [Attribute] { [self] }
         public var asSource: String { description }
     }
-    
+
     public struct Modifier: Equatable {
         public let name: String
-        
+
         public init(name: String) {
             self.name = name
         }
@@ -356,10 +361,10 @@ public enum Syntax {
                 self.isClosure = isClosure
                 self.isOptional = isOptional
             }
-            
+
             public var argumentLabel: String? { label }
             public var typeName: TypeName {
-                guard let type = type else {
+                guard let type else {
                     return TypeName(name: "Unknown")
                 }
                 return TypeName.parse(type, actualTypeNameString: resolvedType)
@@ -388,7 +393,7 @@ public enum Syntax {
             name: String,
             parameters: [Parameter] = [],
             returnType: String? = nil,
-                resolvedReturnType: String? = nil,
+            resolvedReturnType: String? = nil,
             annotations: [String: [String]] = [:],
             accessLevel: String = "internal",
             modifiers: [Modifier] = [],
@@ -406,7 +411,7 @@ public enum Syntax {
             self.name = name
             self.parameters = parameters
             self.returnType = returnType
-                self.resolvedReturnType = resolvedReturnType
+            self.resolvedReturnType = resolvedReturnType
             self.annotations = annotations
             self.accessLevel = accessLevel
             self.modifiers = modifiers
@@ -421,19 +426,21 @@ public enum Syntax {
             self.genericParameters = genericParameters
             self.genericRequirements = genericRequirements
         }
-        
+
         public var shortName: String { name }
         public var callName: String { name.components(separatedBy: "(").first ?? name }
         public var selectorName: String { callName }
         public var unbacktickedCallName: String {
             callName.replacingOccurrences(of: "`", with: "")
         }
+
         public var returnTypeName: TypeName {
-            guard let returnType = returnType else {
+            guard let returnType else {
                 return TypeName(name: "Void", isVoid: true)
             }
             return TypeName.parse(returnType, actualTypeNameString: resolvedReturnType)
         }
+
         public var definedInType: TypeInfo? { nil }
     }
 
@@ -454,7 +461,7 @@ public enum Syntax {
         public init(
             name: String,
             type: String?,
-                resolvedType: String? = nil,
+            resolvedType: String? = nil,
             isVariable: Bool = true,
             annotations: [String: [String]] = [:],
             readAccess: String = "internal",
@@ -467,7 +474,7 @@ public enum Syntax {
         ) {
             self.name = name
             self.type = type
-                self.resolvedType = resolvedType
+            self.resolvedType = resolvedType
             self.isVariable = isVariable
             self.annotations = annotations
             self.readAccess = readAccess
@@ -478,13 +485,14 @@ public enum Syntax {
             self.definedInTypeIsExtension = definedInTypeIsExtension
             self.isStatic = isStatic
         }
-        
+
         public var typeName: TypeName {
-            guard let type = type else {
+            guard let type else {
                 return TypeName(name: "Unknown")
             }
             return TypeName.parse(type, actualTypeNameString: resolvedType)
         }
+
         public var definedInType: TypeInfo? { nil }
         public var unbacktickedName: String {
             name.replacingOccurrences(of: "`", with: "")
@@ -517,9 +525,9 @@ public enum Syntax {
             self.writeAccess = writeAccess
             self.attributes = attributes
         }
-        
+
         public var returnTypeName: TypeName {
-            guard let returnType = returnType else {
+            guard let returnType else {
                 return TypeName(name: "Unknown")
             }
             return TypeName.parse(returnType, actualTypeNameString: resolvedReturnType)
