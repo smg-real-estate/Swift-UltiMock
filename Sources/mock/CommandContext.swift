@@ -30,11 +30,13 @@ struct CommandContext {
     }
 
     func parse() throws -> [UltiMockSwiftSyntaxParser.Syntax.TypeInfo] {
-        try [
+        let rawTypes = try [
             parseSources(),
             parseSDKModules()
         ]
             .flatMap(\.self)
+
+        return TypeInfoResolver().resolve(rawTypes)
     }
 }
 

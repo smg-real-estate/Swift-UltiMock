@@ -36,7 +36,16 @@ extension Syntax.Method {
     var whereConstraints: String? {
         // First check if we have generic requirements
         if !genericRequirements.isEmpty {
-            return genericRequirements.map { "\($0.leftTypeName): \($0.rightTypeName)" }.joined(separator: ", ")
+            return genericRequirements.map { requirement in
+                switch requirement.relationshipSyntax {
+                case ":", "layout":
+                    return "\(requirement.leftTypeName): \(requirement.rightTypeName)"
+                case "==":
+                    return "\(requirement.leftTypeName) == \(requirement.rightTypeName)"
+                default:
+                    return "\(requirement.leftTypeName): \(requirement.rightTypeName)"
+                }
+            }.joined(separator: ", ")
         }
         
         // Fallback to parsing from return type for backward compatibility
@@ -74,7 +83,9 @@ extension Syntax.Method {
     }
 
     func signature(namedParameters: Bool = true, _ mockTypeName: String, substituteReturnSelf: Bool = false) -> String {
-        closureDefinition(namedParameters: namedParameters, mockTypeName, substituteReturnSelf, forwarding: false)
+        sanitizeFunctionType(
+            closureDefinition(namedParameters: namedParameters, mockTypeName, substituteReturnSelf, forwarding: false)
+        )
     }
 
     var rawSignature: String {
@@ -93,12 +104,28 @@ extension Syntax.Method {
     }
 
     var methodIdentifier: String {
-        let whereClause = genericRequirements.isEmpty ? "" : "where" + genericRequirements.map { req in
-            let left = req.leftTypeName.replacingOccurrences(of: ":", with: "_col_")
-            let right = req.rightTypeName.replacingOccurrences(of: ":", with: "_col_")
-            return "\(left)_col_\(right)"
-        }.joined(separator: "_")
-        return "\(unbacktickedCallName)_\(isAsync ? "async" : "sync")\(parametersPart)_ret_\(returnTypePart)\(whereClause)"
+        "\(unbacktickedCallName)_\(isAsync ? "async" : "sync")\(parametersPart)_ret_\(returnTypePart)\(whereClauseIdentifier)"
+    }
+
+    private var whereClauseIdentifier: String {
+        guard !genericRequirements.isEmpty else {
+            return ""
+        }
+
+        let components = genericRequirements.map { requirement -> String in
+            let left = sanitizedIdentifierComponent(from: requirement.leftTypeName)
+            let right = sanitizedIdentifierComponent(from: requirement.rightTypeName)
+            switch requirement.relationshipSyntax {
+            case ":":
+                return "\(left)_conforms_\(right)"
+            case "==":
+                return "\(left)_equals_\(right)"
+            default:
+                return "\(left)_layout_\(right)"
+            }
+        }
+
+        return "_where_" + components.joined(separator: "_and_")
     }
 
     var genericTypeNames: [String] {
@@ -354,7 +381,8 @@ extension Syntax.Method.Parameter {
             ? "\\\"\\($0[\(index)]!)\\\""
             : "\\($0[\(index)] ?? \"nil\")"
 
-        return "\(argumentLabel.map { "\($0): " } ?? "")\(value)"
+        let label = argumentLabel == "_" ? nil : argumentLabel
+        return "\(label.map { "\($0): " } ?? "")\(value)"
     }
 }
 
@@ -461,6 +489,22 @@ extension Syntax.TypeName {
             closure?.asFixedSource ?? name
         }
     }
+}
+
+private func sanitizedIdentifierComponent(from typeName: String) -> String {
+    Syntax.TypeName.parse(typeName).escapedIdentifierName()
+}
+
+private func sanitizeFunctionType(_ functionType: String) -> String {
+    var sanitized = functionType.replacingOccurrences(of: "@escaping", with: "")
+    while sanitized.contains("  ") {
+        sanitized = sanitized.replacingOccurrences(of: "  ", with: " ")
+    }
+    sanitized = sanitized
+        .replacingOccurrences(of: "( ", with: "(")
+        .replacingOccurrences(of: " )", with: ")")
+        .replacingOccurrences(of: " ,", with: ",")
+    return sanitized.trimmingCharacters(in: .whitespaces)
 }
 
 extension Syntax.Property {
@@ -1036,6 +1080,17 @@ extension String {
     
     var trimmed: Self {
         trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    var unquoted: Self {
+        trimmingCharacters(in: CharacterSet(charactersIn: "\"'"))
+    }
+
+    var rootIdentifier: Self {
+        guard let stop = firstIndex(where: { !$0.isLetter && !$0.isNumber && $0 != "_" }) else {
+            return self
+        }
+        return String(self[..<stop])
     }
 }
 

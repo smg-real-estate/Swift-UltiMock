@@ -9,8 +9,10 @@ public struct TypesCollector {
         aliasBuilder.walk(source)
 
         let aliasTable = aliasBuilder.aliasesByScope
-        let globalAliases = Dictionary(uniqueKeysWithValues: (aliasTable[AliasTableBuilder.globalScopeKey] ?? [])
-            .map { ($0.name, $0) })
+        var globalAliases: [String: AliasDefinition] = [:]
+        for alias in aliasTable[AliasTableBuilder.globalScopeKey] ?? [] {
+            globalAliases[alias.name] = alias
+        }
 
         let visitor = Visitor(globalAliases: globalAliases, aliasTable: aliasTable)
         visitor.walk(source)
@@ -32,6 +34,14 @@ private final class Visitor: SyntaxVisitor {
     private var aliasScopeStack: [[String: AliasDefinition]]
     private var typeScopeStack: [String] = []
 
+    private var currentAliasScope: [String: AliasDefinition] {
+        aliasScopeStack.last ?? [:]
+    }
+
+    private var isInsideType: Bool {
+        !typeScopeStack.isEmpty
+    }
+
     init(globalAliases: [String: AliasDefinition], aliasTable: [String: [AliasDefinition]]) {
         self.globalAliases = globalAliases
         self.aliasTable = aliasTable
@@ -52,7 +62,9 @@ private final class Visitor: SyntaxVisitor {
         currentTypeAccessLevel = accessLevel(from: modifiers)
         typeScopeStack.append(name)
         let aliasDefinitions = aliasTable[currentScopeKey] ?? []
-        currentTypeTypealiases = aliasDefinitions.map { Syntax.Typealias(name: $0.name, target: $0.target) }
+        currentTypeTypealiases = aliasDefinitions.map {
+            Syntax.Typealias(name: $0.name, target: trimmedDescription(of: $0.target))
+        }
         pushAliasScope(with: aliasDefinitions)
     }
 
@@ -116,7 +128,8 @@ private final class Visitor: SyntaxVisitor {
             modifiers: node.modifiers,
             inheritanceClause: node.inheritanceClause,
             genericParameters: genericParameters(from: node.genericParameterClause),
-            commentTrivia: node.leadingTrivia
+            commentTrivia: node.leadingTrivia,
+            genericWhereClause: node.genericWhereClause
         )
         return .visitChildren
     }
@@ -133,7 +146,8 @@ private final class Visitor: SyntaxVisitor {
             modifiers: node.modifiers,
             inheritanceClause: node.inheritanceClause,
             genericParameters: genericParameters(from: node.genericParameterClause),
-            commentTrivia: node.leadingTrivia
+            commentTrivia: node.leadingTrivia,
+            genericWhereClause: node.genericWhereClause
         )
         return .visitChildren
     }
@@ -149,7 +163,8 @@ private final class Visitor: SyntaxVisitor {
             name: node.identifier.text,
             modifiers: node.modifiers,
             inheritanceClause: node.inheritanceClause,
-            commentTrivia: node.leadingTrivia
+            commentTrivia: node.leadingTrivia,
+            genericWhereClause: node.genericWhereClause
         )
         return .visitChildren
     }
@@ -165,7 +180,9 @@ private final class Visitor: SyntaxVisitor {
             name: node.identifier.text,
             modifiers: node.modifiers,
             inheritanceClause: node.inheritanceClause,
-            commentTrivia: node.leadingTrivia
+            genericParameters: primaryAssociatedTypes(from: node.primaryAssociatedTypeClause),
+            commentTrivia: node.leadingTrivia,
+            genericWhereClause: node.genericWhereClause
         )
         return .visitChildren
     }
@@ -184,6 +201,7 @@ private final class Visitor: SyntaxVisitor {
             modifiers: node.modifiers,
             inheritanceClause: node.inheritanceClause,
             commentTrivia: node.leadingTrivia,
+            genericWhereClause: node.genericWhereClause,
             isExtension: true
         )
         return .visitChildren
@@ -194,61 +212,113 @@ private final class Visitor: SyntaxVisitor {
     }
 
     override func visit(_ node: FunctionDeclSyntax) -> SyntaxVisitorContinueKind {
-        let parameters = node.signature.input.parameterList.map { parameter in
-            let label: String? = if let firstName = parameter.firstName {
-                firstName.text
-            } else {
-                nil
-            }
+        guard isInsideType else {
+            return .skipChildren
+        }
+
+        let parameterList = node.signature.input.parameterList
+        let parameters = parameterList.map { parameter -> Syntax.Method.Parameter in
+            let label = parameter.firstName?.text
             let name = parameter.secondName?.text ?? parameter.firstName?.text ?? ""
-            let type: String? = if let paramType = parameter.type {
-                trimmedDescription(of: paramType)
-            } else {
-                nil
-            }
-            return Syntax.Method.Parameter(label: label, name: name, type: type)
+            let details = analyzeType(parameter.type, aliasScope: currentAliasScope)
+
+            return Syntax.Method.Parameter(
+                label: label,
+                name: name,
+                type: details?.text,
+                resolvedType: details?.resolvedText,
+                isInout: details?.isInout ?? false,
+                isClosure: details?.isClosure ?? false,
+                isOptional: details?.isOptional ?? false
+            )
         }
 
-        let returnType: String? = if let output = node.signature.output {
-            trimmedDescription(of: output.returnType)
-        } else {
-            nil
-        }
-
-        let methodGenericParameters = genericParameters(from: node.genericParameterClause)
-        
-        let methodGenericRequirements: [Syntax.GenericRequirement]
-        if let whereClause = node.genericWhereClause {
-            methodGenericRequirements = whereClause.requirementList.compactMap { requirement in
-                guard let conformanceRequirement = requirement.body.as(ConformanceRequirementSyntax.self) else {
-                    return nil
-                }
-                return Syntax.GenericRequirement(
-                    leftTypeName: trimmedDescription(of: conformanceRequirement.leftTypeIdentifier),
-                    rightTypeName: trimmedDescription(of: conformanceRequirement.rightTypeIdentifier),
-                    relationshipSyntax: ":"
-                )
-            }
-        } else {
-            methodGenericRequirements = []
-        }
+        let returnDetails = analyzeType(node.signature.output?.returnType, aliasScope: currentAliasScope)
+        let methodModifiers = makeModifiers(from: node.modifiers)
+        let modifierNames = Set(methodModifiers.map { $0.name })
 
         let method = Syntax.Method(
             name: node.identifier.text,
             parameters: parameters,
-            returnType: returnType,
+            returnType: returnDetails?.text,
+            resolvedReturnType: returnDetails?.resolvedText,
+            annotations: [:],
             accessLevel: effectiveMemberAccessLevel(from: node.modifiers).rawValue,
-            genericParameters: methodGenericParameters,
-            genericRequirements: methodGenericRequirements
+            modifiers: methodModifiers,
+            attributes: parseAttributes(node.attributes),
+            isAsync: node.signature.asyncOrReasyncKeyword != nil,
+            throws: node.signature.throwsOrRethrowsKeyword != nil,
+            definedInTypeIsExtension: currentTypeKind == .extension,
+            isStatic: modifierNames.contains("static"),
+            isClass: modifierNames.contains("class"),
+            isInitializer: false,
+            isRequired: modifierNames.contains("required"),
+            genericParameters: genericParameters(from: node.genericParameterClause),
+            genericRequirements: genericRequirements(from: node.genericWhereClause)
         )
         currentTypeMethods.append(method)
 
         return .skipChildren
     }
 
+    override func visit(_ node: InitializerDeclSyntax) -> SyntaxVisitorContinueKind {
+        guard isInsideType else {
+            return .skipChildren
+        }
+
+        let parameters = node.signature.input.parameterList.map { parameter -> Syntax.Method.Parameter in
+            let label = parameter.firstName?.text
+            let name = parameter.secondName?.text ?? parameter.firstName?.text ?? ""
+            let details = analyzeType(parameter.type, aliasScope: currentAliasScope)
+
+            return Syntax.Method.Parameter(
+                label: label,
+                name: name,
+                type: details?.text,
+                resolvedType: details?.resolvedText,
+                isInout: details?.isInout ?? false,
+                isClosure: details?.isClosure ?? false,
+                isOptional: details?.isOptional ?? false
+            )
+        }
+
+        let methodModifiers = makeModifiers(from: node.modifiers)
+        let modifierNames = Set(methodModifiers.map { $0.name })
+
+        let initializer = Syntax.Method(
+            name: initializerName(from: node),
+            parameters: parameters,
+            annotations: [:],
+            accessLevel: effectiveMemberAccessLevel(from: node.modifiers).rawValue,
+            modifiers: methodModifiers,
+            attributes: parseAttributes(node.attributes),
+            isAsync: node.signature.asyncOrReasyncKeyword != nil,
+            throws: node.signature.throwsOrRethrowsKeyword != nil,
+            definedInTypeIsExtension: currentTypeKind == .extension,
+            isStatic: true,
+            isClass: false,
+            isInitializer: true,
+            isRequired: modifierNames.contains("required"),
+            genericParameters: genericParameters(from: node.genericParameterClause),
+            genericRequirements: genericRequirements(from: node.genericWhereClause)
+        )
+        currentTypeMethods.append(initializer)
+
+        return .skipChildren
+    }
+
     override func visit(_ node: VariableDeclSyntax) -> SyntaxVisitorContinueKind {
+        guard isInsideType else {
+            return .skipChildren
+        }
+
         let isVariable = node.letOrVarKeyword.tokenKind == .varKeyword
         let propAccessLevel = effectiveMemberAccessLevel(from: node.modifiers).rawValue
+        let attributes = parseAttributes(node.attributes)
+        let propertyModifiers = makeModifiers(from: node.modifiers)
+        let modifierNames = Set(propertyModifiers.map { $0.name })
+        let isStatic = modifierNames.contains("static") || modifierNames.contains("class")
+        let setterAccessOverride = setterAccessLevel(from: node.modifiers)
 
         for binding in node.bindings {
             guard let pattern = binding.pattern.as(IdentifierPatternSyntax.self) else {
@@ -256,22 +326,29 @@ private final class Visitor: SyntaxVisitor {
             }
 
             let propertyName = pattern.identifier.text
-            let typeAnnotation: String? = if let annotation = binding.typeAnnotation {
-                trimmedDescription(of: annotation.type)
-            } else {
-                nil
+            let typeDetails = analyzeType(binding.typeAnnotation?.type, aliasScope: currentAliasScope)
+            var propertyType = typeDetails?.text
+            var resolvedPropertyType = typeDetails?.resolvedText
+            if propertyType == nil, let initializer = binding.initializer {
+                if let inferred = inferTypeName(from: initializer.value) {
+                    propertyType = inferred
+                    resolvedPropertyType = inferred
+                }
             }
+            let getterEffects = accessorEffects(from: binding.accessor)
 
-            // Determine write access based on accessor block
+            // Determine write access based on accessor block or explicit setter modifier
             let writeAccessLevel: String
-            if let accessor = binding.accessor {
+            if let setterAccessOverride {
+                writeAccessLevel = setterAccessOverride
+            } else if let accessor = binding.accessor {
                 if case let .accessors(accessorBlock) = accessor {
                     // Check if there's a setter
                     let hasSetter = accessorBlock.accessors.contains(where: { accessor in
                         let kind = accessor.accessorKind.text
                         return kind == "set" || kind == "_modify"
                     })
-                    
+
                     if hasSetter {
                         writeAccessLevel = propAccessLevel
                     } else {
@@ -289,10 +366,16 @@ private final class Visitor: SyntaxVisitor {
 
             let property = Syntax.Property(
                 name: propertyName,
-                type: typeAnnotation,
+                type: propertyType,
+                resolvedType: resolvedPropertyType,
                 isVariable: isVariable,
                 readAccess: propAccessLevel,
-                writeAccess: writeAccessLevel
+                writeAccess: writeAccessLevel,
+                attributes: attributes,
+                isAsync: getterEffects.isAsync,
+                throws: getterEffects.throws,
+                definedInTypeIsExtension: currentTypeKind == .extension,
+                isStatic: isStatic
             )
             currentTypeProperties.append(property)
         }
@@ -301,42 +384,49 @@ private final class Visitor: SyntaxVisitor {
     }
 
     override func visit(_ node: SubscriptDeclSyntax) -> SyntaxVisitorContinueKind {
-        let parameters = node.indices.parameterList.map { parameter in
-            let label: String? = if let firstName = parameter.firstName {
-                firstName.text
-            } else {
-                nil
-            }
-            let name = parameter.secondName?.text ?? parameter.firstName?.text ?? ""
-            let type: String? = if let paramType = parameter.type {
-                trimmedDescription(of: paramType)
-            } else {
-                nil
-            }
-            return Syntax.Method.Parameter(label: label, name: name, type: type)
+        guard isInsideType else {
+            return .skipChildren
         }
 
-        let returnType = trimmedDescription(of: node.result.returnType)
+        let parameters = node.indices.parameterList.map { parameter -> Syntax.Method.Parameter in
+            let label = parameter.firstName?.text
+            let name = parameter.secondName?.text ?? parameter.firstName?.text ?? ""
+            let details = analyzeType(parameter.type, aliasScope: currentAliasScope)
+
+            return Syntax.Method.Parameter(
+                label: label,
+                name: name,
+                type: details?.text,
+                resolvedType: details?.resolvedText,
+                isInout: details?.isInout ?? false,
+                isClosure: details?.isClosure ?? false,
+                isOptional: details?.isOptional ?? false
+            )
+        }
+
+        let returnDetails = analyzeType(node.result.returnType, aliasScope: currentAliasScope)
         let subscriptAccessLevel = effectiveMemberAccessLevel(from: node.modifiers).rawValue
+
+        let writeAccessLevel: String
+        if let accessor = node.accessor, case let .accessors(accessorBlock) = accessor {
+            let hasSetter = accessorBlock.accessors.contains { accessor in
+                let kindText = accessor.accessorKind.text
+                return kindText == "set" || kindText == "_modify"
+            }
+            writeAccessLevel = hasSetter ? subscriptAccessLevel : ""
+        } else {
+            writeAccessLevel = subscriptAccessLevel
+        }
 
         let subscriptInfo = Syntax.Subscript(
             parameters: parameters,
-            returnType: returnType,
+            returnType: returnDetails?.text,
+            resolvedReturnType: returnDetails?.resolvedText,
             readAccess: subscriptAccessLevel,
-            writeAccess: subscriptAccessLevel
+            writeAccess: writeAccessLevel,
+            attributes: parseAttributes(node.attributes)
         )
         currentTypeSubscripts.append(subscriptInfo)
-
-        return .skipChildren
-    }
-
-    override func visit(_ node: TypealiasDeclSyntax) -> SyntaxVisitorContinueKind {
-        let target = trimmedDescription(of: node.initializer.value)
-        let typealiasInfo = Syntax.Typealias(
-            name: node.identifier.text,
-            target: target
-        )
-        currentTypeTypealiases.append(typealiasInfo)
 
         return .skipChildren
     }
@@ -347,25 +437,72 @@ private final class Visitor: SyntaxVisitor {
         }
 
         for modifier in modifiers {
-            switch modifier.name.tokenKind {
-            case .publicKeyword:
-                return .public
-            case .fileprivateKeyword:
-                return .fileprivate
-            case .privateKeyword:
-                return .private
-            case .internalKeyword:
-                return .internal
-            case .contextualKeyword("open"), .identifier("open"):
-                return .open
-            case .contextualKeyword("package"), .identifier("package"):
-                return .package
-            default:
-                continue
+            if let level = accessLevel(for: modifier.name.tokenKind) {
+                return level
             }
         }
 
         return .internal
+    }
+
+    private func accessLevel(for tokenKind: TokenKind) -> Syntax.AccessLevel? {
+        switch tokenKind {
+        case .publicKeyword:
+            return .public
+        case .fileprivateKeyword:
+            return .fileprivate
+        case .privateKeyword:
+            return .private
+        case .internalKeyword:
+            return .internal
+        case .contextualKeyword("open"), .identifier("open"):
+            return .open
+        case .contextualKeyword("package"), .identifier("package"):
+            return .package
+        default:
+            return nil
+        }
+    }
+
+    private func setterAccessLevel(from modifiers: ModifierListSyntax?) -> String? {
+        guard let modifiers else {
+            return nil
+        }
+
+        for modifier in modifiers {
+            guard let detail = modifier.detail, detail.detail.text == "set" else {
+                continue
+            }
+            if let level = accessLevel(for: modifier.name.tokenKind) {
+                return level.rawValue
+            }
+        }
+
+        return nil
+    }
+
+    override func visit(_ node: AssociatedtypeDeclSyntax) -> SyntaxVisitorContinueKind {
+        guard isInsideType else {
+            return .skipChildren
+        }
+
+        let constraint: String?
+        if let clause = node.inheritanceClause {
+            let inherited = clause.inheritedTypeCollection.map { inheritedType in
+                trimmedDescription(of: inheritedType.typeName)
+            }
+            constraint = inherited.isEmpty ? nil : inherited.joined(separator: " & ")
+        } else {
+            constraint = nil
+        }
+
+        let associatedType = Syntax.AssociatedType(
+            name: node.identifier.text,
+            typeNameString: constraint
+        )
+        currentTypeAssociatedTypes.append(associatedType)
+
+        return .skipChildren
     }
     
     // For protocol members without explicit access modifiers, inherit the protocol's access level
@@ -455,6 +592,7 @@ private final class Visitor: SyntaxVisitor {
         inheritanceClause: TypeInheritanceClauseSyntax?,
         genericParameters: [Syntax.GenericParameter] = [],
         commentTrivia: Trivia?,
+        genericWhereClause: GenericWhereClauseSyntax? = nil,
         isExtension: Bool = false
     ) {
         let type = Syntax.TypeInfo(
@@ -466,10 +604,39 @@ private final class Visitor: SyntaxVisitor {
             genericParameters: genericParameters,
             annotations: parseAnnotations(from: rawComment(from: commentTrivia)),
             isExtension: isExtension,
-            comment: rawComment(from: commentTrivia)
+            comment: rawComment(from: commentTrivia),
+            genericRequirements: genericRequirements(from: genericWhereClause)
         )
 
         types.append(type)
+    }
+
+    private func initializerName(from node: InitializerDeclSyntax) -> String {
+        var name = node.initKeyword.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let optionalMark = node.optionalMark {
+            name += optionalMark.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        if let genericParameters = node.genericParameterClause {
+            name += trimmedDescription(of: genericParameters)
+        }
+        name += trimmedDescription(of: node.signature.input)
+        return name
+    }
+
+    private func inferTypeName(from expression: ExprSyntax) -> String? {
+        if expression.is(BooleanLiteralExprSyntax.self) {
+            return "Bool"
+        }
+        if expression.is(IntegerLiteralExprSyntax.self) {
+            return "Int"
+        }
+        if expression.is(FloatLiteralExprSyntax.self) {
+            return "Double"
+        }
+        if expression.is(StringLiteralExprSyntax.self) {
+            return "String"
+        }
+        return nil
     }
 
     private func parseAnnotations(from comment: String?) -> [String: String] {
@@ -513,12 +680,59 @@ private final class Visitor: SyntaxVisitor {
     private func localName(for name: String) -> String {
         name.split(separator: ".").last.map(String.init) ?? name
     }
+
+    private func accessorEffects(from accessor: PatternBindingSyntax.Accessor?) -> (isAsync: Bool, `throws`: Bool) {
+        guard let accessor else {
+            return (false, false)
+        }
+
+        guard case let .accessors(accessorBlock) = accessor else {
+            if case let .getter(codeBlock) = accessor {
+                let text = codeBlock.description
+                return (text.contains("async"), text.contains("throws"))
+            }
+            return (false, false)
+        }
+
+        var getterIsAsync = false
+        var getterThrows = false
+
+        for accessorDecl in accessorBlock.accessors {
+            guard accessorDecl.accessorKind.text == "get" else { continue }
+            if let asyncKeyword = accessorDecl.asyncKeyword, asyncKeyword.presence == .present {
+                let keywordText = asyncKeyword.text
+                if keywordText == "async" || keywordText == "reasync" {
+                    getterIsAsync = true
+                } else if keywordText == "throws" || keywordText == "rethrows" {
+                    getterThrows = true
+                }
+            }
+            if let throwsKeyword = accessorDecl.throwsKeyword, throwsKeyword.presence == .present {
+                let keywordText = throwsKeyword.text
+                if keywordText == "throws" || keywordText == "rethrows" {
+                    getterThrows = true
+                }
+            }
+        }
+
+        if (!getterIsAsync || !getterThrows) {
+            let accessorText = accessorBlock.description
+            if !getterIsAsync && accessorText.contains("async") {
+                getterIsAsync = true
+            }
+            if !getterThrows && accessorText.contains("throws") {
+                getterThrows = true
+            }
+        }
+
+        return (getterIsAsync, getterThrows)
+    }
 }
 
-private struct AliasDefinition: Equatable {
+private struct AliasDefinition {
     let name: String
     let genericParameters: [String]
-    let target: String
+    let target: TypeSyntax
 }
 
 private final class AliasTableBuilder: SyntaxVisitor {
@@ -577,7 +791,7 @@ private final class AliasTableBuilder: SyntaxVisitor {
     }
 
     override func visit(_ node: TypealiasDeclSyntax) -> SyntaxVisitorContinueKind {
-        let target = trimmedDescription(of: node.initializer.value)
+        let target = TypeSyntax(node.initializer.value)
         let generics = node.genericParameterClause?.genericParameterList.map { $0.name.text } ?? []
         let alias = AliasDefinition(name: node.identifier.text, genericParameters: generics, target: target)
         aliasesByScope[currentScopeKey, default: []].append(alias)
@@ -587,8 +801,208 @@ private final class AliasTableBuilder: SyntaxVisitor {
     private var currentScopeKey: String {
         scopeStack.joined(separator: ".")
     }
+}
 
-    private func trimmedDescription(of syntax: SyntaxProtocol) -> String {
-        syntax.withoutTrivia().description.trimmingCharacters(in: .whitespacesAndNewlines)
+private struct TypeDetails {
+    let text: String
+    let resolvedText: String?
+    let isOptional: Bool
+    let isClosure: Bool
+    let isInout: Bool
+}
+
+private struct TypeShape {
+    let isOptional: Bool
+    let isClosure: Bool
+    let isInout: Bool
+}
+
+private func analyzeType(_ type: TypeSyntax?, aliasScope: [String: AliasDefinition]) -> TypeDetails? {
+    guard let type else {
+        return nil
     }
+
+    let resolvedSyntax = resolveAliases(in: type, aliases: aliasScope)
+    let text = trimmedDescription(of: type)
+    let resolvedText = resolvedSyntax.map { trimmedDescription(of: $0) }
+
+    let originalShape = inspectTypeShape(type)
+    let resolvedShape = resolvedSyntax.map { inspectTypeShape($0) }
+
+    return TypeDetails(
+        text: text,
+        resolvedText: resolvedText,
+        isOptional: originalShape.isOptional || (resolvedShape?.isOptional ?? false),
+        isClosure: originalShape.isClosure || (resolvedShape?.isClosure ?? false),
+        isInout: originalShape.isInout
+    )
+}
+
+private func inspectTypeShape(_ type: TypeSyntax) -> TypeShape {
+    var current = type
+    var isInout = false
+    current = stripAttributes(from: current, foundInout: &isInout)
+
+    var isOptional = false
+    if let optionalType = current.as(OptionalTypeSyntax.self) {
+        isOptional = true
+        current = stripAttributes(from: optionalType.wrappedType, foundInout: &isInout)
+    } else if let implicitlyUnwrapped = current.as(ImplicitlyUnwrappedOptionalTypeSyntax.self) {
+        isOptional = true
+        current = stripAttributes(from: implicitlyUnwrapped.wrappedType, foundInout: &isInout)
+    }
+
+    current = stripAttributes(from: current, foundInout: &isInout)
+    let isClosure = current.is(FunctionTypeSyntax.self)
+
+    return TypeShape(isOptional: isOptional, isClosure: isClosure, isInout: isInout)
+}
+
+private func stripAttributes(from type: TypeSyntax, foundInout: inout Bool) -> TypeSyntax {
+    var current = type
+    while let attributed = current.as(AttributedTypeSyntax.self) {
+        if attributed.specifier?.tokenKind == .inoutKeyword {
+            foundInout = true
+        }
+        current = attributed.baseType
+    }
+    return current
+}
+
+private func resolveAliases(in type: TypeSyntax, aliases: [String: AliasDefinition]) -> TypeSyntax? {
+    var current = type
+    var changed = false
+    for _ in 0..<8 {
+        let resolver = AliasResolver(aliases: aliases)
+        let rewritten = resolver.visit(current)
+        if resolver.didRewrite {
+            changed = true
+            current = rewritten
+        } else {
+            break
+        }
+    }
+    return changed ? current : nil
+}
+
+private final class AliasResolver: SyntaxRewriter {
+    private let aliases: [String: AliasDefinition]
+    private(set) var didRewrite = false
+
+    init(aliases: [String: AliasDefinition]) {
+        self.aliases = aliases
+        super.init()
+    }
+
+    override func visit(_ node: SimpleTypeIdentifierSyntax) -> TypeSyntax {
+        guard let alias = aliases[node.name.text],
+              let replacement = alias.makeReplacement(arguments: node.genericArgumentClause, aliases: aliases) else {
+            return super.visit(node)
+        }
+
+        didRewrite = true
+        return replacement
+    }
+}
+
+private final class GenericParameterSubstituter: SyntaxRewriter {
+    private let substitutions: [String: TypeSyntax]
+
+    init(substitutions: [String: TypeSyntax]) {
+        self.substitutions = substitutions
+        super.init()
+    }
+
+    override func visit(_ node: SimpleTypeIdentifierSyntax) -> TypeSyntax {
+        if let replacement = substitutions[node.name.text] {
+            return replacement
+        }
+        return super.visit(node)
+    }
+}
+
+private extension AliasDefinition {
+    func makeReplacement(arguments clause: GenericArgumentClauseSyntax?, aliases: [String: AliasDefinition]) -> TypeSyntax? {
+        if genericParameters.isEmpty {
+            return target
+        }
+
+        guard let clause else {
+            return nil
+        }
+
+        guard clause.arguments.count == genericParameters.count else {
+            return nil
+        }
+
+        var substitutions: [String: TypeSyntax] = [:]
+        for (parameter, argument) in zip(genericParameters, clause.arguments) {
+            substitutions[parameter] = argument.argumentType
+        }
+
+        let substituter = GenericParameterSubstituter(substitutions: substitutions)
+        let substituted = substituter.visit(target)
+        return TypeSyntax(substituted)
+    }
+}
+
+private func parseAttributes(_ attributeList: AttributeListSyntax?) -> [String: [Syntax.Attribute]] {
+    guard let attributeList else {
+        return [:]
+    }
+
+    var attributes: [String: [Syntax.Attribute]] = [:]
+    for element in attributeList {
+        guard let attribute = element.as(AttributeSyntax.self) else {
+            continue
+        }
+        let name = trimmedDescription(of: attribute.attributeName)
+        let description = attribute.withoutTrivia().description.trimmingCharacters(in: .whitespacesAndNewlines)
+        let value = Syntax.Attribute(name: name, description: description.isEmpty ? "@\(name)" : description)
+        attributes[name, default: []].append(value)
+    }
+    return attributes
+}
+
+private func makeModifiers(from modifierList: ModifierListSyntax?) -> [Syntax.Modifier] {
+    guard let modifierList else {
+        return []
+    }
+    return modifierList.map { modifier in
+        Syntax.Modifier(name: trimmedDescription(of: modifier.name))
+    }
+}
+
+private func genericRequirements(from clause: GenericWhereClauseSyntax?) -> [Syntax.GenericRequirement] {
+    guard let clause else {
+        return []
+    }
+
+    return clause.requirementList.compactMap { requirement in
+        switch requirement.body {
+        case .conformanceRequirement(let requirement):
+            return Syntax.GenericRequirement(
+                leftTypeName: trimmedDescription(of: requirement.leftTypeIdentifier),
+                rightTypeName: trimmedDescription(of: requirement.rightTypeIdentifier),
+                relationshipSyntax: ":"
+            )
+        case .sameTypeRequirement(let requirement):
+            return Syntax.GenericRequirement(
+                leftTypeName: trimmedDescription(of: requirement.leftTypeIdentifier),
+                rightTypeName: trimmedDescription(of: requirement.rightTypeIdentifier),
+                relationshipSyntax: "=="
+            )
+        case .layoutRequirement(let requirement):
+            return Syntax.GenericRequirement(
+                leftTypeName: trimmedDescription(of: requirement.typeIdentifier),
+                rightTypeName: trimmedDescription(of: requirement),
+                relationshipSyntax: "layout"
+            )
+        }
+    }
+}
+
+@inline(__always)
+private func trimmedDescription(of syntax: SyntaxProtocol) -> String {
+    syntax.withoutTrivia().description.trimmingCharacters(in: .whitespacesAndNewlines)
 }

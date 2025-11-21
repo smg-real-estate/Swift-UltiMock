@@ -23,9 +23,16 @@ struct MockTemplate {
             let typeAliases: [String: String] = type.annotations.array(of: String.self, for: "typealias")
                 .reduce(into: [:]) { partialResult, statement in
                     let parts = statement.split(separator: "=", maxSplits: 1).map { String($0).trimmed }
-                    if !parts.isEmpty {
-                        partialResult[parts[0]] = parts.last
+                    guard
+                        let rawKey = parts.first?.unquoted,
+                        let rawValue = parts.last?.unquoted,
+                        !rawKey.isEmpty,
+                        !rawValue.isEmpty
+                    else {
+                        return
                     }
+
+                    partialResult[rawKey] = rawValue
                 }
             let skipped = type.annotations.array(of: String.self, for: "skip")
             let methods = type.allMethods.filter {
@@ -49,7 +56,24 @@ struct MockTemplate {
 
             if type.kind == .protocol {
                 let refinedAssociatedTypes = type.refinedAssociatedTypes
-                let associatedTypes = type.associatedTypes
+                let declaredAssociatedTypes = type.associatedTypes
+                var knownAssociatedTypeNames = Set(declaredAssociatedTypes.map(\.name))
+
+                let inferredAssociatedTypes = type.genericRequirements.compactMap { requirement -> Syntax.AssociatedType? in
+                    let candidate = requirement.leftTypeName.rootIdentifier
+                    guard
+                        !candidate.isEmpty,
+                        candidate != "Self",
+                        candidate.first?.isUppercase == true,
+                        !knownAssociatedTypeNames.contains(candidate)
+                    else {
+                        return nil
+                    }
+                    knownAssociatedTypeNames.insert(candidate)
+                    return Syntax.AssociatedType(name: candidate)
+                }
+
+                let associatedTypes = (declaredAssociatedTypes + inferredAssociatedTypes)
                     .filter {
                         typeAliases.values.contains($0.name)
                             || refinedAssociatedTypes[$0.name] == nil
