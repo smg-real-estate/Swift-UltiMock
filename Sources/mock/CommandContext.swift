@@ -1,8 +1,6 @@
 import Foundation
 import PathKit
 import SourceKittenFramework
-import SwiftParser
-import SwiftSyntax
 import SyntaxParser
 
 struct CommandContext {
@@ -29,19 +27,21 @@ struct CommandContext {
         self.outputPath = outputPath.isDirectory ? outputPath + mockFilename : outputPath
     }
 
-    func parse() throws -> [SyntaxParser.Syntax.TypeInfo] {
-        let rawTypes = try [
+    func parse() throws -> [Syntax.TypeInfo] {
+        let sources = try [
             parseSources(),
             parseSDKModules()
         ]
             .flatMap(\.self)
+
+        let rawTypes = try TypesCollector().collect(from: sources)
 
         return TypeInfoResolver().resolve(rawTypes)
     }
 }
 
 private extension CommandContext {
-    func parseSources() throws -> [SyntaxParser.Syntax.TypeInfo] {
+    func parseSources() throws -> [() throws -> String?] {
         let sourceFiles = try sources
             .flatMap { path in
                 path.isDirectory ? try path.recursiveChildren() : [path]
@@ -50,17 +50,16 @@ private extension CommandContext {
                 !path.isDirectory && path.extension == "swift" && !path.string.hasSuffix("generated.swift")
             }
 
-        let collector = TypesCollector()
-
-        return try sourceFiles
-            .flatMap { filePath -> [SyntaxParser.Syntax.TypeInfo] in
-                let content = try filePath.read(.utf8)
-                let source = Parser.parse(source: content)
-                return collector.collect(from: source)
+        return sourceFiles
+            .lazy
+            .map { filePath in
+                {
+                    try filePath.read(.utf8)
+                }
             }
     }
 
-    func parseSDKModules() throws -> [SyntaxParser.Syntax.TypeInfo] {
+    func parseSDKModules() throws -> [() throws -> String?] {
         // Required for running in sandbox environment
         setenv("IN_PROCESS_SOURCEKIT", "YES", 1)
         //        setenv("SOURCEKIT_LOGGING", "3", 1)
@@ -70,10 +69,10 @@ private extension CommandContext {
             .path
 
         let sdkPath = try Path(env["SDKROOT"].wrapped)
-        let collector = TypesCollector()
 
         return try (configuration.sdkModules ?? [])
-            .flatMap { module -> [SyntaxParser.Syntax.TypeInfo] in
+            .lazy
+            .compactMap { module in
                 let request = try SourceKittenFramework.Request.customRequest(request: [
                     "key.request": UID("source.request.editor.open.interface"),
                     "key.name": UUID().uuidString,
@@ -95,18 +94,18 @@ private extension CommandContext {
                     "key.synthesizedextensions": 1
                 ])
 
-                let response: [String: any SourceKitRepresentable]
+                return {
+                    let response: [String: any SourceKitRepresentable]
 
-                do {
-                    response = try request.send()
-                } catch {
-                    print("Failed to parse SDK module '\(module)': \(error)")
-                    return []
+                    do {
+                        response = try request.send()
+                    } catch {
+                        print("Failed to parse SDK module '\(module)': \(error)")
+                        return nil
+                    }
+
+                    return try cast(response["key.sourcetext"])
                 }
-
-                let sourceText: String = try cast(response["key.sourcetext"])
-                let source = Parser.parse(source: sourceText)
-                return collector.collect(from: source)
             }
     }
 
