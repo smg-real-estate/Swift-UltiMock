@@ -41,7 +41,7 @@ import Testing
             localName: "Greeter",
             accessLevel: .internal,
             inheritedTypes: [],
-            methods: [Syntax.Method(name: "greet")],
+            methods: [Syntax.Method(name: "greet", definedInTypeIsExtension: true)],
             isExtension: true,
             comment: "\n\n// Extension adds defaults\n"
         ))
@@ -104,7 +104,7 @@ import Testing
             localName: "User",
             accessLevel: .public,
             inheritedTypes: ["Codable", "Equatable"],
-            properties: [Syntax.Property(name: "name", type: "String", isVariable: false)],
+                properties: [Syntax.Property(name: "name", type: "String", isVariable: false, writeAccess: "")],
             isExtension: false,
             comment: "/// A user model\n"
         ))
@@ -415,7 +415,8 @@ import Testing
             inheritedTypes: [],
             genericParameters: [Syntax.GenericParameter(name: "Base")],
             isExtension: false,
-            comment: nil
+            comment: nil,
+            associatedTypes: [Syntax.AssociatedType(name: "Base")]
         ))
     }
 
@@ -443,7 +444,11 @@ import Testing
                 Syntax.GenericParameter(name: "Value")
             ],
             isExtension: false,
-            comment: nil
+            comment: nil,
+            associatedTypes: [
+                Syntax.AssociatedType(name: "Key"),
+                Syntax.AssociatedType(name: "Value")
+            ]
         ))
     }
 
@@ -466,7 +471,7 @@ import Testing
             accessLevel: .internal,
             inheritedTypes: [],
             genericParameters: [Syntax.GenericParameter(name: "T")],
-            properties: [Syntax.Property(name: "value", type: "T", isVariable: false)],
+            properties: [Syntax.Property(name: "value", type: "T", isVariable: false, writeAccess: "")],
             isExtension: false,
             comment: nil
         ))
@@ -585,9 +590,16 @@ import Testing
             accessLevel: .internal,
             inheritedTypes: [],
             genericParameters: [Syntax.GenericParameter(name: "T")],
-            properties: [Syntax.Property(name: "value", type: "T", isVariable: false)],
+            properties: [Syntax.Property(name: "value", type: "T", isVariable: false, writeAccess: "")],
             isExtension: false,
-            comment: nil
+            comment: nil,
+            genericRequirements: [
+                Syntax.GenericRequirement(
+                    leftTypeName: "T",
+                    rightTypeName: "Equatable",
+                    relationshipSyntax: ":"
+                )
+            ]
         ))
     }
 
@@ -615,7 +627,12 @@ import Testing
             ],
             properties: [Syntax.Property(name: "storage", type: "[ID: Model]", isVariable: true)],
             isExtension: false,
-            comment: nil
+            comment: nil,
+            genericRequirements: [
+                Syntax.GenericRequirement(leftTypeName: "Model", rightTypeName: "Identifiable", relationshipSyntax: ":"),
+                Syntax.GenericRequirement(leftTypeName: "Model.ID", rightTypeName: "ID", relationshipSyntax: "=="),
+                Syntax.GenericRequirement(leftTypeName: "ID", rightTypeName: "Hashable", relationshipSyntax: ":")
+            ]
         ))
     }
 
@@ -639,9 +656,22 @@ import Testing
             localName: "Array",
             accessLevel: .internal,
             inheritedTypes: [],
-            methods: [Syntax.Method(name: "containsDuplicates", returnType: "Bool")],
+            methods: [
+                Syntax.Method(
+                    name: "containsDuplicates",
+                    returnType: "Bool",
+                    definedInTypeIsExtension: true
+                )
+            ],
             isExtension: true,
-            comment: nil
+            comment: nil,
+            genericRequirements: [
+                Syntax.GenericRequirement(
+                    leftTypeName: "Element",
+                    rightTypeName: "Equatable",
+                    relationshipSyntax: ":"
+                )
+            ]
         ))
     }
 
@@ -714,7 +744,7 @@ import Testing
             localName: "FrozenStruct",
             accessLevel: .public,
             inheritedTypes: [],
-            properties: [Syntax.Property(name: "value", type: "Int", isVariable: false)],
+            properties: [Syntax.Property(name: "value", type: "Int", isVariable: false, writeAccess: "")],
             isExtension: false,
             comment: nil
         ))
@@ -770,7 +800,15 @@ import Testing
             inheritedTypes: ["BaseGenericProtocol"],
             genericParameters: [Syntax.GenericParameter(name: "A")],
             isExtension: false,
-            comment: nil
+            comment: nil,
+            associatedTypes: [
+                Syntax.AssociatedType(name: "A"),
+                Syntax.AssociatedType(name: "B")
+            ],
+            genericRequirements: [
+                Syntax.GenericRequirement(leftTypeName: "Base", rightTypeName: "Identifiable", relationshipSyntax: ":"),
+                Syntax.GenericRequirement(leftTypeName: "Base.ID", rightTypeName: "A", relationshipSyntax: "==")
+            ]
         ))
     }
 
@@ -787,7 +825,7 @@ import Testing
 
         let types = collector.collect(from: source)
         let type = try #require(types.first)
-        #expect(type.annotations["AutoMockable"] == "AutoMockable")
+        #expect(type.annotations["AutoMockable"] == ["AutoMockable"])
     }
 
     @Test
@@ -803,7 +841,7 @@ import Testing
 
         let types = collector.collect(from: source)
         let type = try #require(types.first)
-        #expect(type.annotations["AutoMockable"] == "AutoMockable")
+        #expect(type.annotations["AutoMockable"] == ["AutoMockable"])
     }
 
     @Test
@@ -817,7 +855,7 @@ import Testing
 
         let types = collector.collect(from: source)
         let type = try #require(types.first)
-        #expect(type.annotations["AutoMockable"] == "AutoMockable")
+        #expect(type.annotations["AutoMockable"] == ["AutoMockable"])
     }
 
     @Test
@@ -835,8 +873,8 @@ import Testing
 
         let types = collector.collect(from: source)
         let type = try #require(types.first)
-        #expect(type.annotations["AutoMockable"] == "AutoMockable")
-        #expect(type.annotations["skip"] == #"["method1", "method2"]"#)
+        #expect(type.annotations["AutoMockable"] == ["AutoMockable"])
+        #expect(type.annotations["skip"] == ["method1", "method2"])
     }
 
     @Test
@@ -855,8 +893,8 @@ import Testing
 
         let types = collector.collect(from: source)
         let type = try #require(types.first)
-        #expect(type.annotations["AutoMockable"] == "AutoMockable")
-        #expect(type.annotations["typealias"] != nil)
+        #expect(type.annotations["AutoMockable"] == ["AutoMockable"])
+        #expect(type.annotations["typealias"] == ["A = Int", "B = String"])
     }
 
     @Test
@@ -889,6 +927,6 @@ import Testing
 
         let types = collector.collect(from: source)
         let type = try #require(types.first)
-        #expect(type.annotations["AutoMockable"] == "AutoMockable")
+        #expect(type.annotations["AutoMockable"] == ["AutoMockable"])
     }
 }

@@ -21,7 +21,7 @@ public enum Syntax {
         public let subscripts: [Subscript]
         public let typealiases: [Typealias]
         public let extensions: [Extension]
-        public let annotations: [String: String]
+        public let annotations: [String: [String]]
         public let isExtension: Bool
         public let comment: String?
         public let associatedTypes: [AssociatedType]
@@ -39,7 +39,7 @@ public enum Syntax {
             subscripts: [Subscript] = [],
             typealiases: [Typealias] = [],
             extensions: [Extension] = [],
-            annotations: [String: String] = [:],
+            annotations: [String: [String]] = [:],
             isExtension: Bool = false,
             comment: String? = nil,
             associatedTypes: [AssociatedType] = [],
@@ -370,7 +370,7 @@ public enum Syntax {
         public let parameters: [Parameter]
         public let returnType: String?
         public let resolvedReturnType: String?
-        public let annotations: [String: String]
+        public let annotations: [String: [String]]
         public let accessLevel: String
         public let modifiers: [Modifier]
         public let attributes: [String: [Attribute]]
@@ -389,7 +389,7 @@ public enum Syntax {
             parameters: [Parameter] = [],
             returnType: String? = nil,
                 resolvedReturnType: String? = nil,
-            annotations: [String: String] = [:],
+            annotations: [String: [String]] = [:],
             accessLevel: String = "internal",
             modifiers: [Modifier] = [],
             attributes: [String: [Attribute]] = [:],
@@ -442,7 +442,7 @@ public enum Syntax {
         public let type: String?
         public let resolvedType: String?
         public let isVariable: Bool
-        public let annotations: [String: String]
+        public let annotations: [String: [String]]
         public let readAccess: String
         public let writeAccess: String
         public let attributes: [String: [Attribute]]
@@ -456,7 +456,7 @@ public enum Syntax {
             type: String?,
                 resolvedType: String? = nil,
             isVariable: Bool = true,
-            annotations: [String: String] = [:],
+            annotations: [String: [String]] = [:],
             readAccess: String = "internal",
             writeAccess: String = "internal",
             attributes: [String: [Attribute]] = [:],
@@ -495,7 +495,7 @@ public enum Syntax {
         public let parameters: [Method.Parameter]
         public let returnType: String?
         public let resolvedReturnType: String?
-        public let annotations: [String: String]
+        public let annotations: [String: [String]]
         public let readAccess: String
         public let writeAccess: String
         public let attributes: [String: [Attribute]]
@@ -504,7 +504,7 @@ public enum Syntax {
             parameters: [Method.Parameter],
             returnType: String?,
             resolvedReturnType: String? = nil,
-            annotations: [String: String] = [:],
+            annotations: [String: [String]] = [:],
             readAccess: String = "internal",
             writeAccess: String = "internal",
             attributes: [String: [Attribute]] = [:]
@@ -529,9 +529,9 @@ public enum Syntax {
     public struct Typealias: Equatable {
         public let name: String
         public let target: String
-        public let annotations: [String: String]
+        public let annotations: [String: [String]]
 
-        public init(name: String, target: String, annotations: [String: String] = [:]) {
+        public init(name: String, target: String, annotations: [String: [String]] = [:]) {
             self.name = name
             self.target = target
             self.annotations = annotations

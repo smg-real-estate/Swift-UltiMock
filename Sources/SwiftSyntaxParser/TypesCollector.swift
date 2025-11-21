@@ -14,7 +14,12 @@ public struct TypesCollector {
             globalAliases[alias.name] = alias
         }
 
-        let visitor = Visitor(globalAliases: globalAliases, aliasTable: aliasTable)
+        let globalAliasFallbacks = makeAliasFallbacks(from: aliasTable[AliasTableBuilder.globalScopeKey] ?? [])
+        let visitor = Visitor(
+            globalAliases: globalAliases,
+            aliasTable: aliasTable,
+            globalAliasFallbacks: globalAliasFallbacks
+        )
         visitor.walk(source)
         return visitor.types
     }
@@ -31,6 +36,7 @@ private final class Visitor: SyntaxVisitor {
     private var currentTypeKind: Syntax.TypeInfo.Kind = .struct
     private let globalAliases: [String: AliasDefinition]
     private let aliasTable: [String: [AliasDefinition]]
+    private let globalAliasFallbacks: [String: String]
     private var aliasScopeStack: [[String: AliasDefinition]]
     private var typeScopeStack: [String] = []
 
@@ -42,9 +48,10 @@ private final class Visitor: SyntaxVisitor {
         !typeScopeStack.isEmpty
     }
 
-    init(globalAliases: [String: AliasDefinition], aliasTable: [String: [AliasDefinition]]) {
+    init(globalAliases: [String: AliasDefinition], aliasTable: [String: [AliasDefinition]], globalAliasFallbacks: [String: String]) {
         self.globalAliases = globalAliases
         self.aliasTable = aliasTable
+        self.globalAliasFallbacks = globalAliasFallbacks
         self.aliasScopeStack = [globalAliases]
         super.init(viewMode: .fixedUp)
     }
@@ -163,6 +170,7 @@ private final class Visitor: SyntaxVisitor {
             name: node.identifier.text,
             modifiers: node.modifiers,
             inheritanceClause: node.inheritanceClause,
+            genericParameters: genericParameters(from: node.genericParameters),
             commentTrivia: node.leadingTrivia,
             genericWhereClause: node.genericWhereClause
         )
@@ -220,7 +228,11 @@ private final class Visitor: SyntaxVisitor {
         let parameters = parameterList.map { parameter -> Syntax.Method.Parameter in
             let label = parameter.firstName?.text
             let name = parameter.secondName?.text ?? parameter.firstName?.text ?? ""
-            let details = analyzeType(parameter.type, aliasScope: currentAliasScope)
+            let details = analyzeType(
+                parameter.type,
+                aliasScope: currentAliasScope,
+                fallbackAliases: globalAliasFallbacks
+            )
 
             return Syntax.Method.Parameter(
                 label: label,
@@ -233,7 +245,11 @@ private final class Visitor: SyntaxVisitor {
             )
         }
 
-        let returnDetails = analyzeType(node.signature.output?.returnType, aliasScope: currentAliasScope)
+        let returnDetails = analyzeType(
+            node.signature.output?.returnType,
+            aliasScope: currentAliasScope,
+            fallbackAliases: globalAliasFallbacks
+        )
         let methodModifiers = makeModifiers(from: node.modifiers)
         let modifierNames = Set(methodModifiers.map { $0.name })
 
@@ -269,7 +285,11 @@ private final class Visitor: SyntaxVisitor {
         let parameters = node.signature.input.parameterList.map { parameter -> Syntax.Method.Parameter in
             let label = parameter.firstName?.text
             let name = parameter.secondName?.text ?? parameter.firstName?.text ?? ""
-            let details = analyzeType(parameter.type, aliasScope: currentAliasScope)
+            let details = analyzeType(
+                parameter.type,
+                aliasScope: currentAliasScope,
+                fallbackAliases: globalAliasFallbacks
+            )
 
             return Syntax.Method.Parameter(
                 label: label,
@@ -326,7 +346,11 @@ private final class Visitor: SyntaxVisitor {
             }
 
             let propertyName = pattern.identifier.text
-            let typeDetails = analyzeType(binding.typeAnnotation?.type, aliasScope: currentAliasScope)
+            let typeDetails = analyzeType(
+                binding.typeAnnotation?.type,
+                aliasScope: currentAliasScope,
+                fallbackAliases: globalAliasFallbacks
+            )
             var propertyType = typeDetails?.text
             var resolvedPropertyType = typeDetails?.resolvedText
             if propertyType == nil, let initializer = binding.initializer {
@@ -391,7 +415,11 @@ private final class Visitor: SyntaxVisitor {
         let parameters = node.indices.parameterList.map { parameter -> Syntax.Method.Parameter in
             let label = parameter.firstName?.text
             let name = parameter.secondName?.text ?? parameter.firstName?.text ?? ""
-            let details = analyzeType(parameter.type, aliasScope: currentAliasScope)
+            let details = analyzeType(
+                parameter.type,
+                aliasScope: currentAliasScope,
+                fallbackAliases: globalAliasFallbacks
+            )
 
             return Syntax.Method.Parameter(
                 label: label,
@@ -404,7 +432,11 @@ private final class Visitor: SyntaxVisitor {
             )
         }
 
-        let returnDetails = analyzeType(node.result.returnType, aliasScope: currentAliasScope)
+        let returnDetails = analyzeType(
+            node.result.returnType,
+            aliasScope: currentAliasScope,
+            fallbackAliases: globalAliasFallbacks
+        )
         let subscriptAccessLevel = effectiveMemberAccessLevel(from: node.modifiers).rawValue
 
         let writeAccessLevel: String
@@ -639,38 +671,63 @@ private final class Visitor: SyntaxVisitor {
         return nil
     }
 
-    private func parseAnnotations(from comment: String?) -> [String: String] {
-        guard let comment = comment else { return [:] }
-        
-        var annotations: [String: String] = [:]
+    private func parseAnnotations(from comment: String?) -> [String: [String]] {
+        guard let comment else { return [:] }
+
+        var annotations: [String: [String]] = [:]
         let lines = comment.components(separatedBy: .newlines)
-        
+
         for line in lines {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
-            
-            // Check if line contains sourcery annotation
-            guard trimmed.contains("sourcery:") else { continue }
-            
-            // Extract the part after "sourcery:"
-            guard let sourceryRange = trimmed.range(of: "sourcery:") else { continue }
+            guard trimmed.contains("sourcery:"),
+                  let sourceryRange = trimmed.range(of: "sourcery:")
+            else { continue }
+
             let annotationContent = String(trimmed[sourceryRange.upperBound...]).trimmingCharacters(in: .whitespaces)
-            
-            // Skip empty annotations
             guard !annotationContent.isEmpty else { continue }
-            
-            // Parse key=value or just key
+
             if let equalIndex = annotationContent.firstIndex(of: "=") {
                 let key = String(annotationContent[..<equalIndex]).trimmingCharacters(in: .whitespaces)
-                let value = String(annotationContent[annotationContent.index(after: equalIndex)...]).trimmingCharacters(in: .whitespaces)
-                if !key.isEmpty {
-                    annotations[key] = value
-                }
+                let rawValue = String(annotationContent[annotationContent.index(after: equalIndex)...])
+                    .trimmingCharacters(in: .whitespaces)
+                let values = parseAnnotationValues(rawValue)
+                guard !key.isEmpty, !values.isEmpty else { continue }
+                annotations[key, default: []].append(contentsOf: values)
             } else {
-                annotations[annotationContent] = annotationContent
+                annotations[annotationContent, default: []].append(annotationContent)
             }
         }
-        
+
         return annotations
+    }
+
+    private func parseAnnotationValues(_ rawValue: String) -> [String] {
+        let value = rawValue.trimmingCharacters(in: .whitespaces)
+
+        if value.hasPrefix("["), value.hasSuffix("]") {
+            if let data = value.data(using: .utf8),
+               let array = try? JSONSerialization.jsonObject(with: data) as? [Any] {
+                return array.compactMap { element in
+                    if let string = element as? String {
+                        return string
+                    } else if let number = element as? NSNumber {
+                        return number.stringValue
+                    }
+                    return nil
+                }
+            }
+
+            let inner = value.dropFirst().dropLast()
+            return inner
+                .split(separator: ",")
+                .map { segment in
+                    segment.trimmingCharacters(in: .whitespaces)
+                        .trimmingCharacters(in: CharacterSet(charactersIn: "\"'"))
+                }
+                .filter { !$0.isEmpty }
+        }
+
+        return [value.trimmingCharacters(in: CharacterSet(charactersIn: "\"'"))]
     }
 
     private func trimmedDescription(of syntax: SyntaxProtocol) -> String {
@@ -733,6 +790,49 @@ private struct AliasDefinition {
     let name: String
     let genericParameters: [String]
     let target: TypeSyntax
+}
+
+private func makeAliasFallbacks(from definitions: [AliasDefinition]) -> [String: String] {
+    guard !definitions.isEmpty else { return [:] }
+
+    var map: [String: AliasDefinition] = [:]
+    for definition in definitions {
+        map[definition.name] = definition
+    }
+
+    var resolved: [String: String] = [:]
+
+    func resolve(name: String, visited: inout Set<String>) -> String? {
+        if let cached = resolved[name] {
+            return cached
+        }
+        guard let definition = map[name] else {
+            return nil
+        }
+
+        if visited.contains(name) {
+            let text = trimmedDescription(of: definition.target)
+            resolved[name] = text
+            return text
+        }
+
+        visited.insert(name)
+        let targetText = trimmedDescription(of: definition.target)
+        if let nested = resolve(name: targetText, visited: &visited) {
+            resolved[name] = nested
+        } else {
+            resolved[name] = targetText
+        }
+        visited.remove(name)
+        return resolved[name]
+    }
+
+    for name in map.keys {
+        var visited: Set<String> = []
+        _ = resolve(name: name, visited: &visited)
+    }
+
+    return resolved
 }
 
 private final class AliasTableBuilder: SyntaxVisitor {
@@ -817,14 +917,25 @@ private struct TypeShape {
     let isInout: Bool
 }
 
-private func analyzeType(_ type: TypeSyntax?, aliasScope: [String: AliasDefinition]) -> TypeDetails? {
+private func analyzeType(
+    _ type: TypeSyntax?,
+    aliasScope: [String: AliasDefinition],
+    fallbackAliases: [String: String]
+) -> TypeDetails? {
     guard let type else {
         return nil
     }
 
     let resolvedSyntax = resolveAliases(in: type, aliases: aliasScope)
     let text = trimmedDescription(of: type)
-    let resolvedText = resolvedSyntax.map { trimmedDescription(of: $0) }
+    let resolvedText: String?
+    if let resolvedSyntax {
+        resolvedText = trimmedDescription(of: resolvedSyntax)
+    } else {
+        let fallbackKey = fallbackAliases[text]
+            ?? fallbackAliases[text.split(separator: ".").last.map(String.init) ?? text]
+        resolvedText = fallbackKey
+    }
 
     let originalShape = inspectTypeShape(type)
     let resolvedShape = resolvedSyntax.map { inspectTypeShape($0) }

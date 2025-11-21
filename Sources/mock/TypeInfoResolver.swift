@@ -44,10 +44,10 @@ private extension TypeInfoResolver {
             return nil
         }
 
-        var annotations: [String: String] = [:]
+        var annotations: [String: [String]] = [:]
         for ext in extensions {
             for (key, value) in ext.annotations {
-                annotations[key] = value
+                annotations[key, default: []].append(contentsOf: value)
             }
         }
 
@@ -103,7 +103,7 @@ private extension TypeInfoResolver {
 
         var annotations = base.annotations
         for (key, value) in extensionType.annotations {
-            annotations[key] = value
+            annotations[key, default: []].append(contentsOf: value)
         }
 
         return Syntax.TypeInfo(

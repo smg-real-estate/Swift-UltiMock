@@ -139,7 +139,7 @@ import Testing
         let types = collector.collect(from: source)
         let type = try #require(types.first)
         #expect(type.properties == [
-            Syntax.Property(name: "id", type: "Int", isVariable: false)
+            Syntax.Property(name: "id", type: "Int", isVariable: false, writeAccess: "")
         ])
     }
 
@@ -158,7 +158,7 @@ import Testing
         let types = collector.collect(from: source)
         let type = try #require(types.first)
         #expect(type.properties == [
-            Syntax.Property(name: "id", type: "Int", isVariable: false),
+            Syntax.Property(name: "id", type: "Int", isVariable: false, writeAccess: ""),
             Syntax.Property(name: "name", type: "String", isVariable: true),
             Syntax.Property(name: "email", type: "String", isVariable: true)
         ])
@@ -263,7 +263,7 @@ import Testing
         let types = collector.collect(from: source)
         let type = try #require(types.first)
         #expect(type.properties == [
-            Syntax.Property(name: "count", type: "Int", isVariable: true)
+            Syntax.Property(name: "count", type: "Int", isVariable: true, writeAccess: "")
         ])
         #expect(type.methods == [
             Syntax.Method(
@@ -279,11 +279,44 @@ import Testing
                 parameters: [
                     Syntax.Method.Parameter(label: "index", name: "index", type: "Int")
                 ],
-                returnType: "Item"
+                returnType: "Item",
+                writeAccess: ""
             )
         ])
         #expect(type.typealiases == [
             Syntax.Typealias(name: "Identifier", target: "String")
+        ])
+    }
+
+    @Test
+    func `collect resolves top-level typealiases in member signatures`() throws {
+        let source = Parser.parse(source:
+            """
+            typealias Identifier = Int
+
+            struct User {
+                var id: Identifier
+                func take(identifier: Identifier) -> Identifier
+            }
+            """
+        )
+
+        let types = collector.collect(from: source)
+        let type = try #require(types.first)
+
+        #expect(type.properties == [
+            Syntax.Property(name: "id", type: "Identifier", resolvedType: "Int", isVariable: true)
+        ])
+
+        #expect(type.methods == [
+            Syntax.Method(
+                name: "take",
+                parameters: [
+                    Syntax.Method.Parameter(label: "identifier", name: "identifier", type: "Identifier", resolvedType: "Int")
+                ],
+                returnType: "Identifier",
+                resolvedReturnType: "Int"
+            )
         ])
     }
 }
