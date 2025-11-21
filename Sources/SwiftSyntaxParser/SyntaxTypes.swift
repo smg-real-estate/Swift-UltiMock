@@ -212,7 +212,7 @@ public enum Syntax {
         public var asSource: String { name }
         
         // Helper to parse a type string and detect optionals and implicit optionals
-        public static func parse(_ typeString: String) -> TypeName {
+        public static func parse(_ typeString: String, actualTypeNameString: String? = nil) -> TypeName {
             let trimmed = typeString.trimmingCharacters(in: .whitespaces)
             
             // Extract ONLY @escaping attribute (parameter-level attribute)
@@ -240,6 +240,7 @@ public enum Syntax {
                     isOptional: false,
                     isImplicitlyUnwrappedOptional: true,
                     unwrappedTypeName: unwrapped,
+                    actualTypeNameString: actualTypeNameString,
                     isVoid: unwrapped == "Void" || unwrapped == "()",
                     isClosure: unwrapped.contains("->"),
                     attributes: attributes
@@ -254,6 +255,7 @@ public enum Syntax {
                     isOptional: true,
                     isImplicitlyUnwrappedOptional: false,
                     unwrappedTypeName: unwrapped,
+                    actualTypeNameString: actualTypeNameString,
                     isVoid: unwrapped == "Void" || unwrapped == "()",
                     isClosure: unwrapped.contains("->"),
                     attributes: attributes
@@ -266,6 +268,7 @@ public enum Syntax {
                 isOptional: false,
                 isImplicitlyUnwrappedOptional: false,
                 unwrappedTypeName: cleanedString,
+                actualTypeNameString: actualTypeNameString,
                 isVoid: cleanedString == "Void" || cleanedString == "()",
                 isClosure: cleanedString.contains("->"),
                 attributes: attributes
@@ -331,6 +334,7 @@ public enum Syntax {
             public let label: String?
             public let name: String
             public let type: String?
+            public let resolvedType: String?
             public let `inout`: Bool
             public let isClosure: Bool
             public let isOptional: Bool
@@ -339,6 +343,7 @@ public enum Syntax {
                 label: String?,
                 name: String,
                 type: String?,
+                resolvedType: String? = nil,
                 isInout: Bool = false,
                 isClosure: Bool = false,
                 isOptional: Bool = false
@@ -346,6 +351,7 @@ public enum Syntax {
                 self.label = label
                 self.name = name
                 self.type = type
+                self.resolvedType = resolvedType
                 self.`inout` = isInout
                 self.isClosure = isClosure
                 self.isOptional = isOptional
@@ -356,13 +362,14 @@ public enum Syntax {
                 guard let type = type else {
                     return TypeName(name: "Unknown")
                 }
-                return TypeName.parse(type)
+                return TypeName.parse(type, actualTypeNameString: resolvedType)
             }
         }
 
         public let name: String
         public let parameters: [Parameter]
         public let returnType: String?
+        public let resolvedReturnType: String?
         public let annotations: [String: String]
         public let accessLevel: String
         public let modifiers: [Modifier]
@@ -381,6 +388,7 @@ public enum Syntax {
             name: String,
             parameters: [Parameter] = [],
             returnType: String? = nil,
+                resolvedReturnType: String? = nil,
             annotations: [String: String] = [:],
             accessLevel: String = "internal",
             modifiers: [Modifier] = [],
@@ -398,6 +406,7 @@ public enum Syntax {
             self.name = name
             self.parameters = parameters
             self.returnType = returnType
+                self.resolvedReturnType = resolvedReturnType
             self.annotations = annotations
             self.accessLevel = accessLevel
             self.modifiers = modifiers
@@ -423,7 +432,7 @@ public enum Syntax {
             guard let returnType = returnType else {
                 return TypeName(name: "Void", isVoid: true)
             }
-            return TypeName.parse(returnType)
+            return TypeName.parse(returnType, actualTypeNameString: resolvedReturnType)
         }
         public var definedInType: TypeInfo? { nil }
     }
@@ -431,6 +440,7 @@ public enum Syntax {
     public struct Property: Equatable {
         public let name: String
         public let type: String?
+        public let resolvedType: String?
         public let isVariable: Bool
         public let annotations: [String: String]
         public let readAccess: String
@@ -444,6 +454,7 @@ public enum Syntax {
         public init(
             name: String,
             type: String?,
+                resolvedType: String? = nil,
             isVariable: Bool = true,
             annotations: [String: String] = [:],
             readAccess: String = "internal",
@@ -456,6 +467,7 @@ public enum Syntax {
         ) {
             self.name = name
             self.type = type
+                self.resolvedType = resolvedType
             self.isVariable = isVariable
             self.annotations = annotations
             self.readAccess = readAccess
@@ -471,7 +483,7 @@ public enum Syntax {
             guard let type = type else {
                 return TypeName(name: "Unknown")
             }
-            return TypeName.parse(type)
+            return TypeName.parse(type, actualTypeNameString: resolvedType)
         }
         public var definedInType: TypeInfo? { nil }
         public var unbacktickedName: String {
@@ -482,6 +494,7 @@ public enum Syntax {
     public struct Subscript: Equatable {
         public let parameters: [Method.Parameter]
         public let returnType: String?
+        public let resolvedReturnType: String?
         public let annotations: [String: String]
         public let readAccess: String
         public let writeAccess: String
@@ -490,6 +503,7 @@ public enum Syntax {
         public init(
             parameters: [Method.Parameter],
             returnType: String?,
+            resolvedReturnType: String? = nil,
             annotations: [String: String] = [:],
             readAccess: String = "internal",
             writeAccess: String = "internal",
@@ -497,6 +511,7 @@ public enum Syntax {
         ) {
             self.parameters = parameters
             self.returnType = returnType
+            self.resolvedReturnType = resolvedReturnType
             self.annotations = annotations
             self.readAccess = readAccess
             self.writeAccess = writeAccess
@@ -507,7 +522,7 @@ public enum Syntax {
             guard let returnType = returnType else {
                 return TypeName(name: "Unknown")
             }
-            return TypeName.parse(returnType)
+            return TypeName.parse(returnType, actualTypeNameString: resolvedReturnType)
         }
     }
 
