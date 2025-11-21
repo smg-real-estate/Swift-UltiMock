@@ -60,21 +60,7 @@ struct MockTemplate {
                 let declaredAssociatedTypes = type.associatedTypes
                 var knownAssociatedTypeNames = Set(declaredAssociatedTypes.map(\.name))
 
-                let inferredAssociatedTypes = type.genericRequirements.compactMap { requirement -> Syntax.AssociatedType? in
-                    let candidate = requirement.leftTypeName.rootIdentifier
-                    guard
-                        !candidate.isEmpty,
-                        candidate != "Self",
-                        candidate.first?.isUppercase == true,
-                        !knownAssociatedTypeNames.contains(candidate)
-                    else {
-                        return nil
-                    }
-                    knownAssociatedTypeNames.insert(candidate)
-                    return Syntax.AssociatedType(name: candidate)
-                }
-
-                let associatedTypes = (declaredAssociatedTypes + inferredAssociatedTypes)
+                let associatedTypes = declaredAssociatedTypes
                     .filter {
                         typeAliases.values.contains($0.name)
                             || refinedAssociatedTypes[$0.name] == nil
