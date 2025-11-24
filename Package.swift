@@ -41,6 +41,7 @@ let package = Package(
                 .product(name: "SwiftSyntax", package: "swift-syntax")
             ]
         ),
+//        .target(name: "MockGenerator"),
         .executableTarget(
             name: "mock",
             dependencies: [
@@ -62,6 +63,12 @@ let package = Package(
             dependencies: [
                 "SyntaxParser",
                 .product(name: "SwiftParser", package: "swift-syntax")
+            ]
+        ),
+        .testTarget(
+            name: "MockGeneratorTests",
+            dependencies: [
+                "mock"
             ]
         )
     ]

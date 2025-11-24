@@ -1,14 +1,6 @@
 import Foundation
 import SyntaxParser
 
-func additionalImports(_ arguments: [String: Any]) -> [String] {
-    arguments["import"]
-        .flatMap { $0 as? [String] }
-        .map { imports in
-            imports.map { "import \($0)" }
-        } ?? []
-}
-
 extension Syntax.Method {
     var isPrivate: Bool {
         modifiers.contains {
@@ -128,10 +120,6 @@ extension Syntax.Method {
         return "_where_" + components.joined(separator: "_and_")
     }
 
-    var genericTypeNames: [String] {
-        genericParameters.map(\.name)
-    }
-
     var genericClause: String {
         guard !genericParameters.isEmpty else {
             return ""
@@ -169,14 +157,6 @@ extension Syntax.Method {
     func performClosureParameters(prepending: [String]) -> String {
         let parameters = prepending + parameters.map(\.name)
         return parameters.isEmpty ? "" : " \(parameters.joined(separator: ", ")) in"
-    }
-
-    var invocationDescription: String {
-        if parameters.isEmpty {
-            selectorName
-        } else {
-            "\(callName)(\(parameters.map { "\($0.argumentLabel.map { $0 + ": " } ?? "")\\(\($0.name))" }.joined(separator: ", ")))"
-        }
     }
 
     func expectationDefinitionParameters(_ mockTypeName: String) -> String {
@@ -419,13 +399,6 @@ extension Syntax.TypeInfo {
                 partialResult[requirement.leftType.name] = requirement.rightType.typeName.name
             }
     }
-
-    var equatableAssociatedTypes: [String] {
-        associatedTypes.filter {
-            $0.typeName?.name == "Equatable"
-        }
-        .map(\.name)
-    }
 }
 
 extension Syntax.TypeInfo {
@@ -556,14 +529,6 @@ extension Syntax.Property {
         typeName.escapedIdentifierName()
     }
 
-    var getterSignature: String {
-        getterPerformDefinition(forwarding: false)
-    }
-
-    var setterSignature: String? {
-        setterPerformDefinition(forwarding: false)
-    }
-
     func getterPerformDefinition(forwarding: Bool, _ namespacedTypes: [String: String] = [:]) -> String {
         let parameters = forwarding ? ["_ forwardToOriginal: " + getterPerformDefinition(forwarding: false, namespacedTypes)] : []
         let returnType = typeName.actualName(convertingImplicitOptional: true)
@@ -603,14 +568,6 @@ extension Syntax.Property {
             }
         }
         """
-    }
-
-    func defaultGetterPerformClosure(forwarding: Bool) -> String {
-        forwarding ? " = { $0() }" : ""
-    }
-
-    func defaultSetterPerformClosure(forwarding: Bool) -> String {
-        forwarding ? " = { $0($1) }" : " = { _ in }"
     }
 
     var isReadOnly: Bool {
@@ -728,54 +685,6 @@ extension Syntax.Property {
             }
             """
         }
-    }
-
-    func mockExpectGetter(forwarding: Bool) -> String {
-        """
-            public func expect(
-                _ expectation: PropertyExpectation<\(getterSignature)>,
-                fileID: String = #fileID,
-                filePath: StaticString = #filePath,
-                line: UInt = #line,
-                column: Int = #column,
-                perform: @escaping \(getterPerformDefinition(forwarding: forwarding))\(defaultGetterPerformClosure(forwarding: forwarding))
-            ) {
-                _record(
-                    expectation.getterExpectation,
-                    fileID,
-                    filePath, 
-                    line,
-                    column,
-                    perform
-                )
-            }
-        """
-    }
-
-    func mockExpectSetter(forwarding: Bool) -> String {
-        guard let setterSignature else {
-            return ""
-        }
-        return """
-            public func expect(
-                set expectation: PropertyExpectation<\(setterSignature)>,
-                to newValue: Parameter<\(typeName.name(convertingImplicitOptional: true))>,
-                fileID: String = #fileID,
-                filePath: StaticString = #filePath,
-                line: UInt = #line,
-                column: Int = #column,
-                perform: @escaping \(setterPerformDefinition(forwarding: forwarding))\(defaultSetterPerformClosure(forwarding: forwarding))
-            ) {
-                _record(
-                    expectation.setterExpectation(newValue.anyParameter),
-                    fileID,
-                    filePath, 
-                    line,
-                    column,
-                    perform
-                )
-            }
-        """
     }
 }
 
@@ -909,10 +818,6 @@ extension Syntax.Subscript {
         ) as! \(setterPerformDefinition)
         return perform(\(forwardedParameters), newValue)
         """
-    }
-
-    var forwardedLabeledParameters: String {
-        "\(parameters.map { "\($0.argumentLabel.map { $0 + ": " } ?? "")\($0.name)" }.joined(separator: ", "))"
     }
 
     var forwardedParameters: String {
@@ -1056,13 +961,6 @@ extension Syntax.TypeInfo {
     }
 }
 
-extension Syntax.ClosureType {
-    var asFixedSource: String {
-        // Since we store the description as a string, just return it
-        description
-    }
-}
-
 extension String {
     func indented(_ level: Int, width: Int = 4) -> Self {
         components(separatedBy: "\n")
@@ -1084,13 +982,6 @@ extension String {
 
     var unquoted: Self {
         trimmingCharacters(in: CharacterSet(charactersIn: "\"'"))
-    }
-
-    var rootIdentifier: Self {
-        guard let stop = firstIndex(where: { !$0.isLetter && !$0.isNumber && $0 != "_" }) else {
-            return self
-        }
-        return String(self[..<stop])
     }
 }
 
