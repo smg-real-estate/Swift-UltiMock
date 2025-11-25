@@ -1,20 +1,12 @@
-//
-//  Test.swift
-//  UltiMock
-//
-//  Created by Mykola Tarbaiev on 21.11.25.
-//
-
+import Foundation
+import PathKit
 import Testing
 @testable import mock
-import PathKit
-import Foundation
 
 struct MockGeneratorTests {
-
     let pluginTestsPath = Path(#filePath).parent().parent().parent() + "PluginTests/Tests/"
 
-    @Test func mockGeneration_MockTests() async throws {
+    @Test func mockGeneration_MockTests() throws {
         let sdkPath = try #require(getRootSDKPath())
         let path = pluginTestsPath + "MockTests/mock.json"
         let outputPath = FileManager.default.temporaryDirectory.appending(path: "MockTests.generated.swift")
@@ -44,7 +36,7 @@ struct MockGeneratorTests {
         }
     }
 
-    @Test func mockGeneration_TestMocks() async throws {
+    @Test func mockGeneration_TestMocks() throws {
         let sdkPath = try #require(getRootSDKPath())
         let path = pluginTestsPath + "TestMocks/mock.json"
         let outputPath = FileManager.default.temporaryDirectory.appending(path: "TestMocks.generated.swift")

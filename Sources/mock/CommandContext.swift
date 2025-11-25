@@ -34,9 +34,7 @@ struct CommandContext {
         ]
             .flatMap(\.self)
 
-        let rawTypes = try TypesCollector().collect(from: sources)
-
-        return TypeInfoResolver().resolve(rawTypes)
+        return try TypeInfoResolver().resolve(from: sources)
     }
 }
 

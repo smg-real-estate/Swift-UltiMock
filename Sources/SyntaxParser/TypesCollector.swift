@@ -2,22 +2,12 @@ import Foundation
 import SwiftParser
 import SwiftSyntax
 
-public struct TypesCollector {
-    public init() {}
+struct TypesCollector {
+    init() {}
 
-    public func collect(from content: String) -> [Syntax.TypeInfo] {
+    func collect(from content: String) -> [Syntax.TypeInfo] {
         let source = Parser.parse(source: content)
         return collect(from: source)
-    }
-
-    public func collect(from contentSequence: some Sequence<() throws -> String?>) throws -> [Syntax.TypeInfo] {
-        try contentSequence.flatMap { content in
-            if let content = try content() {
-                collect(from: content)
-            } else {
-                [Syntax.TypeInfo]()
-            }
-        }
     }
 
     func collect(from source: SourceFileSyntax) -> [Syntax.TypeInfo] {

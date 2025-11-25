@@ -1,6 +1,26 @@
-import SyntaxParser
+public struct TypeInfoResolver {
+    var collectTypes: (_ content: String) -> [Syntax.TypeInfo]
+}
 
-struct TypeInfoResolver {
+public extension TypeInfoResolver {
+    init() {
+        self.init(collectTypes: TypesCollector().collect)
+    }
+
+    func resolve(from contentSequence: some Sequence<() throws -> String?>) throws -> [Syntax.TypeInfo] {
+        let allTypes = try contentSequence.flatMap { content in
+            if let content = try content() {
+                collectTypes(content)
+            } else {
+                [Syntax.TypeInfo]()
+            }
+        }
+
+        return resolve(allTypes)
+    }
+}
+
+extension TypeInfoResolver {
     func resolve(_ types: [Syntax.TypeInfo]) -> [Syntax.TypeInfo] {
         var baseOrder: [String] = []
         var baseTypes: [String: Syntax.TypeInfo] = [:]
@@ -10,11 +30,11 @@ struct TypeInfoResolver {
             if type.isExtension {
                 extensions[type.name, default: []].append(type)
             } else {
-                if baseTypes[type.name] == nil {
+                if let existing = baseTypes[type.name] {
+                    baseTypes[type.name] = merge(base: existing, with: type)
+                } else {
                     baseOrder.append(type.name)
                     baseTypes[type.name] = type
-                } else if let existing = baseTypes[type.name] {
-                    baseTypes[type.name] = merge(base: existing, with: type)
                 }
             }
         }
@@ -239,21 +259,14 @@ private extension TypeInfoResolver {
     }
 
     func mergeClass(_ type: Syntax.TypeInfo, with superclass: Syntax.TypeInfo) -> Syntax.TypeInfo {
-        let methodSignatures = Set(type.methods.map(\.methodIdentifier))
-        let inheritedMethods = superclass.methods.filter { !methodSignatures.contains($0.methodIdentifier) }
+        let methods = Set(type.methods.map(\.signatureData))
+        let inheritedMethods = superclass.methods.filter { !methods.contains($0.signatureData) }
 
-        var propertySignatures = Set(type.properties.map(\.getterIdentifier))
-        let inheritedProperties = superclass.properties.filter { property in
-            let signature = property.getterIdentifier
-            if propertySignatures.contains(signature) {
-                return false
-            }
-            propertySignatures.insert(signature)
-            return true
-        }
+        let properties = Set(type.properties)
+        let inheritedProperties = superclass.properties.filter { !properties.contains($0) }
 
-        let subscriptSignatures = Set(type.subscripts.map(\.getterSignature))
-        let inheritedSubscripts = superclass.subscripts.filter { !subscriptSignatures.contains($0.getterSignature) }
+        let subscripts = Set(type.subscripts)
+        let inheritedSubscripts = superclass.subscripts.filter { !subscripts.contains($0) }
 
         return Syntax.TypeInfo(
             kind: type.kind,

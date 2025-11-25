@@ -98,7 +98,7 @@ public enum Syntax {
         }
     }
 
-    public struct GenericRequirement: Equatable {
+    public struct GenericRequirement: Hashable {
         public let leftTypeName: String
         public let rightTypeName: String
         public let relationshipSyntax: String
@@ -291,7 +291,7 @@ public enum Syntax {
         public var asFixedSource: String { description }
     }
 
-    public struct Attribute: Equatable {
+    public struct Attribute: Hashable {
         public let name: String
         public let arguments: [String: String]
         public let description: String
@@ -307,7 +307,7 @@ public enum Syntax {
         public var asSource: String { description }
     }
 
-    public struct Modifier: Equatable {
+    public struct Modifier: Hashable {
         public let name: String
 
         public init(name: String) {
@@ -324,7 +324,7 @@ public enum Syntax {
         case `package`
     }
 
-    public struct GenericParameter: Equatable {
+    public struct GenericParameter: Hashable {
         public let name: String
         public let constraints: [String]
 
@@ -334,8 +334,8 @@ public enum Syntax {
         }
     }
 
-    public struct Method: Equatable {
-        public struct Parameter: Equatable {
+    public struct Method: Hashable {
+        public struct Parameter: Hashable {
             public let label: String?
             public let name: String
             public let type: String?
@@ -442,9 +442,31 @@ public enum Syntax {
         }
 
         public var definedInType: TypeInfo? { nil }
+
+        struct SignatureData: Hashable {
+            let name: String
+            let parameters: [Parameter]
+            let returnType: String?
+            let isAsync: Bool
+            let `throws`: Bool
+            let isStatic: Bool
+            let isClass: Bool
+        }
+
+        var signatureData: SignatureData {
+            SignatureData(
+                name: name,
+                parameters: parameters,
+                returnType: returnType,
+                isAsync: isAsync,
+                throws: `throws`,
+                isStatic: isStatic,
+                isClass: isClass
+            )
+        }
     }
 
-    public struct Property: Equatable {
+    public struct Property: Hashable {
         public let name: String
         public let type: String?
         public let resolvedType: String?
@@ -499,7 +521,7 @@ public enum Syntax {
         }
     }
 
-    public struct Subscript: Equatable {
+    public struct Subscript: Hashable {
         public let parameters: [Method.Parameter]
         public let returnType: String?
         public let resolvedReturnType: String?
