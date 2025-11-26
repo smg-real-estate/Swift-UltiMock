@@ -115,7 +115,6 @@ private final class Visitor: SyntaxVisitor {
                 properties: currentTypeProperties,
                 subscripts: currentTypeSubscripts,
                 typealiases: currentTypeTypealiases,
-                extensions: lastType.extensions,
                 annotations: lastType.annotations,
                 isExtension: lastType.isExtension,
                 comment: lastType.comment,
