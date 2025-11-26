@@ -57,23 +57,15 @@ extension TypeInfoResolver {
 
 private extension TypeInfoResolver {
     func merge(base: Syntax.TypeInfo, with other: Syntax.TypeInfo) -> Syntax.TypeInfo {
-        Syntax.TypeInfo(
-            kind: base.kind,
-            name: base.name,
-            localName: base.localName,
-            accessLevel: base.accessLevel,
-            inheritedTypes: base.inheritedTypes,
-            genericParameters: base.genericParameters,
-            methods: base.methods + other.methods,
-            properties: base.properties + other.properties,
-            subscripts: base.subscripts + other.subscripts,
-            typealiases: base.typealiases + other.typealiases,
-            annotations: base.annotations,
-            isExtension: base.isExtension,
-            comment: base.comment ?? other.comment,
-            associatedTypes: base.associatedTypes + other.associatedTypes,
-            genericRequirements: base.genericRequirements + other.genericRequirements
-        )
+        var merged = base
+        merged.methods += other.methods
+        merged.properties += other.properties
+        merged.subscripts += other.subscripts
+        merged.typealiases += other.typealiases
+        merged.comment = base.comment ?? other.comment
+        merged.associatedTypes += other.associatedTypes
+        merged.genericRequirements += other.genericRequirements
+        return merged
     }
 
     func mergeAnnotations(from extensionType: Syntax.TypeInfo, into base: Syntax.TypeInfo) -> Syntax.TypeInfo {
@@ -81,28 +73,11 @@ private extension TypeInfoResolver {
             return base
         }
 
-        var annotations = base.annotations
+        var merged = base
         for (key, value) in extensionType.annotations {
-            annotations[key, default: []].append(contentsOf: value)
+            merged.annotations[key, default: []].append(contentsOf: value)
         }
-
-        return Syntax.TypeInfo(
-            kind: base.kind,
-            name: base.name,
-            localName: base.localName,
-            accessLevel: base.accessLevel,
-            inheritedTypes: base.inheritedTypes,
-            genericParameters: base.genericParameters,
-            methods: base.methods,
-            properties: base.properties,
-            subscripts: base.subscripts,
-            typealiases: base.typealiases,
-            annotations: annotations,
-            isExtension: base.isExtension,
-            comment: base.comment,
-            associatedTypes: base.associatedTypes,
-            genericRequirements: base.genericRequirements
-        )
+        return merged
     }
 
     func resolveProtocolInheritance(in types: [String: Syntax.TypeInfo]) -> [String: Syntax.TypeInfo] {
@@ -147,23 +122,10 @@ private extension TypeInfoResolver {
 
             visiting.remove(name)
 
-            type = Syntax.TypeInfo(
-                kind: type.kind,
-                name: type.name,
-                localName: type.localName,
-                accessLevel: type.accessLevel,
-                inheritedTypes: type.inheritedTypes,
-                genericParameters: type.genericParameters,
-                methods: methods,
-                properties: properties,
-                subscripts: subscripts,
-                typealiases: type.typealiases,
-                annotations: type.annotations,
-                isExtension: type.isExtension,
-                comment: type.comment,
-                associatedTypes: associatedTypes,
-                genericRequirements: type.genericRequirements
-            )
+            type.methods = methods
+            type.properties = properties
+            type.subscripts = subscripts
+            type.associatedTypes = associatedTypes
 
             cache[name] = type
             return type
@@ -226,22 +188,10 @@ private extension TypeInfoResolver {
         let subscripts = Set(type.subscripts)
         let inheritedSubscripts = superclass.subscripts.filter { !subscripts.contains($0) }
 
-        return Syntax.TypeInfo(
-            kind: type.kind,
-            name: type.name,
-            localName: type.localName,
-            accessLevel: type.accessLevel,
-            inheritedTypes: type.inheritedTypes,
-            genericParameters: type.genericParameters,
-            methods: type.methods + inheritedMethods,
-            properties: type.properties + inheritedProperties,
-            subscripts: type.subscripts + inheritedSubscripts,
-            typealiases: type.typealiases,
-            annotations: type.annotations,
-            isExtension: type.isExtension,
-            comment: type.comment,
-            associatedTypes: type.associatedTypes,
-            genericRequirements: type.genericRequirements
-        )
+        var merged = type
+        merged.methods += inheritedMethods
+        merged.properties += inheritedProperties
+        merged.subscripts += inheritedSubscripts
+        return merged
     }
 }

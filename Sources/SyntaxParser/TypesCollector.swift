@@ -104,23 +104,11 @@ private final class Visitor: SyntaxVisitor {
     private func finalizeCurrentType() {
         if var lastType = types.last {
             types.removeLast()
-            lastType = Syntax.TypeInfo(
-                kind: lastType.kind,
-                name: lastType.name,
-                localName: lastType.localName,
-                accessLevel: lastType.accessLevel,
-                inheritedTypes: lastType.inheritedTypes,
-                genericParameters: lastType.genericParameters,
-                methods: currentTypeMethods,
-                properties: currentTypeProperties,
-                subscripts: currentTypeSubscripts,
-                typealiases: currentTypeTypealiases,
-                annotations: lastType.annotations,
-                isExtension: lastType.isExtension,
-                comment: lastType.comment,
-                associatedTypes: currentTypeAssociatedTypes,
-                genericRequirements: lastType.genericRequirements
-            )
+            lastType.methods = currentTypeMethods
+            lastType.properties = currentTypeProperties
+            lastType.subscripts = currentTypeSubscripts
+            lastType.typealiases = currentTypeTypealiases
+            lastType.associatedTypes = currentTypeAssociatedTypes
             types.append(lastType)
         }
         currentTypeMethods = []

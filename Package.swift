@@ -38,7 +38,8 @@ let package = Package(
         .target(
             name: "SyntaxParser",
             dependencies: [
-                .product(name: "SwiftSyntax", package: "swift-syntax")
+                .product(name: "SwiftSyntax", package: "swift-syntax"),
+                .product(name: "SwiftParser", package: "swift-syntax"),
             ]
         ),
 //        .target(name: "MockGenerator"),
@@ -47,7 +48,6 @@ let package = Package(
             dependencies: [
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "SourceKittenFramework", package: "SourceKitten"),
-                .product(name: "SwiftParser", package: "swift-syntax"),
                 .product(name: "PathKit", package: "PathKit"),
                 "SyntaxParser"
             ],
