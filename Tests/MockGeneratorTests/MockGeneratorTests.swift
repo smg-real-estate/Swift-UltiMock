@@ -4,17 +4,20 @@ import Testing
 @testable import mock
 
 struct MockGeneratorTests {
-    let pluginTestsPath = Path(#filePath).parent().parent().parent() + "PluginTests/Tests/"
+    let pluginTestsPath = Path(#filePath).parent().parent().parent() + "PluginTests/"
 
     @Test func mockGeneration_MockTests() throws {
         let sdkPath = try #require(getRootSDKPath())
-        let path = pluginTestsPath + "MockTests/mock.json"
+        let path = pluginTestsPath + "Tests/MockTests/mock.json"
         let outputPath = FileManager.default.temporaryDirectory.appending(path: "MockTests.generated.swift")
 
         setenv("SDKROOT", sdkPath, 1)
 
         var mockCommand = try MockCommand.parseAsRoot([
             path.string,
+            "--sources",
+            (pluginTestsPath + "Tests/MockTests").string,
+            (pluginTestsPath + "Tests/TestableMockables").string,
             "--output", outputPath.path,
         ])
 
@@ -38,7 +41,7 @@ struct MockGeneratorTests {
 
     @Test func mockGeneration_TestMocks() throws {
         let sdkPath = try #require(getRootSDKPath())
-        let path = pluginTestsPath + "TestMocks/mock.json"
+        let path = pluginTestsPath + "Tests/TestMocks/mock.json"
         let outputPath = FileManager.default.temporaryDirectory.appending(path: "TestMocks.generated.swift")
 
         setenv("SDKROOT", sdkPath, 1)
@@ -49,6 +52,9 @@ struct MockGeneratorTests {
 
         var mockCommand = try MockCommand.parseAsRoot([
             path.string,
+            "--sources",
+            (pluginTestsPath + "Tests/TestMocks").string,
+            (pluginTestsPath + "TestPackage/Sources").string,
             "--output", outputPath.path,
         ])
 

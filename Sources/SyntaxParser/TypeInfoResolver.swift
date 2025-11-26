@@ -45,9 +45,6 @@ extension TypeInfoResolver {
                     base = mergeAnnotations(from: ext, into: base)
                 }
                 baseTypes[name] = base
-            } else if let synthetic = syntheticType(from: attachedExtensions) {
-                baseOrder.append(name)
-                baseTypes[name] = synthetic
             }
         }
 
@@ -59,42 +56,6 @@ extension TypeInfoResolver {
 }
 
 private extension TypeInfoResolver {
-    func syntheticType(from extensions: [Syntax.TypeInfo]) -> Syntax.TypeInfo? {
-        guard extensions.contains(where: { $0.annotations["AutoMockable"] != nil }) else {
-            return nil
-        }
-
-        var annotations: [String: [String]] = [:]
-        for ext in extensions {
-            for (key, value) in ext.annotations {
-                annotations[key, default: []].append(contentsOf: value)
-            }
-        }
-
-        guard let sample = extensions.first else {
-            return nil
-        }
-
-        return Syntax.TypeInfo(
-            kind: .class,
-            name: sample.name,
-            localName: sample.localName,
-            accessLevel: sample.accessLevel,
-            inheritedTypes: sample.inheritedTypes,
-            genericParameters: sample.genericParameters,
-            methods: [],
-            properties: [],
-            subscripts: [],
-            typealiases: sample.typealiases,
-            extensions: sample.extensions,
-            annotations: annotations,
-            isExtension: false,
-            comment: sample.comment,
-            associatedTypes: sample.associatedTypes,
-            genericRequirements: sample.genericRequirements
-        )
-    }
-
     func merge(base: Syntax.TypeInfo, with other: Syntax.TypeInfo) -> Syntax.TypeInfo {
         Syntax.TypeInfo(
             kind: base.kind,
