@@ -35,20 +35,10 @@ struct MockTemplate {
 
                     partialResult[rawKey] = rawValue
                 }
-            let skipped = Set(type.annotations["skip", default: []])
-            let methods = type.allMethods.filter {
-                !$0.isStatic
-                    && !$0.isClass
-                    && !$0.definedInExtension
-                    && !$0.isPrivate
-                    && !skipped.contains($0.unbacktickedCallName)
-                    && $0.callName != "deinit"
-            }
-            let properties = type.allVariables.filter { !$0.isStatic && !$0.definedInExtension && !skipped.contains($0.unbacktickedName) }
-            let subscripts = type.allSubscripts.unique(by: \.getterSignature) { old, new in old.isReadOnly ? new : old }
-
-            let mockAccessLevel = type.mockAccessLevel
-            let mockTypeName = "\(type.name)Mock"
+            
+            let mockedTypeInfo = MockedTypeInfo(type)
+            let mockTypeName = mockedTypeInfo.mockTypeName
+            let mockAccessLevel = mockedTypeInfo.mockAccessLevel
 
             let namespacedTypes: [String: String] = (type.kind == .protocol) ? type.associatedTypes
                 .reduce(into: [:]) { partialResult, associatedType in
@@ -56,7 +46,7 @@ struct MockTemplate {
                 } : [:]
 
             if type.kind == .protocol {
-                let refinedAssociatedTypes = type.refinedAssociatedTypes
+                let refinedAssociatedTypes = mockedTypeInfo.refinedAssociatedTypes
 
                 let associatedTypes = type.associatedTypes
                     .filter {
@@ -69,7 +59,7 @@ struct MockTemplate {
                 let sendable = type.based["Sendable"].map { ", @unchecked \($0)" } ?? ""
 
                 """
-                \(type.mockClassAccessLevel) class \(mockTypeName)\(type.genericParameters(associatedTypes)): \(type.name)\(sendable), Mock {
+                \(mockedTypeInfo.mockClassAccessLevel) class \(mockTypeName)\(mockedTypeInfo.genericParameters(associatedTypes)): \(type.name)\(sendable), Mock {
                 """
                 for associatedType in associatedTypes {
                     "    \(mockAccessLevel) typealias \(associatedType.name) = \(associatedType.name)"
@@ -79,7 +69,7 @@ struct MockTemplate {
                 }
             } else {
                 """
-                \(type.mockClassAccessLevel) class \(mockTypeName): \(type.name), Mock {
+                \(mockedTypeInfo.mockClassAccessLevel) class \(mockTypeName): \(type.name), Mock {
                 """
             }
             """
@@ -87,11 +77,9 @@ struct MockTemplate {
                 enum Methods {
             """
 
-            methods.map(\.definition).indented(2)
-            properties.flatMap(\.definitions).indented(2)
-            subscripts.unique(by: \.getterSignature) { old, new in old.isReadOnly ? new : old }
-                .flatMap(\.definitions)
-                .indented(2)
+            mockedTypeInfo.methods.map(\.definition).indented(2)
+            mockedTypeInfo.properties.flatMap(\.definitions).indented(2)
+            mockedTypeInfo.subscripts.flatMap(\.definitions).indented(2)
 
             let mocksClass = type.kind == .class
 
@@ -109,8 +97,8 @@ struct MockTemplate {
                     }
             """
 
-            methods.map {
-                "\n" + $0.expectationConstructor(mockTypeName, forwarding: mocksClass)
+            mockedTypeInfo.methods.map {
+                "\n" + $0.expectationConstructor(forwarding: mocksClass)
                     .indented(2)
             }
 
@@ -118,7 +106,7 @@ struct MockTemplate {
                 }
             """
 
-            if !properties.isEmpty {
+            if !mockedTypeInfo.properties.isEmpty {
                 """
 
                     \(mockAccessLevel) struct PropertyExpectation<Signature> {
@@ -146,11 +134,11 @@ struct MockTemplate {
                 propertyExpectationExpectMethods(
                     mockAccessLevel: mockAccessLevel,
                     supportsForwarding: mocksClass,
-                    hasWritableProperties: properties.contains { !$0.isReadOnly }
+                    hasWritableProperties: mockedTypeInfo.properties.contains(where: { !$0.isReadOnly })
                 )
             }
 
-            if !subscripts.isEmpty {
+            if !mockedTypeInfo.subscripts.isEmpty {
                 """
 
                     \(mockAccessLevel) struct SubscriptExpectation<Signature> {
@@ -181,8 +169,8 @@ struct MockTemplate {
 
                     \(mockAccessLevel) struct SubscriptExpectations {
                 """
-                subscripts.map {
-                    "\n" + $0.expectationConstructor(mockTypeName)
+                mockedTypeInfo.subscripts.map {
+                    "\n" + $0.expectationConstructor()
                         .indented(2)
                 }
                 """
@@ -236,6 +224,7 @@ struct MockTemplate {
 
             let initializers = type.allMethods.filter(\.isInitializer).unique(by: \.name)
             for method in initializers {
+                let mockedMethod = MockedMethod(method, mockTypeName: mockTypeName)
                 """
 
                     public \(method.name.dropLast())\(method.parameters.isEmpty ? "" : ", ")
@@ -249,7 +238,7 @@ struct MockTemplate {
                         self.line = line
                         self.column = column
                         self.autoForwardingEnabled = true
-                        super.init(\(method.forwardedLabeledParameters))
+                        super.init(\(mockedMethod.forwardedLabeledParameters))
                         self.autoForwardingEnabled = false
                     }
                 """
@@ -259,7 +248,7 @@ struct MockTemplate {
             if initializers.isEmpty, type.kind == .class {
                 """
 
-                    \(type.mockAccessLevel) init(
+                    \(mockAccessLevel) init(
                         fileID: String = #fileID,
                         filePath: StaticString = #filePath,
                         line: UInt = #line,
@@ -350,38 +339,37 @@ struct MockTemplate {
 
             let isObjc = objcClassNames.contains(type.name)
 
-            methods
+            mockedTypeInfo.methods
                 .filter { method in
-                    !isObjc || !method.isAsync
+                    !isObjc || !method.method.isAsync
                 }
                 .map {
-                    "\n" + $0.implementation(mockTypeName, override: mocksClass)
+                    "\n" + $0.implementation(override: mocksClass)
                         .indented(1)
                 }
 
-            properties.map {
+            mockedTypeInfo.properties.map {
                 "\n" + $0.implementation(override: mocksClass)
                     .indented(1)
             }
 
-            subscripts.map {
+            mockedTypeInfo.subscripts.map {
                 "\n" + $0.implementation
                     .indented(1)
             }
 
-            methods.unique(by: \.rawSignature)
-                .map { "\n" + $0.mockExpect(mockTypeName, forwarding: mocksClass) }
+            mockedTypeInfo.methods.unique(by: \.rawSignature)
+                .map { "\n" + $0.mockExpect(forwarding: mocksClass) }
 
-            subscripts.unique(by: \.getterSignature)
-                .map { "\n" + $0.mockExpectGetter }
+            mockedTypeInfo.subscripts.map { "\n" + $0.mockExpectGetter }
 
-            subscripts.unique(by: \.setterSignature)
-                .map { "\n" + $0.mockExpectSetter }
+            mockedTypeInfo.subscripts.map { "\n" + $0.mockExpectSetter }
             """
             }
             """
-            properties.flatMap {
-                $0.expectationExtensions(type.mockClassAccessLevel, mockTypeName, namespacedTypes, forwarding: mocksClass)
+            mockedTypeInfo.properties.flatMap {
+                MockedProperty($0.property, mockTypeName: mockTypeName, namespacedTypes: namespacedTypes)
+                    .expectationExtensions(mockedTypeInfo.mockClassAccessLevel)
             }
             .map { "\n" + $0 }
         }
