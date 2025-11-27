@@ -371,12 +371,7 @@ struct MockedTypeInfo {
     }
 
     @StringBuilder
-    func definition(objcClassNames: Set<String>) -> String {
-        ""
-        mockTypeDefinition
-        expectationKeys.indented()
-        expectations.indented()
-
+    var storedProperties: String {
         """
 
             public let recorder = Recorder()
@@ -388,6 +383,20 @@ struct MockedTypeInfo {
 
         """
 
+        if typeInfo.kind == .class {
+            """
+
+                public var autoForwardingEnabled: Bool
+
+                public var isEnabled: Bool {
+                    !autoForwardingEnabled
+                }
+            """
+        }
+    }
+
+    @StringBuilder
+    var initializers: String {
         if typeInfo.kind == .protocol {
             """
                 public init(
@@ -463,20 +472,9 @@ struct MockedTypeInfo {
                 }
             """
         }
+    }
 
-        let mocksClass = typeInfo.kind == .class
-
-        if mocksClass {
-            """
-
-                public var autoForwardingEnabled: Bool
-
-                public var isEnabled: Bool {
-                    !autoForwardingEnabled
-                }
-            """
-        }
-
+    var privateHelpers: String {
         """
 
             private func _record<P>(
@@ -537,6 +535,21 @@ struct MockedTypeInfo {
                 return stub.perform
             }
         """
+    }
+
+    @StringBuilder
+    func definition(objcClassNames: Set<String>) -> String {
+        ""
+        mockTypeDefinition
+        expectationKeys.indented()
+        expectations.indented()
+
+        storedProperties
+        initializers
+
+        privateHelpers
+
+        let mocksClass = typeInfo.kind == .class
 
         let isObjc = objcClassNames.contains(typeInfo.name)
 
