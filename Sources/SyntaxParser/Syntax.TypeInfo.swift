@@ -1,7 +1,7 @@
 import Foundation
 
-extension Syntax {
-    public struct TypeInfo: Equatable {
+public extension Syntax {
+    struct TypeInfo: Equatable {
         public enum Kind: Equatable {
             case `class`
             case `struct`

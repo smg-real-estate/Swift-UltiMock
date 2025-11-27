@@ -11,12 +11,12 @@ struct MockedTypeInfo {
     let methods: [MockedMethod]
     let properties: [MockedProperty]
     let subscripts: [MockedSubscript]
-    
+
     init(_ type: Syntax.TypeInfo) {
         self.typeInfo = type
         let mockTypeName = "\(type.name)Mock"
         self.mockTypeName = mockTypeName
-        
+
         let skipped = Set(type.annotations["skip", default: []])
 
         let typeAliases: [String: String] = type.annotations["typealias", default: []]
@@ -39,7 +39,7 @@ struct MockedTypeInfo {
                 partialResult[associatedType.name] = "\(mockTypeName).\(associatedType.name)"
             } : [:]
 
-        let refinedAssociatedTypes: [String : String] = typeInfo.genericRequirements
+        let refinedAssociatedTypes: [String: String] = typeInfo.genericRequirements
             .filter { $0.relationshipSyntax == "==" }
             .reduce(into: [:]) { partialResult, requirement in
                 let left = requirement.leftType.name
@@ -56,8 +56,8 @@ struct MockedTypeInfo {
         self.associatedTypes = typeInfo.associatedTypes
             .filter {
                 typeAliases.values.contains($0.name)
-                || refinedAssociatedTypes[$0.name] == nil
-                && typeAliases[$0.name] == nil
+                    || refinedAssociatedTypes[$0.name] == nil
+                    && typeAliases[$0.name] == nil
             }
             .sorted(by: \.name, <)
 
@@ -67,26 +67,30 @@ struct MockedTypeInfo {
         // Filter and map methods
         self.methods = type.allMethods.compactMap { method -> MockedMethod? in
             let mockedMethod = MockedMethod(method, mockTypeName: mockTypeName)
-            guard !method.isStatic
-                && !method.isClass
-                && !mockedMethod.definedInExtension
-                && !mockedMethod.isPrivate
-                && !skipped.contains(method.unbacktickedCallName)
-                && method.callName != "deinit"
-            else { return nil }
+            guard !method.isStatic,
+                  !method.isClass,
+                  !mockedMethod.definedInExtension,
+                  !mockedMethod.isPrivate,
+                  !skipped.contains(method.unbacktickedCallName),
+                  method.callName != "deinit"
+            else {
+                return nil
+            }
             return mockedMethod
         }
-        
+
         // Filter and map properties
         self.properties = type.allVariables.compactMap { property -> MockedProperty? in
             let mockedProperty = MockedProperty(property)
-            guard !property.isStatic
-                && !mockedProperty.definedInExtension
-                && !skipped.contains(property.unbacktickedName)
-            else { return nil }
+            guard !property.isStatic,
+                  !mockedProperty.definedInExtension,
+                  !skipped.contains(property.unbacktickedName)
+            else {
+                return nil
+            }
             return mockedProperty
         }
-        
+
         // Filter and map subscripts (with uniquing)
         self.subscripts = type.allSubscripts
             .map { MockedSubscript($0, mockTypeName: mockTypeName) }
@@ -98,9 +102,9 @@ struct MockedTypeInfo {
         if typeInfo.kind == .protocol {
             let sendable = typeInfo.based["Sendable"].map { ", @unchecked \($0)" } ?? ""
 
-                """
-                \(mockClassAccessLevel) class \(mockTypeName)\(genericParameters(associatedTypes)): \(typeInfo.name)\(sendable), Mock {
-                """
+            """
+            \(mockClassAccessLevel) class \(mockTypeName)\(genericParameters(associatedTypes)): \(typeInfo.name)\(sendable), Mock {
+            """
             for associatedType in associatedTypes {
                 "    \(mockAccessLevel) typealias \(associatedType.name) = \(associatedType.name)"
             }
@@ -108,9 +112,9 @@ struct MockedTypeInfo {
                 "    \(mockAccessLevel) typealias \(left) = \(right)"
             }
         } else {
-                """
-                \(mockClassAccessLevel) class \(mockTypeName): \(typeInfo.name), Mock {
-                """
+            """
+            \(mockClassAccessLevel) class \(mockTypeName): \(typeInfo.name), Mock {
+            """
         }
     }
 
@@ -294,30 +298,30 @@ struct MockedTypeInfo {
         """
 
         if !properties.isEmpty {
-                """
-                
-                    \(mockAccessLevel) struct PropertyExpectation<Signature> {
-                        private let method: MockMethod
-                
-                        init(method: MockMethod) {
-                            self.method = method
-                        }
-                
-                        \(mockAccessLevel) var getterExpectation: Recorder.Expectation {
-                            .init(
-                                method: method,
-                                parameters: []
-                            )
-                        }
-                
-                        \(mockAccessLevel) func setterExpectation(_ newValue: AnyParameter) -> Recorder.Expectation {
-                            .init(
-                                method: method,
-                                parameters: [newValue]
-                            )
-                        }
+            """
+
+                \(mockAccessLevel) struct PropertyExpectation<Signature> {
+                    private let method: MockMethod
+
+                    init(method: MockMethod) {
+                        self.method = method
                     }
-                """
+
+                    \(mockAccessLevel) var getterExpectation: Recorder.Expectation {
+                        .init(
+                            method: method,
+                            parameters: []
+                        )
+                    }
+
+                    \(mockAccessLevel) func setterExpectation(_ newValue: AnyParameter) -> Recorder.Expectation {
+                        .init(
+                            method: method,
+                            parameters: [newValue]
+                        )
+                    }
+                }
+            """
             propertyExpectationExpectMethods(
                 mockAccessLevel: mockAccessLevel,
                 supportsForwarding: mocksClass,
@@ -326,43 +330,43 @@ struct MockedTypeInfo {
         }
 
         if !subscripts.isEmpty {
-                """
-                
-                    \(mockAccessLevel) struct SubscriptExpectation<Signature> {
-                        private let method: MockMethod
-                        private let parameters: [AnyParameter]
-                
-                        init(method: MockMethod, parameters: [AnyParameter]) {
-                            self.method = method
-                            self.parameters = parameters
-                        }
-                
-                        \(mockAccessLevel) var getterExpectation: Recorder.Expectation {
-                            .init(
-                                method: method,
-                                parameters: parameters
-                            )
-                        }
-                
-                        \(mockAccessLevel) func setterExpectation(_ newValue: AnyParameter) -> Recorder.Expectation {
-                            .init(
-                                method: method,
-                                parameters: parameters + [newValue]
-                            )
-                        }
-                
-                        \(mockAccessLevel) static var `subscript`: \(mockTypeName).SubscriptExpectations { .init() }
+            """
+
+                \(mockAccessLevel) struct SubscriptExpectation<Signature> {
+                    private let method: MockMethod
+                    private let parameters: [AnyParameter]
+
+                    init(method: MockMethod, parameters: [AnyParameter]) {
+                        self.method = method
+                        self.parameters = parameters
                     }
-                
-                    \(mockAccessLevel) struct SubscriptExpectations {
-                """
+
+                    \(mockAccessLevel) var getterExpectation: Recorder.Expectation {
+                        .init(
+                            method: method,
+                            parameters: parameters
+                        )
+                    }
+
+                    \(mockAccessLevel) func setterExpectation(_ newValue: AnyParameter) -> Recorder.Expectation {
+                        .init(
+                            method: method,
+                            parameters: parameters + [newValue]
+                        )
+                    }
+
+                    \(mockAccessLevel) static var `subscript`: \(mockTypeName).SubscriptExpectations { .init() }
+                }
+
+                \(mockAccessLevel) struct SubscriptExpectations {
+            """
             subscripts.map {
                 "\n" + $0.expectationConstructor()
                     .indented(2)
             }
-                """
-                    }
-                """
+            """
+                }
+            """
         }
     }
 
@@ -373,167 +377,166 @@ struct MockedTypeInfo {
         expectationKeys.indented()
         expectations.indented()
 
+        """
 
-            """
-            
-                public let recorder = Recorder()
-            
-                private let fileID: String
-                private let filePath: StaticString
-                private let line: UInt
-                private let column: Int
-            
-            """
+            public let recorder = Recorder()
+
+            private let fileID: String
+            private let filePath: StaticString
+            private let line: UInt
+            private let column: Int
+
+        """
 
         if typeInfo.kind == .protocol {
-                """
-                    public init(
-                        fileID: String = #fileID,
-                        filePath: StaticString = #filePath,
-                        line: UInt = #line,
-                        column: Int = #column
-                    ) {
-                        self.fileID = fileID
-                        self.filePath = filePath
-                        self.line = line
-                        self.column = column
-                    }
-                """
+            """
+                public init(
+                    fileID: String = #fileID,
+                    filePath: StaticString = #filePath,
+                    line: UInt = #line,
+                    column: Int = #column
+                ) {
+                    self.fileID = fileID
+                    self.filePath = filePath
+                    self.line = line
+                    self.column = column
+                }
+            """
         }
 
         let requiredInitializers = typeInfo.implements.values
             .flatMap(\.methods)
             .filter(\.isInitializer)
-        + typeInfo.allMethods
+            + typeInfo.allMethods
             .filter(\.isInitializer)
             .filter(\.isRequired)
 
         for method in requiredInitializers {
-                """
-                
-                    @available(*, unavailable)
-                    \(mockAccessLevel) \("required") \(method.name) {
-                        fatalError()
-                    }
-                """
+            """
+
+                @available(*, unavailable)
+                \(mockAccessLevel) \("required") \(method.name) {
+                    fatalError()
+                }
+            """
         }
 
         let initializers = typeInfo.allMethods.filter(\.isInitializer).unique(by: \.name)
         for method in initializers {
             let mockedMethod = MockedMethod(method, mockTypeName: mockTypeName)
-                """
-                
-                    public \(method.name.dropLast())\(method.parameters.isEmpty ? "" : ", ")
-                        fileID: String = #fileID,
-                        filePath: StaticString = #filePath,
-                        line: UInt = #line,
-                        column: Int = #column
-                    ) {
-                        self.fileID = fileID
-                        self.filePath = filePath
-                        self.line = line
-                        self.column = column
-                        self.autoForwardingEnabled = true
-                        super.init(\(mockedMethod.forwardedLabeledParameters))
-                        self.autoForwardingEnabled = false
-                    }
-                """
+            """
+
+                public \(method.name.dropLast())\(method.parameters.isEmpty ? "" : ", ")
+                    fileID: String = #fileID,
+                    filePath: StaticString = #filePath,
+                    line: UInt = #line,
+                    column: Int = #column
+                ) {
+                    self.fileID = fileID
+                    self.filePath = filePath
+                    self.line = line
+                    self.column = column
+                    self.autoForwardingEnabled = true
+                    super.init(\(mockedMethod.forwardedLabeledParameters))
+                    self.autoForwardingEnabled = false
+                }
+            """
         }
 
         // Defining default initializer
         if initializers.isEmpty, typeInfo.kind == .class {
-                """
-                
-                    \(mockAccessLevel) init(
-                        fileID: String = #fileID,
-                        filePath: StaticString = #filePath,
-                        line: UInt = #line,
-                        column: Int = #column
-                    ) {
-                        self.fileID = fileID
-                        self.filePath = filePath
-                        self.line = line
-                        self.column = column
-                        self.autoForwardingEnabled = true
-                        super.init()
-                        self.autoForwardingEnabled = false
-                    }
-                """
+            """
+
+                \(mockAccessLevel) init(
+                    fileID: String = #fileID,
+                    filePath: StaticString = #filePath,
+                    line: UInt = #line,
+                    column: Int = #column
+                ) {
+                    self.fileID = fileID
+                    self.filePath = filePath
+                    self.line = line
+                    self.column = column
+                    self.autoForwardingEnabled = true
+                    super.init()
+                    self.autoForwardingEnabled = false
+                }
+            """
         }
 
         let mocksClass = typeInfo.kind == .class
 
         if mocksClass {
-                """
-                
-                    public var autoForwardingEnabled: Bool
-                
-                    public var isEnabled: Bool {
-                        !autoForwardingEnabled
-                    }
-                """
+            """
+
+                public var autoForwardingEnabled: Bool
+
+                public var isEnabled: Bool {
+                    !autoForwardingEnabled
+                }
+            """
         }
 
-            """
-            
-                private func _record<P>(
-                    _ expectation: Recorder.Expectation, 
-                    _ fileID: String,
-                    _ filePath: StaticString,
-                    _ line: UInt,
-                    _ column: Int,
-                    _ perform: P
-                ) {
-                    guard isEnabled else {
-                        handleFatalFailure(
-                            "Setting expectation on disabled mock is not allowed",
-                            fileID: fileID,
-                            filePath: filePath,
-                            line: line,
-                            column: column
-                        )            
-                    }
-                    recorder.record(
-                        .init(
-                            expectation, 
-                            perform,
-                            fileID,
-                            filePath, 
-                            line,
-                            column
-                        )
+        """
+
+            private func _record<P>(
+                _ expectation: Recorder.Expectation, 
+                _ fileID: String,
+                _ filePath: StaticString,
+                _ line: UInt,
+                _ column: Int,
+                _ perform: P
+            ) {
+                guard isEnabled else {
+                    handleFatalFailure(
+                        "Setting expectation on disabled mock is not allowed",
+                        fileID: fileID,
+                        filePath: filePath,
+                        line: line,
+                        column: column
+                    )            
+                }
+                recorder.record(
+                    .init(
+                        expectation, 
+                        perform,
+                        fileID,
+                        filePath, 
+                        line,
+                        column
+                    )
+                )
+            }
+
+            private func _perform(_ method: MockMethod, _ parameters: [Any?] = []) -> Any {
+                let invocation = Invocation(
+                    method: method,
+                    parameters: parameters
+                )
+                guard let stub = recorder.next() else {
+                    handleFatalFailure(
+                        "Expected no calls but received `\\(invocation)`", 
+                        fileID: fileID,
+                        filePath: filePath,
+                        line: line,
+                        column: column
                     )
                 }
-            
-                private func _perform(_ method: MockMethod, _ parameters: [Any?] = []) -> Any {
-                    let invocation = Invocation(
-                        method: method,
-                        parameters: parameters
+
+                guard stub.matches(invocation) else {
+                    handleFatalFailure(
+                        "Unexpected call: expected `\\(stub.expectation)`, but received `\\(invocation)`",
+                        fileID: stub.fileID,
+                        filePath: stub.filePath,
+                        line: stub.line,
+                        column: stub.column
                     )
-                    guard let stub = recorder.next() else {
-                        handleFatalFailure(
-                            "Expected no calls but received `\\(invocation)`", 
-                            fileID: fileID,
-                            filePath: filePath,
-                            line: line,
-                            column: column
-                        )
-                    }
-            
-                    guard stub.matches(invocation) else {
-                        handleFatalFailure(
-                            "Unexpected call: expected `\\(stub.expectation)`, but received `\\(invocation)`",
-                            fileID: stub.fileID,
-                            filePath: stub.filePath,
-                            line: stub.line,
-                            column: stub.column
-                        )
-                    }
-            
-                    defer { recorder.checkVerification() }
-                    return stub.perform
                 }
-            """
+
+                defer { recorder.checkVerification() }
+                return stub.perform
+            }
+        """
 
         let isObjc = objcClassNames.contains(typeInfo.name)
 
@@ -562,9 +565,9 @@ struct MockedTypeInfo {
         subscripts.map { "\n" + $0.mockExpectGetter }
 
         subscripts.map { "\n" + $0.mockExpectSetter }
-            """
-            }
-            """
+        """
+        }
+        """
         properties.flatMap {
             MockedProperty($0.property, mockTypeName: mockTypeName, namespacedTypes: namespacedTypes)
                 .expectationExtensions(mockClassAccessLevel)
@@ -603,4 +606,3 @@ struct PropertyGetterVariant {
         }
     }
 }
-

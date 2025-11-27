@@ -4,12 +4,12 @@ import SyntaxParser
 struct MockedMethod {
     let method: Syntax.Method
     let mockTypeName: String
-    
+
     init(_ method: Syntax.Method, mockTypeName: String) {
         self.method = method
         self.mockTypeName = mockTypeName
     }
-    
+
     var isPrivate: Bool {
         method.modifiers.contains { $0.name == "private" }
     }

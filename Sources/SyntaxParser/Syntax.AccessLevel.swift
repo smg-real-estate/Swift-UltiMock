@@ -1,7 +1,7 @@
 import Foundation
 
-extension Syntax {
-    public enum AccessLevel: String, Equatable, Sendable {
+public extension Syntax {
+    enum AccessLevel: String, Equatable, Sendable {
         case `public`
         case `open`
         case `internal`

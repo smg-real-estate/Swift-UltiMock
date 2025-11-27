@@ -1,7 +1,7 @@
 import Foundation
 
-extension Syntax {
-    public struct GenericParameter: Hashable {
+public extension Syntax {
+    struct GenericParameter: Hashable {
         public let name: String
         public let constraints: [String]
 

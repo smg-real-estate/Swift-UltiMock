@@ -3,11 +3,11 @@ import SyntaxParser
 
 struct MockedTypeName {
     let typeName: Syntax.TypeName
-    
+
     init(_ typeName: Syntax.TypeName) {
         self.typeName = typeName
     }
-    
+
     var actualTypeNameExceptSelf: Syntax.TypeName {
         typeName.name == "Self" ? typeName : typeName.actualTypeName ?? typeName
     }
@@ -25,7 +25,7 @@ struct MockedTypeName {
             .replacingOccurrences(of: "Swift.Set", with: "Set")
             .replacingOccurrences(of: "Swift.Optional", with: "Optional")
     }
-    
+
     func nameForSyntaxTypeName(convertingImplicitOptional: Bool) -> String {
         name(convertingImplicitOptional: convertingImplicitOptional)
     }

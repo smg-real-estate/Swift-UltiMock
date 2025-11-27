@@ -1,7 +1,7 @@
 import Foundation
 
-extension Syntax {
-    public struct Typealias: Equatable {
+public extension Syntax {
+    struct Typealias: Equatable {
         public let name: String
         public let target: String
         public let annotations: [String: [String]]

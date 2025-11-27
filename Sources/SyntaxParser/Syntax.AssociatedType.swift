@@ -1,7 +1,7 @@
 import Foundation
 
-extension Syntax {
-    public struct AssociatedType: Equatable {
+public extension Syntax {
+    struct AssociatedType: Equatable {
         public let name: String
         public let typeNameString: String?
 

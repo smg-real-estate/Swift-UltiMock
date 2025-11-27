@@ -4,12 +4,12 @@ import SyntaxParser
 struct MockedSubscript {
     let subscriptDecl: Syntax.Subscript
     let mockTypeName: String
-    
+
     init(_ subscriptDecl: Syntax.Subscript, mockTypeName: String) {
         self.subscriptDecl = subscriptDecl
         self.mockTypeName = mockTypeName
     }
-    
+
     var getterIdentifier: String {
         "subscript_get_by_\(parametersPart)_\(returnTypePart)"
     }

@@ -1,7 +1,7 @@
 import Foundation
 
-extension Syntax {
-    public struct TypeName: Equatable {
+public extension Syntax {
+    struct TypeName: Equatable {
         public let name: String
         public let isOptional: Bool
         public let isImplicitlyUnwrappedOptional: Bool

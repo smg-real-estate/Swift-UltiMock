@@ -3,11 +3,11 @@ import SyntaxParser
 
 struct MockedMethodParameter {
     let parameter: Syntax.Method.Parameter
-    
+
     init(_ parameter: Syntax.Method.Parameter) {
         self.parameter = parameter
     }
-    
+
     var definitionName: String {
         if let label = parameter.argumentLabel, label == parameter.name {
             return label

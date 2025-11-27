@@ -5,13 +5,13 @@ struct MockedProperty {
     let property: Syntax.Property
     let mockTypeName: String?
     let namespacedTypes: [String: String]
-    
+
     init(_ property: Syntax.Property, mockTypeName: String? = nil, namespacedTypes: [String: String] = [:]) {
         self.property = property
         self.mockTypeName = mockTypeName
         self.namespacedTypes = namespacedTypes
     }
-    
+
     var definedInExtension: Bool {
         property.definedInType?.isExtension ?? false
     }
@@ -196,8 +196,8 @@ struct MockedProperty {
         guard let mockTypeName else {
             return []
         }
-        
-        var result: [String] = [
+
+        var result = [
             """
             \(mockAccessLevel.replacingOccurrences(of: "open", with: "public")) \
             extension \(mockTypeName).PropertyExpectation where Signature == \(getterPerformDefinition(forwarding: false)) {
@@ -220,7 +220,7 @@ struct MockedProperty {
                 """
             )
         }
-        
+
         return result
     }
 }

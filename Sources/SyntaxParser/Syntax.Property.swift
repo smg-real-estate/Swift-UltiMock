@@ -1,7 +1,7 @@
 import Foundation
 
-extension Syntax {
-    public struct Property: Hashable {
+public extension Syntax {
+    struct Property: Hashable {
         public let name: String
         public let type: String?
         public let resolvedType: String?

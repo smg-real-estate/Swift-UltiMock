@@ -1,7 +1,7 @@
 import Foundation
 
-extension Syntax {
-    public struct GenericRequirement: Hashable {
+public extension Syntax {
+    struct GenericRequirement: Hashable {
         public let leftTypeName: String
         public let rightTypeName: String
         public let relationshipSyntax: String

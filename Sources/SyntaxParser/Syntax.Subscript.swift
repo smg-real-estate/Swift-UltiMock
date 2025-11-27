@@ -1,7 +1,7 @@
 import Foundation
 
-extension Syntax {
-    public struct Subscript: Hashable {
+public extension Syntax {
+    struct Subscript: Hashable {
         public let parameters: [Method.Parameter]
         public let returnType: String?
         public let resolvedReturnType: String?

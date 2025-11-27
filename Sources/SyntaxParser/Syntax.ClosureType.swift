@@ -1,7 +1,7 @@
 import Foundation
 
-extension Syntax {
-    public struct ClosureType: Equatable {
+public extension Syntax {
+    struct ClosureType: Equatable {
         public let description: String
 
         public init(description: String) {
