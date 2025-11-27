@@ -1,7 +1,7 @@
 import Foundation
 
 extension String {
-    func indented(_ level: Int, width: Int = 4) -> Self {
+    func indented(_ level: Int = 1, width: Int = 4) -> Self {
         components(separatedBy: "\n")
             .map { String(repeating: " ", count: level * width) + $0 }
             .joined(separator: "\n")
@@ -25,7 +25,7 @@ extension String {
 }
 
 extension Sequence<String> {
-    func indented(_ level: Int, width: Int = 4) -> [String] {
+    func indented(_ level: Int = 1, width: Int = 4) -> [String] {
         map {
             $0.indented(level, width: width)
         }
