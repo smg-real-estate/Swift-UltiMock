@@ -667,3 +667,64 @@ private final class Visitor: SyntaxVisitor {
         return (getterIsAsync, getterThrows)
     }
 }
+
+func makeModifiers(from modifierList: ModifierListSyntax?) -> [Syntax.Modifier] {
+    guard let modifierList else {
+        return []
+    }
+    return modifierList.map { modifier in
+        Syntax.Modifier(name: trimmedDescription(of: modifier.name))
+    }
+}
+
+func parseAttributes(_ attributeList: AttributeListSyntax?) -> [String: [Syntax.Attribute]] {
+    guard let attributeList else {
+        return [:]
+    }
+
+    var attributes: [String: [Syntax.Attribute]] = [:]
+    for element in attributeList {
+        guard let attribute = element.as(AttributeSyntax.self) else {
+            continue
+        }
+        let name = trimmedDescription(of: attribute.attributeName)
+        let description = attribute.withoutTrivia().description.trimmingCharacters(in: .whitespacesAndNewlines)
+        let value = Syntax.Attribute(name: name, description: description.isEmpty ? "@\(name)" : description)
+        attributes[name, default: []].append(value)
+    }
+    return attributes
+}
+
+func genericRequirements(from clause: GenericWhereClauseSyntax?) -> [Syntax.GenericRequirement] {
+    guard let clause else {
+        return []
+    }
+
+    return clause.requirementList.compactMap { requirement in
+        switch requirement.body {
+        case let .conformanceRequirement(requirement):
+            Syntax.GenericRequirement(
+                leftTypeName: trimmedDescription(of: requirement.leftTypeIdentifier),
+                rightTypeName: trimmedDescription(of: requirement.rightTypeIdentifier),
+                relationshipSyntax: ":"
+            )
+        case let .sameTypeRequirement(requirement):
+            Syntax.GenericRequirement(
+                leftTypeName: trimmedDescription(of: requirement.leftTypeIdentifier),
+                rightTypeName: trimmedDescription(of: requirement.rightTypeIdentifier),
+                relationshipSyntax: "=="
+            )
+        case let .layoutRequirement(requirement):
+            Syntax.GenericRequirement(
+                leftTypeName: trimmedDescription(of: requirement.typeIdentifier),
+                rightTypeName: trimmedDescription(of: requirement),
+                relationshipSyntax: "layout"
+            )
+        }
+    }
+}
+
+@inline(__always)
+func trimmedDescription(of syntax: SyntaxProtocol) -> String {
+    syntax.withoutTrivia().description.trimmingCharacters(in: .whitespacesAndNewlines)
+}

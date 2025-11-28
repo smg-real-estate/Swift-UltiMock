@@ -16,9 +16,26 @@ struct TypeAliasCollectorTests {
         let source = Parser.parse(source: """
             typealias A = Int
             typealias B = A
+            typealias C<T> = [T]
         
-            enum X {
+            struct Struct {
                 typealias B = Double 
+            }
+        
+            enum Enum {
+                typealias D = String
+            }
+        
+            class Class {
+                typealias E = Float
+            }
+        
+            protocol Protocol {
+                typealias F = Bool
+            }
+        
+            extension Struct {
+                typealias G = Character
             }
         """)
 
@@ -27,10 +44,21 @@ struct TypeAliasCollectorTests {
         #expect(aliases == [
             "" : [
                 "A" : AliasDefinition(name: "A", genericParameters: [], text: "Int"),
-                "B" : AliasDefinition(name: "B", genericParameters: [], text: "A")
+                "B" : AliasDefinition(name: "B", genericParameters: [], text: "A"),
+                "C" : AliasDefinition(name: "C", genericParameters: ["T"], text: "[T]"),
             ],
-            "X" : [
-                "B" : AliasDefinition(name: "B", genericParameters: [], text: "Double")
+            "Struct" : [
+                "B" : AliasDefinition(name: "B", genericParameters: [], text: "Double"),
+                "G" : AliasDefinition(name: "G", genericParameters: [], text: "Character")
+            ],
+            "Enum" : [
+                "D" : AliasDefinition(name: "D", genericParameters: [], text: "String")
+            ],
+            "Class" : [
+                "E" : AliasDefinition(name: "E", genericParameters: [], text: "Float")
+            ],
+            "Protocol" : [
+                "F" : AliasDefinition(name: "F", genericParameters: [], text: "Bool")
             ]
         ])
     }
