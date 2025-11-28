@@ -11,21 +11,7 @@ struct TypesCollector {
     }
 
     func collect(from source: SourceFileSyntax) -> [Syntax.TypeInfo] {
-        let aliasBuilder = AliasTableBuilder(viewMode: .fixedUp)
-        aliasBuilder.walk(source)
-
-        let aliasTable = aliasBuilder.aliasesByScope
-        var globalAliases: [String: AliasDefinition] = [:]
-        for alias in aliasTable[AliasTableBuilder.globalScopeKey] ?? [] {
-            globalAliases[alias.name] = alias
-        }
-
-        let globalAliasFallbacks = makeAliasFallbacks(from: aliasTable[AliasTableBuilder.globalScopeKey] ?? [])
-        let visitor = Visitor(
-            globalAliases: globalAliases,
-            aliasTable: aliasTable,
-            globalAliasFallbacks: globalAliasFallbacks
-        )
+        let visitor = Visitor()
         visitor.walk(source)
         return visitor.types
     }
@@ -36,29 +22,16 @@ private final class Visitor: SyntaxVisitor {
     private var currentTypeMethods: [Syntax.Method] = []
     private var currentTypeProperties: [Syntax.Property] = []
     private var currentTypeSubscripts: [Syntax.Subscript] = []
-    private var currentTypeTypealiases: [Syntax.Typealias] = []
     private var currentTypeAssociatedTypes: [Syntax.AssociatedType] = []
     private var currentTypeAccessLevel: Syntax.AccessLevel = .internal
     private var currentTypeKind: Syntax.TypeInfo.Kind = .struct
-    private let globalAliases: [String: AliasDefinition]
-    private let aliasTable: [String: [AliasDefinition]]
-    private let globalAliasFallbacks: [String: String]
-    private var aliasScopeStack: [[String: AliasDefinition]]
     private var typeScopeStack: [String] = []
-
-    private var currentAliasScope: [String: AliasDefinition] {
-        aliasScopeStack.last ?? [:]
-    }
 
     private var isInsideType: Bool {
         !typeScopeStack.isEmpty
     }
 
-    init(globalAliases: [String: AliasDefinition], aliasTable: [String: [AliasDefinition]], globalAliasFallbacks: [String: String]) {
-        self.globalAliases = globalAliases
-        self.aliasTable = aliasTable
-        self.globalAliasFallbacks = globalAliasFallbacks
-        self.aliasScopeStack = [globalAliases]
+    init() {
         super.init(viewMode: .fixedUp)
     }
 
@@ -74,31 +47,6 @@ private final class Visitor: SyntaxVisitor {
         currentTypeKind = kind
         currentTypeAccessLevel = accessLevel(from: modifiers)
         typeScopeStack.append(name)
-        let aliasDefinitions = aliasTable[currentScopeKey] ?? []
-        currentTypeTypealiases = aliasDefinitions.map {
-            Syntax.Typealias(name: $0.name, target: trimmedDescription(of: $0.target))
-        }
-        pushAliasScope(with: aliasDefinitions)
-    }
-
-    private func pushAliasScope(with definitions: [AliasDefinition]) {
-        let parent = aliasScopeStack.last ?? [:]
-        guard !definitions.isEmpty else {
-            aliasScopeStack.append(parent)
-            return
-        }
-        var merged = parent
-        for definition in definitions {
-            merged[definition.name] = definition
-        }
-        aliasScopeStack.append(merged)
-    }
-
-    private func popAliasScope() {
-        guard aliasScopeStack.count > 1 else {
-            return
-        }
-        aliasScopeStack.removeLast()
     }
 
     private func finalizeCurrentType() {
@@ -107,16 +55,13 @@ private final class Visitor: SyntaxVisitor {
             lastType.methods = currentTypeMethods
             lastType.properties = currentTypeProperties
             lastType.subscripts = currentTypeSubscripts
-            lastType.typealiases = currentTypeTypealiases
             lastType.associatedTypes = currentTypeAssociatedTypes
             types.append(lastType)
         }
         currentTypeMethods = []
         currentTypeProperties = []
         currentTypeSubscripts = []
-        currentTypeTypealiases = []
         currentTypeAssociatedTypes = []
-        popAliasScope()
         if !typeScopeStack.isEmpty {
             typeScopeStack.removeLast()
         }
@@ -221,38 +166,16 @@ private final class Visitor: SyntaxVisitor {
 
         let parameterList = node.signature.input.parameterList
         let parameters = parameterList.map { parameter -> Syntax.Method.Parameter in
-            let label = parameter.firstName?.text
-            let name = parameter.secondName?.text ?? parameter.firstName?.text ?? ""
-            let details = analyzeType(
-                parameter.type,
-                aliasScope: currentAliasScope,
-                fallbackAliases: globalAliasFallbacks
-            )
-
-            return Syntax.Method.Parameter(
-                label: label,
-                name: name,
-                type: details?.text,
-                resolvedType: details?.resolvedText,
-                isInout: details?.isInout ?? false,
-                isClosure: details?.isClosure ?? false,
-                isOptional: details?.isOptional ?? false
-            )
+            return Syntax.Method.Parameter(parameter)
         }
 
-        let returnDetails = analyzeType(
-            node.signature.output?.returnType,
-            aliasScope: currentAliasScope,
-            fallbackAliases: globalAliasFallbacks
-        )
         let methodModifiers = makeModifiers(from: node.modifiers)
         let modifierNames = Set(methodModifiers.map(\.name))
 
         let method = Syntax.Method(
             name: node.identifier.text,
             parameters: parameters,
-            returnType: returnDetails?.text,
-            resolvedReturnType: returnDetails?.resolvedText,
+            returnType: node.signature.output?.returnType.description.trimmingCharacters(in: .whitespacesAndNewlines),
             annotations: [:],
             accessLevel: effectiveMemberAccessLevel(from: node.modifiers).rawValue,
             modifiers: methodModifiers,
@@ -277,24 +200,8 @@ private final class Visitor: SyntaxVisitor {
             return .skipChildren
         }
 
-        let parameters = node.signature.input.parameterList.map { parameter -> Syntax.Method.Parameter in
-            let label = parameter.firstName?.text
-            let name = parameter.secondName?.text ?? parameter.firstName?.text ?? ""
-            let details = analyzeType(
-                parameter.type,
-                aliasScope: currentAliasScope,
-                fallbackAliases: globalAliasFallbacks
-            )
-
-            return Syntax.Method.Parameter(
-                label: label,
-                name: name,
-                type: details?.text,
-                resolvedType: details?.resolvedText,
-                isInout: details?.isInout ?? false,
-                isClosure: details?.isClosure ?? false,
-                isOptional: details?.isOptional ?? false
-            )
+        let parameters = node.signature.input.parameterList.map { parameter in
+            Syntax.Method.Parameter(parameter)
         }
 
         let methodModifiers = makeModifiers(from: node.modifiers)
@@ -341,17 +248,10 @@ private final class Visitor: SyntaxVisitor {
             }
 
             let propertyName = pattern.identifier.text
-            let typeDetails = analyzeType(
-                binding.typeAnnotation?.type,
-                aliasScope: currentAliasScope,
-                fallbackAliases: globalAliasFallbacks
-            )
-            var propertyType = typeDetails?.text
-            var resolvedPropertyType = typeDetails?.resolvedText
+            var propertyType = binding.typeAnnotation?.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
             if propertyType == nil, let initializer = binding.initializer {
                 if let inferred = inferTypeName(from: initializer.value) {
                     propertyType = inferred
-                    resolvedPropertyType = inferred
                 }
             }
             let getterEffects = accessorEffects(from: binding.accessor)
@@ -385,8 +285,7 @@ private final class Visitor: SyntaxVisitor {
 
             let property = Syntax.Property(
                 name: propertyName,
-                type: propertyType,
-                resolvedType: resolvedPropertyType,
+                type: propertyType ?? "",
                 isVariable: isVariable,
                 readAccess: propAccessLevel,
                 writeAccess: writeAccessLevel,
@@ -407,31 +306,10 @@ private final class Visitor: SyntaxVisitor {
             return .skipChildren
         }
 
-        let parameters = node.indices.parameterList.map { parameter -> Syntax.Method.Parameter in
-            let label = parameter.firstName?.text
-            let name = parameter.secondName?.text ?? parameter.firstName?.text ?? ""
-            let details = analyzeType(
-                parameter.type,
-                aliasScope: currentAliasScope,
-                fallbackAliases: globalAliasFallbacks
-            )
-
-            return Syntax.Method.Parameter(
-                label: label,
-                name: name,
-                type: details?.text,
-                resolvedType: details?.resolvedText,
-                isInout: details?.isInout ?? false,
-                isClosure: details?.isClosure ?? false,
-                isOptional: details?.isOptional ?? false
-            )
+        let parameters = node.indices.parameterList.map { parameter in
+            Syntax.Method.Parameter(parameter)
         }
 
-        let returnDetails = analyzeType(
-            node.result.returnType,
-            aliasScope: currentAliasScope,
-            fallbackAliases: globalAliasFallbacks
-        )
         let subscriptAccessLevel = effectiveMemberAccessLevel(from: node.modifiers).rawValue
 
         let writeAccessLevel: String
@@ -447,8 +325,7 @@ private final class Visitor: SyntaxVisitor {
 
         let subscriptInfo = Syntax.Subscript(
             parameters: parameters,
-            returnType: returnDetails?.text,
-            resolvedReturnType: returnDetails?.resolvedText,
+            returnType: node.result.returnType.description.trimmingCharacters(in: .whitespacesAndNewlines),
             readAccess: subscriptAccessLevel,
             writeAccess: writeAccessLevel,
             attributes: parseAttributes(node.attributes)

@@ -61,7 +61,6 @@ private extension TypeInfoResolver {
         merged.methods += other.methods
         merged.properties += other.properties
         merged.subscripts += other.subscripts
-        merged.typealiases += other.typealiases
         merged.comment = base.comment ?? other.comment
         merged.associatedTypes += other.associatedTypes
         merged.genericRequirements += other.genericRequirements

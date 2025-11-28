@@ -52,14 +52,23 @@ import Testing
 
         let types = collector.collect(from: source)
         let type = try #require(types.first)
-        #expect(type.methods == [
-            Syntax.Method(
-                name: "setValue",
-                parameters: [
-                    Syntax.Method.Parameter(label: "_", name: "value", type: "Int")
-                ]
-            )
-        ])
+        #expect(
+            type.methods == [
+                Syntax.Method(
+                    name: "setValue",
+                    parameters: [
+                        Syntax.Method.Parameter(
+                            label: "_",
+                            name: "value",
+                            type: "Int",
+                            isInout: false,
+                            isClosure: false,
+                            isOptional: false
+                        )
+                    ]
+                )
+            ]
+        )
     }
 
     @Test
@@ -74,14 +83,23 @@ import Testing
 
         let types = collector.collect(from: source)
         let type = try #require(types.first)
-        #expect(type.methods == [
-            Syntax.Method(
-                name: "configure",
-                parameters: [
-                    Syntax.Method.Parameter(label: "with", name: "value", type: "String")
-                ]
-            )
-        ])
+        #expect(
+            type.methods == [
+                Syntax.Method(
+                    name: "configure",
+                    parameters: [
+                        Syntax.Method.Parameter(
+                            label: "with",
+                            name: "value",
+                            type: "String",
+                            isInout: false,
+                            isClosure: false,
+                            isOptional: false
+                        )
+                    ]
+                )
+            ]
+        )
     }
 
     @Test
@@ -100,9 +118,18 @@ import Testing
             Syntax.Method(
                 name: "update",
                 parameters: [
-                    Syntax.Method.Parameter(label: "id", name: "id", type: "Int"),
-                    Syntax.Method.Parameter(label: "name", name: "name", type: "String"),
-                    Syntax.Method.Parameter(label: "isActive", name: "isActive", type: "Bool")
+                    Syntax.Method.Parameter(label: "id", name: "id", type: "Int",
+                                            isInout: false,
+                                            isClosure: false,
+                                            isOptional: false),
+                    Syntax.Method.Parameter(label: "name", name: "name", type: "String",
+                                            isInout: false,
+                                            isClosure: false,
+                                            isOptional: false),
+                    Syntax.Method.Parameter(label: "isActive", name: "isActive", type: "Bool",
+                                            isInout: false,
+                                            isClosure: false,
+                                            isOptional: false)
                 ],
                 returnType: "Bool"
             )
@@ -181,7 +208,10 @@ import Testing
         #expect(type.subscripts == [
             Syntax.Subscript(
                 parameters: [
-                    Syntax.Method.Parameter(label: "index", name: "index", type: "Int")
+                    Syntax.Method.Parameter(label: "index", name: "index", type: "Int",
+                                            isInout: false,
+                                            isClosure: false,
+                                            isOptional: false)
                 ],
                 returnType: "String"
             )
@@ -205,45 +235,17 @@ import Testing
         #expect(type.subscripts == [
             Syntax.Subscript(
                 parameters: [
-                    Syntax.Method.Parameter(label: "row", name: "row", type: "Int"),
-                    Syntax.Method.Parameter(label: "column", name: "column", type: "Int")
+                    Syntax.Method.Parameter(label: "row", name: "row", type: "Int",
+                                            isInout: false,
+                                            isClosure: false,
+                                            isOptional: false),
+                    Syntax.Method.Parameter(label: "column", name: "column", type: "Int",
+                                            isInout: false,
+                                            isClosure: false,
+                                            isOptional: false)
                 ],
                 returnType: "Double"
             )
-        ])
-    }
-
-    @Test
-    func `collect returns typealias`() throws {
-        let source = Parser.parse(source:
-            """
-            protocol Service {
-                typealias Callback = () -> Void
-            }
-            """
-        )
-
-        let types = collector.collect(from: source)
-        let type = try #require(types.first)
-        #expect(type.typealiases == [
-            Syntax.Typealias(name: "Callback", target: "() -> Void")
-        ])
-    }
-
-    @Test
-    func `collect returns typealias with generic target`() throws {
-        let source = Parser.parse(source:
-            """
-            protocol Repository {
-                typealias StringDictionary = Dictionary<String, String>
-            }
-            """
-        )
-
-        let types = collector.collect(from: source)
-        let type = try #require(types.first)
-        #expect(type.typealiases == [
-            Syntax.Typealias(name: "StringDictionary", target: "Dictionary<String, String>")
         ])
     }
 
@@ -269,7 +271,10 @@ import Testing
             Syntax.Method(
                 name: "fetch",
                 parameters: [
-                    Syntax.Method.Parameter(label: "id", name: "id", type: "String")
+                    Syntax.Method.Parameter(label: "id", name: "id", type: "String",
+                                            isInout: false,
+                                            isClosure: false,
+                                            isOptional: false)
                 ],
                 returnType: "Item?"
             )
@@ -277,45 +282,13 @@ import Testing
         #expect(type.subscripts == [
             Syntax.Subscript(
                 parameters: [
-                    Syntax.Method.Parameter(label: "index", name: "index", type: "Int")
+                    Syntax.Method.Parameter(label: "index", name: "index", type: "Int",
+                                            isInout: false,
+                                            isClosure: false,
+                                            isOptional: false)
                 ],
                 returnType: "Item",
                 writeAccess: ""
-            )
-        ])
-        #expect(type.typealiases == [
-            Syntax.Typealias(name: "Identifier", target: "String")
-        ])
-    }
-
-    @Test
-    func `collect resolves top-level typealiases in member signatures`() throws {
-        let source = Parser.parse(source:
-            """
-            typealias Identifier = Int
-
-            struct User {
-                var id: Identifier
-                func take(identifier: Identifier) -> Identifier
-            }
-            """
-        )
-
-        let types = collector.collect(from: source)
-        let type = try #require(types.first)
-
-        #expect(type.properties == [
-            Syntax.Property(name: "id", type: "Identifier", resolvedType: "Int", isVariable: true)
-        ])
-
-        #expect(type.methods == [
-            Syntax.Method(
-                name: "take",
-                parameters: [
-                    Syntax.Method.Parameter(label: "identifier", name: "identifier", type: "Identifier", resolvedType: "Int")
-                ],
-                returnType: "Identifier",
-                resolvedReturnType: "Int"
             )
         ])
     }

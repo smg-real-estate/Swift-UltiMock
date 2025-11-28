@@ -3,8 +3,7 @@ import Foundation
 public extension Syntax {
     struct Property: Hashable {
         public let name: String
-        public let type: String?
-        public let resolvedType: String?
+        public let type: String
         public let isVariable: Bool
         public let annotations: [String: [String]]
         public let readAccess: String
@@ -17,8 +16,7 @@ public extension Syntax {
 
         public init(
             name: String,
-            type: String?,
-            resolvedType: String? = nil,
+            type: String,
             isVariable: Bool = true,
             annotations: [String: [String]] = [:],
             readAccess: String = "internal",
@@ -31,7 +29,6 @@ public extension Syntax {
         ) {
             self.name = name
             self.type = type
-            self.resolvedType = resolvedType
             self.isVariable = isVariable
             self.annotations = annotations
             self.readAccess = readAccess
@@ -41,13 +38,6 @@ public extension Syntax {
             self.throws = `throws`
             self.definedInTypeIsExtension = definedInTypeIsExtension
             self.isStatic = isStatic
-        }
-
-        public var typeName: TypeName {
-            guard let type else {
-                return TypeName(name: "Unknown")
-            }
-            return TypeName.parse(type, actualTypeNameString: resolvedType)
         }
 
         public var definedInType: TypeInfo? { nil }

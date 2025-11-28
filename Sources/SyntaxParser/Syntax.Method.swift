@@ -1,41 +1,46 @@
 import Foundation
+import SwiftSyntax
 
 public extension Syntax {
     struct Method: Hashable {
         public struct Parameter: Hashable {
             public let label: String?
             public let name: String
-            public let type: String?
-            public let resolvedType: String?
+            public let type: String
             public let `inout`: Bool
             public let isClosure: Bool
             public let isOptional: Bool
 
+            init(_ parameter: FunctionParameterSyntax) {
+                self.init(
+                    label: parameter.firstName?.text,
+                    name: parameter.secondName?.text ?? parameter.firstName?.text ?? "",
+                    type: parameter.type?.description ?? "",
+                    isInout: parameter.as(AttributedTypeSyntax.self)?.specifier?.tokenKind == .inoutKeyword,
+                    isClosure: parameter.type?.is(FunctionTypeSyntax.self) ?? false,
+                    isOptional: parameter.type.map {
+                        $0.is(OptionalTypeSyntax.self) || $0.is(ImplicitlyUnwrappedOptionalTypeSyntax.self)
+                    } ?? false
+                )
+            }
+
             public init(
                 label: String?,
                 name: String,
-                type: String?,
-                resolvedType: String? = nil,
-                isInout: Bool = false,
-                isClosure: Bool = false,
-                isOptional: Bool = false
+                type: String,
+                isInout: Bool,
+                isClosure: Bool,
+                isOptional: Bool
             ) {
                 self.label = label
                 self.name = name
                 self.type = type
-                self.resolvedType = resolvedType
                 self.`inout` = isInout
                 self.isClosure = isClosure
                 self.isOptional = isOptional
             }
 
             public var argumentLabel: String? { label }
-            public var typeName: TypeName {
-                guard let type else {
-                    return TypeName(name: "Unknown")
-                }
-                return TypeName.parse(type, actualTypeNameString: resolvedType)
-            }
         }
 
         public let name: String

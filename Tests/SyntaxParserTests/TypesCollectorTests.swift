@@ -687,16 +687,28 @@ import Testing
 
         let types = collector.collect(from: source)
         let type = try #require(types.first)
-        #expect(type == Syntax.TypeInfo(
-            kind: .protocol,
-            name: "ObjCMockable",
-            localName: "ObjCMockable",
-            accessLevel: .internal,
-            inheritedTypes: [],
-            methods: [Syntax.Method(name: "doSomething", parameters: [Syntax.Method.Parameter(label: "with", name: "int", type: "Int")])],
-            isExtension: false,
-            comment: nil
-        ))
+        #expect(
+            type == Syntax.TypeInfo(
+                kind: .protocol,
+                name: "ObjCMockable",
+                localName: "ObjCMockable",
+                accessLevel: .internal,
+                inheritedTypes: [],
+                methods: [Syntax.Method(
+                    name: "doSomething",
+                    parameters: [Syntax.Method.Parameter(
+                        label: "with",
+                        name: "int",
+                        type: "Int",
+                        isInout: false,
+                        isClosure: false,
+                        isOptional: false
+                    )]
+                )],
+                isExtension: false,
+                comment: nil
+            )
+        )
     }
 
     @Test
@@ -770,8 +782,14 @@ import Testing
             accessLevel: .internal,
             inheritedTypes: [],
             methods: [
-                Syntax.Method(name: "doSomething", parameters: [Syntax.Method.Parameter(label: "with", name: "internal", type: "Internal")]),
-                Syntax.Method(name: "doSomething", parameters: [Syntax.Method.Parameter(label: "withAny", name: "any", type: "Any")])
+                Syntax.Method(name: "doSomething", parameters: [Syntax.Method.Parameter(label: "with", name: "internal", type: "Internal",
+                                                                                        isInout: false,
+                                                                                        isClosure: false,
+                                                                                        isOptional: false)]),
+                Syntax.Method(name: "doSomething", parameters: [Syntax.Method.Parameter(label: "withAny", name: "any", type: "Any",
+                                                                                        isInout: false,
+                                                                                        isClosure: false,
+                                                                                        isOptional: false)])
             ],
             isExtension: false,
             comment: nil

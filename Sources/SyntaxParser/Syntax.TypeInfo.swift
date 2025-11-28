@@ -19,7 +19,6 @@ public extension Syntax {
         public internal(set) var methods: [Method] = []
         public internal(set) var properties: [Property] = []
         public internal(set) var subscripts: [Subscript] = []
-        public internal(set) var typealiases: [Typealias] = []
         public internal(set) var annotations: [String: [String]] = [:]
         public internal(set) var isExtension: Bool
         public internal(set) var comment: String?
