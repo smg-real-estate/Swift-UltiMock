@@ -12,6 +12,14 @@ struct MockedProperty {
         self.namespacedTypes = namespacedTypes
     }
 
+    var getterSignature: String {
+        getterPerformDefinition(forwarding: false)
+    }
+
+    var setterSignature: String? {
+        setterPerformDefinition(forwarding: false)
+    }
+
     var definedInExtension: Bool {
         property.definedInType?.isExtension ?? false
     }
@@ -57,17 +65,17 @@ struct MockedProperty {
     }
 
     var returnTypePart: String {
-        MockedTypeName(property.typeName).escapedIdentifierName()
+        property.typeName.escapedIdentifierName()
     }
 
     func getterPerformDefinition(forwarding: Bool) -> String {
         let parameters = forwarding ? ["_ forwardToOriginal: " + getterPerformDefinition(forwarding: false)] : []
-        let returnType = MockedTypeName(property.typeName).actualName(convertingImplicitOptional: true)
+        let returnType = property.typeName.actualName(convertingImplicitOptional: true)
         return "(\(parameters.joined(separator: ", "))) \(getterSpecifiers)-> \(namespacedTypes[returnType, default: returnType])"
     }
 
     func setterPerformDefinition(forwarding: Bool) -> String {
-        let type = MockedTypeName(property.typeName).actualName(convertingImplicitOptional: true)
+        let type = property.typeName.actualName(convertingImplicitOptional: true)
         let parameters = (forwarding ? ["_ forwardToOriginal: " + setterPerformDefinition(forwarding: false)] : [])
             + ["_ newValue: \(namespacedTypes[type, default: type])"]
         return "(\(parameters.joined(separator: ", "))) -> Void"
@@ -222,5 +230,61 @@ struct MockedProperty {
         }
 
         return result
+    }
+    
+    func defaultGetterPerformClosure(forwarding: Bool) -> String {
+        forwarding ? " = { $0() }" : ""
+    }
+
+    func defaultSetterPerformClosure(forwarding: Bool) -> String {
+        forwarding ? " = { $0($1) }" : " = { _ in }"
+    }
+
+    func mockExpectGetter(forwarding: Bool) -> String {
+        """
+            public func expect(
+                _ expectation: PropertyExpectation<\(getterSignature)>,
+                fileID: String = #fileID,
+                filePath: StaticString = #filePath,
+                line: UInt = #line,
+                column: Int = #column,
+                perform: @escaping \(getterPerformDefinition(forwarding: forwarding))\(defaultGetterPerformClosure(forwarding: forwarding))
+            ) {
+                _record(
+                    expectation.getterExpectation,
+                    fileID,
+                    filePath, 
+                    line,
+                    column,
+                    perform
+                )
+            }
+        """
+    }
+
+    func mockExpectSetter(forwarding: Bool) -> String {
+        guard let setterSignature else {
+            return ""
+        }
+        return """
+            public func expect(
+                set expectation: PropertyExpectation<\(setterSignature)>,
+                to newValue: Parameter<\(property.typeName.name(convertingImplicitOptional: true))>,
+                fileID: String = #fileID,
+                filePath: StaticString = #filePath,
+                line: UInt = #line,
+                column: Int = #column,
+                perform: @escaping \(setterPerformDefinition(forwarding: forwarding))\(defaultSetterPerformClosure(forwarding: forwarding))
+            ) {
+                _record(
+                    expectation.setterExpectation(newValue.anyParameter),
+                    fileID,
+                    filePath, 
+                    line,
+                    column,
+                    perform
+                )
+            }
+        """
     }
 }

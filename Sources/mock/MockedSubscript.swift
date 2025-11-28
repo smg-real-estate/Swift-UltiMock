@@ -62,7 +62,7 @@ struct MockedSubscript {
     }
 
     var returnTypePart: String {
-        MockedTypeName(subscriptDecl.returnTypeName).escapedIdentifierName()
+        subscriptDecl.returnTypeName.escapedIdentifierName()
     }
 
     var isReadOnly: Bool {
@@ -154,13 +154,13 @@ struct MockedSubscript {
     func parameterDefinitions(named: Bool) -> [String] {
         subscriptDecl.parameters.map {
             (named ? "\($0.name): " : "")
-                + MockedTypeName($0.typeName).name(convertingImplicitOptional: true)
+                + $0.typeName.name(convertingImplicitOptional: true)
                 .replacingOccurrences(of: "some ", with: "any ")
         }
     }
 
     func postParametersDefinition(inClosure: Bool) -> String {
-        let returnType = MockedTypeName(subscriptDecl.returnTypeName).name(convertingImplicitOptional: inClosure)
+        let returnType = subscriptDecl.returnTypeName.name(convertingImplicitOptional: inClosure)
             .components(separatedBy: "where")[0]
             .trimmed
 
@@ -173,7 +173,7 @@ struct MockedSubscript {
     }
 
     var setterPerformDefinition: String {
-        let type = MockedTypeName(subscriptDecl.returnTypeName).actualName(convertingImplicitOptional: true)
+        let type = subscriptDecl.returnTypeName.actualName(convertingImplicitOptional: true)
         let parameters = parameterDefinitions(named: false) + ["_ newValue: \(type)"]
         return "(\(parameters.joined(separator: ", "))) -> Void"
     }
@@ -243,7 +243,7 @@ struct MockedSubscript {
         return """
             public func expect(
                 set expectation: SubscriptExpectation<\(setterSignature)>,
-                to newValue: Parameter<\(MockedTypeName(subscriptDecl.returnTypeName).name(convertingImplicitOptional: true))>,
+                to newValue: Parameter<\(subscriptDecl.returnTypeName.name(convertingImplicitOptional: true))>,
                 file: StaticString = #filePath,
                 line: UInt = #line,
                 perform: @escaping \(setterPerformDefinition)\(defaultSetterPerformClosure)

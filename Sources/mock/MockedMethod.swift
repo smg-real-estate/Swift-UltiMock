@@ -24,9 +24,9 @@ struct MockedMethod {
 
     func parameterDefinitions(named: Bool) -> [String] {
         method.parameters.map {
-            let mockedTypeName = MockedTypeName($0.typeName)
+            let mockedTypeName = $0.typeName
             let actualTypeName = mockedTypeName.actualTypeNameExceptSelf
-            let convertedName = MockedTypeName(actualTypeName).name(convertingImplicitOptional: true)
+            let convertedName = actualTypeName.name(convertingImplicitOptional: true)
             return (named ? "\($0.name): " : "")
                 + convertedName
                 .replacingOccurrences(of: "Self", with: mockTypeName)
@@ -58,8 +58,8 @@ struct MockedMethod {
     }
 
     func postParametersDefinition(_ selfSubstitute: String? = nil, inClosure: Bool) -> String {
-        let actualTypeName = MockedTypeName(method.returnTypeName).actualTypeNameExceptSelf
-        var returnType = MockedTypeName(actualTypeName).name(convertingImplicitOptional: inClosure)
+        let actualTypeName = method.returnTypeName.actualTypeNameExceptSelf
+        var returnType = actualTypeName.name(convertingImplicitOptional: inClosure)
             .components(separatedBy: "where")[0]
             .trimmed
 
@@ -269,7 +269,7 @@ struct MockedMethod {
     }
 
     var returnTypePart: String {
-        MockedTypeName(method.returnTypeName).escapedIdentifierName()
+        method.returnTypeName.escapedIdentifierName()
     }
 
     var callAttributes: String {
@@ -323,7 +323,7 @@ struct MockedMethod {
 }
 
 private func sanitizedIdentifierComponent(from typeName: String) -> String {
-    MockedTypeName(Syntax.TypeName.parse(typeName)).escapedIdentifierName()
+    Syntax.TypeName.parse(typeName).escapedIdentifierName()
 }
 
 private func sanitizeFunctionType(_ functionType: String) -> String {

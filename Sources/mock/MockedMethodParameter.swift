@@ -37,7 +37,7 @@ struct MockedMethodParameter {
     }
 
     var argumentTypePart: String {
-        MockedTypeName(parameter.typeName).escapedIdentifierName()
+        parameter.typeName.escapedIdentifierName()
     }
 
     var forwardedString: String {

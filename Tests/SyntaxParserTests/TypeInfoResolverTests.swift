@@ -28,4 +28,28 @@ struct Test {
         #expect(classB.methods.count == 1)
         #expect(classB.methods.first?.name == "method")
     }
+
+    @Test func `resolves types from a different source`() throws {
+        let sources: [() throws -> String?] = [
+            {
+                """
+                typealias Foo = Int
+                """
+            },
+            {
+                """
+                protocol Bar {
+                    var foo: Foo
+                }
+                """
+            }
+        ]
+
+        let typeInfos = try resolver.resolve(from: sources)
+
+        let protocolInfo = try #require(typeInfos.first)
+        let property = try #require(protocolInfo.properties.first)
+        #expect(property.type == "Foo")
+        #expect(property.resolvedType == "Int")
+    }
 }

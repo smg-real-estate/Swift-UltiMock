@@ -322,11 +322,13 @@ struct MockedTypeInfo {
                     }
                 }
             """
-            propertyExpectationExpectMethods(
-                mockAccessLevel: mockAccessLevel,
-                supportsForwarding: mocksClass,
-                hasWritableProperties: properties.contains(where: { !$0.isReadOnly })
-            )
+
+            properties.unique(by: \.getterSignature)
+                .map { "\n" + $0.mockExpectGetter(forwarding: mocksClass) }
+
+            properties.unique(by: \.setterSignature)
+                .map { "\n" + $0.mockExpectSetter(forwarding: mocksClass) }
+
         }
 
         if !subscripts.isEmpty {
@@ -582,8 +584,7 @@ struct MockedTypeInfo {
         }
         """
         properties.flatMap {
-            MockedProperty($0.property, mockTypeName: mockTypeName, namespacedTypes: namespacedTypes)
-                .expectationExtensions(mockClassAccessLevel)
+            $0.expectationExtensions(mockClassAccessLevel)
         }
         .map { "\n" + $0 }
     }
