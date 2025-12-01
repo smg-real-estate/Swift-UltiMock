@@ -18,66 +18,37 @@ struct TypesCollector {
 }
 
 private final class Visitor: SyntaxVisitor {
-    enum TypeKind: Equatable {
-        case `class`
-        case `struct`
-        case `enum`
-        case `protocol`
-        case `extension`
-    }
-
     private(set) var types: [Syntax.TypeInfo] = []
-    private var currentTypeMethods: [Syntax.Method] = []
-    private var currentTypeProperties: [Syntax.Property] = []
-    private var currentTypeSubscripts: [Syntax.Subscript] = []
-    private var currentTypeAssociatedTypes: [Syntax.AssociatedType] = []
-    private var currentTypeAccessLevel: Syntax.AccessLevel = .internal
-    private var currentTypeKind: TypeKind = .struct
-    private var typeScopeStack: [String] = []
-
-    private var isInsideType: Bool {
-        !typeScopeStack.isEmpty
-    }
+    private var typesStack: [Syntax.TypeInfo] = []
 
     init() {
         super.init(viewMode: .fixedUp)
     }
 
-    private var currentScopeKey: String {
-        typeScopeStack.joined(separator: ".")
-    }
-
-    private func beginType(kind: TypeKind, name: String, modifiers: ModifierListSyntax?) {
-        currentTypeMethods = []
-        currentTypeProperties = []
-        currentTypeSubscripts = []
-        currentTypeAssociatedTypes = []
-        currentTypeKind = kind
-        currentTypeAccessLevel = accessLevel(from: modifiers)
-        typeScopeStack.append(name)
+    private var currentType: Syntax.TypeInfo? {
+        get {
+            typesStack.last
+        }
+        set {
+            if let newValue, !typesStack.isEmpty {
+                typesStack[typesStack.count - 1] = newValue
+            }
+        }
     }
 
     private func finalizeCurrentType() {
-        if var lastType = types.last {
-            types.removeLast()
-            lastType.methods = currentTypeMethods
-            lastType.properties = currentTypeProperties
-            lastType.subscripts = currentTypeSubscripts
-            lastType.associatedTypes = currentTypeAssociatedTypes
-            types.append(lastType)
-        }
-        currentTypeMethods = []
-        currentTypeProperties = []
-        currentTypeSubscripts = []
-        currentTypeAssociatedTypes = []
-        if !typeScopeStack.isEmpty {
-            typeScopeStack.removeLast()
+        if let currentType = typesStack.popLast() {
+            types.append(currentType)
         }
     }
 
     override func visit(_ node: StructDeclSyntax) -> SyntaxVisitorContinueKind {
-        beginType(kind: .struct, name: node.identifier.text, modifiers: node.modifiers)
-        types.append(node.declaration)
+        typesStack.append(
+            .init(
+                scope: (typesStack.last?.scope ?? []) + [node.identifier.text],
+                declaration: DeclSyntax(node)
+            )
+        )
         return .visitChildren
     }
 
@@ -86,8 +57,12 @@ private final class Visitor: SyntaxVisitor {
     }
 
     override func visit(_ node: ClassDeclSyntax) -> SyntaxVisitorContinueKind {
-        beginType(kind: .class, name: node.identifier.text, modifiers: node.modifiers)
-        types.append(node.declaration)
+        typesStack.append(
+            .init(
+                scope: (typesStack.last?.scope ?? []) + [node.identifier.text],
+                declaration: DeclSyntax(node)
+            )
+        )
         return .visitChildren
     }
 
@@ -96,8 +71,12 @@ private final class Visitor: SyntaxVisitor {
     }
 
     override func visit(_ node: EnumDeclSyntax) -> SyntaxVisitorContinueKind {
-        beginType(kind: .enum, name: node.identifier.text, modifiers: node.modifiers)
-        types.append(node.declaration)
+        typesStack.append(
+            .init(
+                scope: (typesStack.last?.scope ?? []) + [node.identifier.text],
+                declaration: DeclSyntax(node)
+            )
+        )
         return .visitChildren
     }
 
@@ -106,8 +85,12 @@ private final class Visitor: SyntaxVisitor {
     }
 
     override func visit(_ node: ProtocolDeclSyntax) -> SyntaxVisitorContinueKind {
-        beginType(kind: .protocol, name: node.identifier.text, modifiers: node.modifiers)
-        types.append(node.declaration)
+        typesStack.append(
+            .init(
+                scope: (typesStack.last?.scope ?? []) + [node.identifier.text],
+                declaration: DeclSyntax(node)
+            )
+        )
         return .visitChildren
     }
 
@@ -117,9 +100,12 @@ private final class Visitor: SyntaxVisitor {
 
     override func visit(_ node: ExtensionDeclSyntax) -> SyntaxVisitorContinueKind {
         let extendedName = trimmedDescription(of: node.extendedType)
-        beginType(kind: .extension, name: extendedName, modifiers: node.modifiers)
-
-        types.append(node.declaration)
+        typesStack.append(
+            .init(
+                scope: (typesStack.last?.scope ?? []) + [extendedName],
+                declaration: DeclSyntax(node)
+            )
+        )
         return .visitChildren
     }
 
@@ -128,177 +114,22 @@ private final class Visitor: SyntaxVisitor {
     }
 
     override func visit(_ node: FunctionDeclSyntax) -> SyntaxVisitorContinueKind {
-        guard isInsideType else {
-            return .skipChildren
-        }
-
-        let parameterList = node.signature.input.parameterList
-        let parameters = parameterList.map { parameter -> Syntax.Method.Parameter in
-            return Syntax.Method.Parameter(parameter)
-        }
-
-        let methodModifiers = makeModifiers(from: node.modifiers)
-        let modifierNames = Set(methodModifiers.map(\.name))
-
-        let method = Syntax.Method(
-            name: node.identifier.text,
-            parameters: parameters,
-            returnType: node.signature.output?.returnType.description.trimmingCharacters(in: .whitespacesAndNewlines),
-            annotations: [:],
-            accessLevel: effectiveMemberAccessLevel(from: node.modifiers).rawValue,
-            modifiers: methodModifiers,
-            attributes: parseAttributes(node.attributes),
-            isAsync: node.signature.asyncOrReasyncKeyword != nil,
-            throws: node.signature.throwsOrRethrowsKeyword != nil,
-            definedInTypeIsExtension: currentTypeKind == .extension,
-            isStatic: modifierNames.contains("static"),
-            isClass: modifierNames.contains("class"),
-            isInitializer: false,
-            isRequired: modifierNames.contains("required"),
-            genericParameters: genericParameters(from: node.genericParameterClause),
-            genericRequirements: genericRequirements(from: node.genericWhereClause)
-        )
-        currentTypeMethods.append(method)
-
+        currentType?.methods.append(node)
         return .skipChildren
     }
 
     override func visit(_ node: InitializerDeclSyntax) -> SyntaxVisitorContinueKind {
-        guard isInsideType else {
-            return .skipChildren
-        }
-
-        let parameters = node.signature.input.parameterList.map { parameter in
-            Syntax.Method.Parameter(parameter)
-        }
-
-        let methodModifiers = makeModifiers(from: node.modifiers)
-        let modifierNames = Set(methodModifiers.map(\.name))
-
-        let initializer = Syntax.Method(
-            name: initializerName(from: node),
-            parameters: parameters,
-            annotations: [:],
-            accessLevel: effectiveMemberAccessLevel(from: node.modifiers).rawValue,
-            modifiers: methodModifiers,
-            attributes: parseAttributes(node.attributes),
-            isAsync: node.signature.asyncOrReasyncKeyword != nil,
-            throws: node.signature.throwsOrRethrowsKeyword != nil,
-            definedInTypeIsExtension: currentTypeKind == .extension,
-            isStatic: true,
-            isClass: false,
-            isInitializer: true,
-            isRequired: modifierNames.contains("required"),
-            genericParameters: genericParameters(from: node.genericParameterClause),
-            genericRequirements: genericRequirements(from: node.genericWhereClause)
-        )
-        currentTypeMethods.append(initializer)
-
+        currentType?.initializers.append(node)
         return .skipChildren
     }
 
     override func visit(_ node: VariableDeclSyntax) -> SyntaxVisitorContinueKind {
-        guard isInsideType else {
-            return .skipChildren
-        }
-
-        let isVariable = node.letOrVarKeyword.tokenKind == .varKeyword
-        let propAccessLevel = effectiveMemberAccessLevel(from: node.modifiers).rawValue
-        let attributes = parseAttributes(node.attributes)
-        let propertyModifiers = makeModifiers(from: node.modifiers)
-        let modifierNames = Set(propertyModifiers.map(\.name))
-        let isStatic = modifierNames.contains("static") || modifierNames.contains("class")
-        let setterAccessOverride = setterAccessLevel(from: node.modifiers)
-
-        for binding in node.bindings {
-            guard let pattern = binding.pattern.as(IdentifierPatternSyntax.self) else {
-                continue
-            }
-
-            let propertyName = pattern.identifier.text
-            var propertyType = binding.typeAnnotation?.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
-            if propertyType == nil, let initializer = binding.initializer {
-                if let inferred = inferTypeName(from: initializer.value) {
-                    propertyType = inferred
-                }
-            }
-            let getterEffects = accessorEffects(from: binding.accessor)
-
-            // Determine write access based on accessor block or explicit setter modifier
-            let writeAccessLevel: String
-            if let setterAccessOverride {
-                writeAccessLevel = setterAccessOverride
-            } else if let accessor = binding.accessor {
-                if case let .accessors(accessorBlock) = accessor {
-                    // Check if there's a setter
-                    let hasSetter = accessorBlock.accessors.contains(where: { accessor in
-                        let kind = accessor.accessorKind.text
-                        return kind == "set" || kind == "_modify"
-                    })
-
-                    if hasSetter {
-                        writeAccessLevel = propAccessLevel
-                    } else {
-                        writeAccessLevel = "" // No write access (read-only with { get })
-                    }
-                } else {
-                    // Has getter/setter code block, not just accessors
-                    // Assume it's a computed property if there's a code block and it's a var
-                    writeAccessLevel = isVariable ? propAccessLevel : ""
-                }
-            } else {
-                // No accessor block means stored property - has write access if it's var
-                writeAccessLevel = isVariable ? propAccessLevel : ""
-            }
-
-            let property = Syntax.Property(
-                name: propertyName,
-                type: propertyType ?? "",
-                isVariable: isVariable,
-                readAccess: propAccessLevel,
-                writeAccess: writeAccessLevel,
-                attributes: attributes,
-                isAsync: getterEffects.isAsync,
-                throws: getterEffects.throws,
-                definedInTypeIsExtension: currentTypeKind == .extension,
-                isStatic: isStatic
-            )
-            currentTypeProperties.append(property)
-        }
-
+        currentType?.properties.append(node)
         return .skipChildren
     }
 
     override func visit(_ node: SubscriptDeclSyntax) -> SyntaxVisitorContinueKind {
-        guard isInsideType else {
-            return .skipChildren
-        }
-
-        let parameters = node.indices.parameterList.map { parameter in
-            Syntax.Method.Parameter(parameter)
-        }
-
-        let subscriptAccessLevel = effectiveMemberAccessLevel(from: node.modifiers).rawValue
-
-        let writeAccessLevel: String
-        if let accessor = node.accessor, case let .accessors(accessorBlock) = accessor {
-            let hasSetter = accessorBlock.accessors.contains { accessor in
-                let kindText = accessor.accessorKind.text
-                return kindText == "set" || kindText == "_modify"
-            }
-            writeAccessLevel = hasSetter ? subscriptAccessLevel : ""
-        } else {
-            writeAccessLevel = subscriptAccessLevel
-        }
-
-        let subscriptInfo = Syntax.Subscript(
-            parameters: parameters,
-            returnType: node.result.returnType.description.trimmingCharacters(in: .whitespacesAndNewlines),
-            readAccess: subscriptAccessLevel,
-            writeAccess: writeAccessLevel,
-            attributes: parseAttributes(node.attributes)
-        )
-        currentTypeSubscripts.append(subscriptInfo)
+        currentType?.subscripts.append(node)
 
         return .skipChildren
     }
@@ -354,45 +185,8 @@ private final class Visitor: SyntaxVisitor {
     }
 
     override func visit(_ node: AssociatedtypeDeclSyntax) -> SyntaxVisitorContinueKind {
-        guard isInsideType else {
-            return .skipChildren
-        }
-
-        let constraint: String?
-        if let clause = node.inheritanceClause {
-            let inherited = clause.inheritedTypeCollection.map { inheritedType in
-                trimmedDescription(of: inheritedType.typeName)
-            }
-            constraint = inherited.isEmpty ? nil : inherited.joined(separator: " & ")
-        } else {
-            constraint = nil
-        }
-
-        let associatedType = Syntax.AssociatedType(
-            name: node.identifier.text,
-            typeNameString: constraint
-        )
-        currentTypeAssociatedTypes.append(associatedType)
-
+        currentType?.associatedTypes.append(node)
         return .skipChildren
-    }
-
-    // For protocol members without explicit access modifiers, inherit the protocol's access level
-    private func effectiveMemberAccessLevel(from modifiers: ModifierListSyntax?) -> Syntax.AccessLevel {
-        let explicitLevel = accessLevel(from: modifiers)
-
-        // If the member has an explicit access level, use it
-        if let modifiers, !modifiers.isEmpty {
-            return explicitLevel
-        }
-
-        // For protocol members without explicit modifiers, use the protocol's access level
-        if currentTypeKind == .protocol {
-            return currentTypeAccessLevel
-        }
-
-        // For other types, use internal as default
-        return explicitLevel
     }
 
     private func inheritedTypes(from clause: TypeInheritanceClauseSyntax?) -> [String] {

@@ -3,16 +3,12 @@ import SwiftSyntax
 
 public extension Syntax {
     struct TypeInfo: Equatable {
+        public internal(set) var scope: [String]
         public internal(set) var declaration: DeclSyntax
-        public internal(set) var methods: [Method] = []
-        public internal(set) var properties: [Property] = []
-        public internal(set) var subscripts: [Subscript] = []
-        public internal(set) var associatedTypes: [AssociatedType] = []
-    }
-}
-
-extension DeclSyntaxProtocol where Self: SyntaxHashable {
-    var declaration: Syntax.TypeInfo {
-        .init(declaration: DeclSyntax(self))
+        public internal(set) var initializers: [InitializerDeclSyntax] = []
+        public internal(set) var methods: [FunctionDeclSyntax] = []
+        public internal(set) var properties: [VariableDeclSyntax] = []
+        public internal(set) var subscripts: [SubscriptDeclSyntax] = []
+        public internal(set) var associatedTypes: [AssociatedtypeDeclSyntax] = []
     }
 }

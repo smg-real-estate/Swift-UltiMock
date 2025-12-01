@@ -178,19 +178,19 @@ private extension TypeInfoResolver {
     }
 
     func mergeClass(_ type: Syntax.TypeInfo, with superclass: Syntax.TypeInfo) -> Syntax.TypeInfo {
-        let methods = Set(type.methods.map(\.signatureData))
-        let inheritedMethods = superclass.methods.filter { !methods.contains($0.signatureData) }
-
-        let properties = Set(type.properties)
-        let inheritedProperties = superclass.properties.filter { !properties.contains($0) }
-
-        let subscripts = Set(type.subscripts)
-        let inheritedSubscripts = superclass.subscripts.filter { !subscripts.contains($0) }
+//        let methods = Set(type.methods.map(\.signatureData))
+//        let inheritedMethods = superclass.methods.filter { !methods.contains($0.signatureData) }
+//
+//        let properties = Set(type.properties)
+//        let inheritedProperties = superclass.properties.filter { !properties.contains($0) }
+//
+//        let subscripts = Set(type.subscripts)
+//        let inheritedSubscripts = superclass.subscripts.filter { !subscripts.contains($0) }
 
         var merged = type
-        merged.methods += inheritedMethods
-        merged.properties += inheritedProperties
-        merged.subscripts += inheritedSubscripts
+//        merged.methods += inheritedMethods
+//        merged.properties += inheritedProperties
+//        merged.subscripts += inheritedSubscripts
         return merged
     }
 }
