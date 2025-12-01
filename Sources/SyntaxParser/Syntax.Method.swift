@@ -46,7 +46,6 @@ public extension Syntax {
         public let name: String
         public let parameters: [Parameter]
         public let returnType: String?
-        public let resolvedReturnType: String?
         public let annotations: [String: [String]]
         public let accessLevel: String
         public let modifiers: [Modifier]
@@ -83,7 +82,6 @@ public extension Syntax {
             self.name = name
             self.parameters = parameters
             self.returnType = returnType
-            self.resolvedReturnType = resolvedReturnType
             self.annotations = annotations
             self.accessLevel = accessLevel
             self.modifiers = modifiers
@@ -104,13 +102,6 @@ public extension Syntax {
         public var selectorName: String { callName }
         public var unbacktickedCallName: String {
             callName.replacingOccurrences(of: "`", with: "")
-        }
-
-        public var returnTypeName: TypeName {
-            guard let returnType else {
-                return TypeName(name: "Void", isVoid: true)
-            }
-            return TypeName.parse(returnType, actualTypeNameString: resolvedReturnType)
         }
 
         public var definedInType: TypeInfo? { nil }

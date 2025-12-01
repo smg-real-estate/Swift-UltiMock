@@ -18,13 +18,21 @@ struct TypesCollector {
 }
 
 private final class Visitor: SyntaxVisitor {
+    enum TypeKind: Equatable {
+        case `class`
+        case `struct`
+        case `enum`
+        case `protocol`
+        case `extension`
+    }
+
     private(set) var types: [Syntax.TypeInfo] = []
     private var currentTypeMethods: [Syntax.Method] = []
     private var currentTypeProperties: [Syntax.Property] = []
     private var currentTypeSubscripts: [Syntax.Subscript] = []
     private var currentTypeAssociatedTypes: [Syntax.AssociatedType] = []
     private var currentTypeAccessLevel: Syntax.AccessLevel = .internal
-    private var currentTypeKind: Syntax.TypeInfo.Kind = .struct
+    private var currentTypeKind: TypeKind = .struct
     private var typeScopeStack: [String] = []
 
     private var isInsideType: Bool {
@@ -39,7 +47,7 @@ private final class Visitor: SyntaxVisitor {
         typeScopeStack.joined(separator: ".")
     }
 
-    private func beginType(kind: Syntax.TypeInfo.Kind, name: String, modifiers: ModifierListSyntax?) {
+    private func beginType(kind: TypeKind, name: String, modifiers: ModifierListSyntax?) {
         currentTypeMethods = []
         currentTypeProperties = []
         currentTypeSubscripts = []
@@ -69,15 +77,7 @@ private final class Visitor: SyntaxVisitor {
 
     override func visit(_ node: StructDeclSyntax) -> SyntaxVisitorContinueKind {
         beginType(kind: .struct, name: node.identifier.text, modifiers: node.modifiers)
-        appendType(
-            kind: .struct,
-            name: node.identifier.text,
-            modifiers: node.modifiers,
-            inheritanceClause: node.inheritanceClause,
-            genericParameters: genericParameters(from: node.genericParameterClause),
-            commentTrivia: node.leadingTrivia,
-            genericWhereClause: node.genericWhereClause
-        )
+        types.append(node.declaration)
         return .visitChildren
     }
 
@@ -87,15 +87,7 @@ private final class Visitor: SyntaxVisitor {
 
     override func visit(_ node: ClassDeclSyntax) -> SyntaxVisitorContinueKind {
         beginType(kind: .class, name: node.identifier.text, modifiers: node.modifiers)
-        appendType(
-            kind: .class,
-            name: node.identifier.text,
-            modifiers: node.modifiers,
-            inheritanceClause: node.inheritanceClause,
-            genericParameters: genericParameters(from: node.genericParameterClause),
-            commentTrivia: node.leadingTrivia,
-            genericWhereClause: node.genericWhereClause
-        )
+        types.append(node.declaration)
         return .visitChildren
     }
 
@@ -105,15 +97,7 @@ private final class Visitor: SyntaxVisitor {
 
     override func visit(_ node: EnumDeclSyntax) -> SyntaxVisitorContinueKind {
         beginType(kind: .enum, name: node.identifier.text, modifiers: node.modifiers)
-        appendType(
-            kind: .enum,
-            name: node.identifier.text,
-            modifiers: node.modifiers,
-            inheritanceClause: node.inheritanceClause,
-            genericParameters: genericParameters(from: node.genericParameters),
-            commentTrivia: node.leadingTrivia,
-            genericWhereClause: node.genericWhereClause
-        )
+        types.append(node.declaration)
         return .visitChildren
     }
 
@@ -123,15 +107,7 @@ private final class Visitor: SyntaxVisitor {
 
     override func visit(_ node: ProtocolDeclSyntax) -> SyntaxVisitorContinueKind {
         beginType(kind: .protocol, name: node.identifier.text, modifiers: node.modifiers)
-        appendType(
-            kind: .protocol,
-            name: node.identifier.text,
-            modifiers: node.modifiers,
-            inheritanceClause: node.inheritanceClause,
-            genericParameters: primaryAssociatedTypes(from: node.primaryAssociatedTypeClause),
-            commentTrivia: node.leadingTrivia,
-            genericWhereClause: node.genericWhereClause
-        )
+        types.append(node.declaration)
         return .visitChildren
     }
 
@@ -143,15 +119,7 @@ private final class Visitor: SyntaxVisitor {
         let extendedName = trimmedDescription(of: node.extendedType)
         beginType(kind: .extension, name: extendedName, modifiers: node.modifiers)
 
-        appendType(
-            kind: .extension,
-            name: extendedName,
-            modifiers: node.modifiers,
-            inheritanceClause: node.inheritanceClause,
-            commentTrivia: node.leadingTrivia,
-            genericWhereClause: node.genericWhereClause,
-            isExtension: true
-        )
+        types.append(node.declaration)
         return .visitChildren
     }
 
@@ -487,32 +455,6 @@ private final class Visitor: SyntaxVisitor {
         }
 
         return text
-    }
-
-    private func appendType(
-        kind: Syntax.TypeInfo.Kind,
-        name: String,
-        modifiers: ModifierListSyntax?,
-        inheritanceClause: TypeInheritanceClauseSyntax?,
-        genericParameters: [Syntax.GenericParameter] = [],
-        commentTrivia: Trivia?,
-        genericWhereClause: GenericWhereClauseSyntax? = nil,
-        isExtension: Bool = false
-    ) {
-        let type = Syntax.TypeInfo(
-            kind: kind,
-            name: name,
-            localName: localName(for: name),
-            accessLevel: accessLevel(from: modifiers),
-            inheritedTypes: inheritedTypes(from: inheritanceClause),
-            genericParameters: genericParameters,
-            annotations: parseAnnotations(from: rawComment(from: commentTrivia)),
-            isExtension: isExtension,
-            comment: rawComment(from: commentTrivia),
-            genericRequirements: genericRequirements(from: genericWhereClause)
-        )
-
-        types.append(type)
     }
 
     private func initializerName(from node: InitializerDeclSyntax) -> String {

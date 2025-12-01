@@ -26,18 +26,18 @@ extension TypeInfoResolver {
         var baseTypes: [String: Syntax.TypeInfo] = [:]
         var extensions: [String: [Syntax.TypeInfo]] = [:]
 
-        for type in types {
-            if type.isExtension {
-                extensions[type.name, default: []].append(type)
-            } else {
-                if let existing = baseTypes[type.name] {
-                    baseTypes[type.name] = merge(base: existing, with: type)
-                } else {
-                    baseOrder.append(type.name)
-                    baseTypes[type.name] = type
-                }
-            }
-        }
+//        for type in types {
+//            if type.isExtension {
+//                extensions[type.name, default: []].append(type)
+//            } else {
+//                if let existing = baseTypes[type.name] {
+//                    baseTypes[type.name] = merge(base: existing, with: type)
+//                } else {
+//                    baseOrder.append(type.name)
+//                    baseTypes[type.name] = type
+//                }
+//            }
+//        }
 
         for (name, attachedExtensions) in extensions {
             if var base = baseTypes[name] {
@@ -61,21 +61,21 @@ private extension TypeInfoResolver {
         merged.methods += other.methods
         merged.properties += other.properties
         merged.subscripts += other.subscripts
-        merged.comment = base.comment ?? other.comment
+//        merged.comment = base.comment ?? other.comment
         merged.associatedTypes += other.associatedTypes
-        merged.genericRequirements += other.genericRequirements
+//        merged.genericRequirements += other.genericRequirements
         return merged
     }
 
     func mergeAnnotations(from extensionType: Syntax.TypeInfo, into base: Syntax.TypeInfo) -> Syntax.TypeInfo {
-        guard !extensionType.annotations.isEmpty else {
-            return base
-        }
+//        guard !extensionType.annotations.isEmpty else {
+//            return base
+//        }
 
         var merged = base
-        for (key, value) in extensionType.annotations {
-            merged.annotations[key, default: []].append(contentsOf: value)
-        }
+//        for (key, value) in extensionType.annotations {
+//            merged.annotations[key, default: []].append(contentsOf: value)
+//        }
         return merged
     }
 
@@ -83,57 +83,57 @@ private extension TypeInfoResolver {
         var cache: [String: Syntax.TypeInfo] = [:]
         var visiting: Set<String> = []
 
-        func resolve(name: String) -> Syntax.TypeInfo? {
-            if let cached = cache[name] {
-                return cached
-            }
-            guard var type = types[name] else {
-                return nil
-            }
-            guard type.kind == .protocol else {
-                cache[name] = type
-                return type
-            }
-
-            if visiting.contains(name) {
-                return type
-            }
-
-            visiting.insert(name)
-            var methods = type.methods
-            var properties = type.properties
-            var subscripts = type.subscripts
-            var associatedTypes = type.associatedTypes
-            var seenAssociatedNames = Set(associatedTypes.map(\.name))
-
-            for inheritedName in type.inheritedTypes {
-                guard let inherited = resolve(name: inheritedName) else {
-                    continue
-                }
-                methods.append(contentsOf: inherited.methods)
-                properties.append(contentsOf: inherited.properties)
-                subscripts.append(contentsOf: inherited.subscripts)
-                for associated in inherited.associatedTypes where !seenAssociatedNames.contains(associated.name) {
-                    associatedTypes.append(associated)
-                    seenAssociatedNames.insert(associated.name)
-                }
-            }
-
-            visiting.remove(name)
-
-            type.methods = methods
-            type.properties = properties
-            type.subscripts = subscripts
-            type.associatedTypes = associatedTypes
-
-            cache[name] = type
-            return type
-        }
+//        func resolve(name: String) -> Syntax.TypeInfo? {
+//            if let cached = cache[name] {
+//                return cached
+//            }
+//            guard var type = types[name] else {
+//                return nil
+//            }
+//            guard type.kind == .protocol else {
+//                cache[name] = type
+//                return type
+//            }
+//
+//            if visiting.contains(name) {
+//                return type
+//            }
+//
+//            visiting.insert(name)
+//            var methods = type.methods
+//            var properties = type.properties
+//            var subscripts = type.subscripts
+//            var associatedTypes = type.associatedTypes
+//            var seenAssociatedNames = Set(associatedTypes.map(\.name))
+//
+//            for inheritedName in type.inheritedTypes {
+//                guard let inherited = resolve(name: inheritedName) else {
+//                    continue
+//                }
+//                methods.append(contentsOf: inherited.methods)
+//                properties.append(contentsOf: inherited.properties)
+//                subscripts.append(contentsOf: inherited.subscripts)
+//                for associated in inherited.associatedTypes where !seenAssociatedNames.contains(associated.name) {
+//                    associatedTypes.append(associated)
+//                    seenAssociatedNames.insert(associated.name)
+//                }
+//            }
+//
+//            visiting.remove(name)
+//
+//            type.methods = methods
+//            type.properties = properties
+//            type.subscripts = subscripts
+//            type.associatedTypes = associatedTypes
+//
+//            cache[name] = type
+//            return type
+//        }
 
         var resolved: [String: Syntax.TypeInfo] = [:]
-        for name in types.keys {
-            resolved[name] = resolve(name: name)
-        }
+//        for name in types.keys {
+//            resolved[name] = resolve(name: name)
+//        }
         return resolved
     }
 
@@ -141,38 +141,38 @@ private extension TypeInfoResolver {
         var cache: [String: Syntax.TypeInfo] = [:]
         var visiting: Set<String> = []
 
-        func resolve(name: String) -> Syntax.TypeInfo? {
-            if let cached = cache[name] {
-                return cached
-            }
-            guard var type = types[name] else {
-                return nil
-            }
-            guard type.kind == .class else {
-                cache[name] = type
-                return type
-            }
-
-            if visiting.contains(name) {
-                return type
-            }
-            visiting.insert(name)
-
-            if let superclassName = type.inheritedTypes.first(where: { types[$0]?.kind == .class }),
-               let superclass = resolve(name: superclassName) {
-                type = mergeClass(type, with: superclass)
-            }
-
-            visiting.remove(name)
-            cache[name] = type
-            return type
-        }
+//        func resolve(name: String) -> Syntax.TypeInfo? {
+//            if let cached = cache[name] {
+//                return cached
+//            }
+//            guard var type = types[name] else {
+//                return nil
+//            }
+//            guard type.kind == .class else {
+//                cache[name] = type
+//                return type
+//            }
+//
+//            if visiting.contains(name) {
+//                return type
+//            }
+//            visiting.insert(name)
+//
+//            if let superclassName = type.inheritedTypes.first(where: { types[$0]?.kind == .class }),
+//               let superclass = resolve(name: superclassName) {
+//                type = mergeClass(type, with: superclass)
+//            }
+//
+//            visiting.remove(name)
+//            cache[name] = type
+//            return type
+//        }
 
         var resolved: [String: Syntax.TypeInfo] = types
         for name in types.keys {
-            if let updated = resolve(name: name) {
-                resolved[name] = updated
-            }
+//            if let updated = resolve(name: name) {
+//                resolved[name] = updated
+//            }
         }
         return resolved
     }

@@ -103,6 +103,37 @@ import Testing
     }
 
     @Test
+    func `collect returns method with closure parameter`() throws {
+        let source = Parser.parse(source:
+            """
+            protocol Service {
+                func execute(completion: (Response) -> Void)
+            }
+            """
+        )
+
+        let types = collector.collect(from: source)
+        let type = try #require(types.first)
+        #expect(
+            type.methods == [
+                Syntax.Method(
+                    name: "execute",
+                    parameters: [
+                        Syntax.Method.Parameter(
+                            label: "completion",
+                            name: "completion",
+                            type: "(Response) -> Void",
+                            isInout: false,
+                            isClosure: true,
+                            isOptional: false
+                        )
+                    ]
+                )
+            ]
+        )
+    }
+
+    @Test
     func `collect returns method with multiple parameters`() throws {
         let source = Parser.parse(source:
             """

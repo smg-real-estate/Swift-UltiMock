@@ -3,10 +3,7 @@ import SyntaxParser
 
 struct MockedMethodParameter {
     let parameter: Syntax.Method.Parameter
-
-    init(_ parameter: Syntax.Method.Parameter) {
-        self.parameter = parameter
-    }
+    let resolvedTypeName: String
 
     var definitionName: String {
         if let label = parameter.argumentLabel, label == parameter.name {
@@ -21,11 +18,11 @@ struct MockedMethodParameter {
     }
 
     func implementationDefinition(_ mockTypeName: String) -> String {
-        "\(definitionName): \(isEscapingClosure ? "@escaping " : "")\(parameter.typeName.fixedName.replacingOccurrences(of: "Self", with: mockTypeName))"
+        "\(definitionName): \(isEscapingClosure ? "@escaping " : "")\(resolvedTypeName.replacingOccurrences(of: "Self", with: mockTypeName))"
     }
 
     var implementationDefinition: String {
-        "\(definitionName): \(isEscapingClosure ? "@escaping " : "")\(parameter.typeName.name)"
+        "\(definitionName): \(isEscapingClosure ? "@escaping " : "")\(resolvedTypeName)"
     }
 
     func expectationConstructorDefinition(_ mockTypeName: String) -> String {

@@ -4,10 +4,14 @@ import SyntaxParser
 struct MockedMethod {
     let method: Syntax.Method
     let mockTypeName: String
+    let parameters: [MockedMethodParameter]
 
-    init(_ method: Syntax.Method, mockTypeName: String) {
+    init(_ method: Syntax.Method, mockTypeName: String, resolveTypeName: (String, String) -> String) {
         self.method = method
         self.mockTypeName = mockTypeName
+        self.parameters = method.parameters.map {
+            MockedMethodParameter(parameter: $0, resolvedTypeName: resolveTypeName($0.type, mockTypeName))
+        }
     }
 
     var isPrivate: Bool {

@@ -19,7 +19,11 @@ struct TypeAliasCollectorTests {
             typealias C<T> = [T]
         
             struct Struct {
-                typealias B = Double 
+                typealias B = Double
+        
+                enum Enum {
+                    typealias D = String
+                }
             }
         
             enum Enum {
@@ -50,6 +54,9 @@ struct TypeAliasCollectorTests {
             "Struct" : [
                 "B" : AliasDefinition(name: "B", genericParameters: [], text: "Double"),
                 "G" : AliasDefinition(name: "G", genericParameters: [], text: "Character")
+            ],
+            "Struct.Enum" : [
+                "D" : AliasDefinition(name: "D", genericParameters: [], text: "String")
             ],
             "Enum" : [
                 "D" : AliasDefinition(name: "D", genericParameters: [], text: "String")
