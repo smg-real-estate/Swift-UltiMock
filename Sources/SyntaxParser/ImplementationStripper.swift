@@ -33,13 +33,13 @@ final class ImplementationStripper: SyntaxRewriter {
     override func visit(_ node: VariableDeclSyntax) -> DeclSyntax {
         if node.hasInitializer {
             return node.with(\.bindings, PatternBindingListSyntax(
-                    node.bindings.map { binding in
-                        binding
-                            .with(\.typeAnnotation, binding.typeAnnotation?.with(\.trailingTrivia, []))
-                            .with(\.initializer, nil)
-                    }
-                ))
-                .cast(DeclSyntax.self)
+                node.bindings.map { binding in
+                    binding
+                        .with(\.typeAnnotation, binding.typeAnnotation?.with(\.trailingTrivia, []))
+                        .with(\.initializer, nil)
+                }
+            ))
+            .cast(DeclSyntax.self)
         }
 
         if node.bindingSpecifier.tokenKind == .keyword(.let) || node.bindings.first?.accessorBlock?.isGetterOnly == true {

@@ -1,13 +1,6 @@
-//
-//  Test.swift
-//  UltiMock
-//
-//  Created by Mykola Tarbaiev on 02.12.25.
-//
-
+import SwiftSyntax
 import Testing
 @testable import SyntaxParser
-import SwiftSyntax
 
 final class MockedTypesResolverTests {
     var typeAliases: [String: [String: AliasDefinition]] = [:]
@@ -21,7 +14,7 @@ final class MockedTypesResolverTests {
         class MyClass {
             func doSomething() {}
         }
-        
+
         // This is a regular comment
         protocol MyProtocol {
             func doSomething()
@@ -67,7 +60,7 @@ final class MockedTypesResolverTests {
         protocol A {
             func doSomething()
         }
-        
+
         // UltiMock:AutoMockable
         extension A {}
         """)
@@ -79,7 +72,6 @@ final class MockedTypesResolverTests {
                 declaration: types[0].declaration.cast(ProtocolDeclSyntax.self)
             )
         ])
-
     }
 
     @Test func `resolves annotated classes`() {
@@ -104,7 +96,7 @@ final class MockedTypesResolverTests {
         class A {
             func doSomething()
         }
-        
+
         // UltiMock:AutoMockable
         extension A {}
         """)
@@ -119,7 +111,6 @@ final class MockedTypesResolverTests {
     }
 }
 
-func casted<A, B>(_ value: A, to type: B.Type = B.self) -> B? {
+func casted<B>(_ value: some Any, to type: B.Type = B.self) -> B? {
     value as? B
 }
-

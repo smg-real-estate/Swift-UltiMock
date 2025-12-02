@@ -5,12 +5,12 @@ struct MockType {
 
     init?(_ typeInfo: Syntax.TypeInfo, annotationKeys: [String] = ["sourcery", "UltiMock"]) {
         let hasAnnotation = typeInfo.declaration.leadingTrivia.contains { piece in
-            if case .lineComment(let comment) = piece {
+            if case let .lineComment(comment) = piece {
                 return annotationKeys.contains { key in
                     comment.contains("\(key):AutoMockable")
                 }
             }
-            if case .blockComment(let comment) = piece {
+            if case let .blockComment(comment) = piece {
                 return annotationKeys.contains { key in
                     comment.contains("\(key):AutoMockable")
                 }
@@ -18,7 +18,9 @@ struct MockType {
             return false
         }
 
-        guard hasAnnotation else { return nil }
+        guard hasAnnotation else {
+            return nil
+        }
         self.mockedType = typeInfo
     }
 

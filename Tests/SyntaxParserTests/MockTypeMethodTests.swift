@@ -1,14 +1,7 @@
-//
-//  Test.swift
-//  UltiMock
-//
-//  Created by Mykola Tarbaiev on 02.12.25.
-//
-
-import Testing
-@testable import SyntaxParser
 import SwiftParser
 import SwiftSyntax
+import Testing
+@testable import SyntaxParser
 
 struct MockTypeMethodTests {
     @Test(arguments: [
@@ -21,7 +14,7 @@ struct MockTypeMethodTests {
         ("func complex(_ value: Int) async throws -> String", "complex_async__value_Int_async_throws_ret_String"),
         ("func withGenericConstraints<A>(a: A, b: B) where A: Codable, B == Int", "withGenericConstraints_a_A_b_B_sync_ret_Void_where_A_con_Codable_B_eq_Int"),
     ])
-    func `stubIdentifier maps non-textual information`(source: String, expectedIdentifier: String) async throws {
+    func `stubIdentifier maps non-textual information`(source: String, expectedIdentifier: String) throws {
         let syntax = Parser.parse(source: source).statements.first?.item
         let declaration = try #require(FunctionDeclSyntax(syntax))
 

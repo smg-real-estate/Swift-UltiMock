@@ -1,17 +1,10 @@
-//
-//  Test.swift
-//  UltiMock
-//
-//  Created by Mykola Tarbaiev on 02.12.25.
-//
-
-import Testing
-@testable import SyntaxParser
 import SwiftParser
 import SwiftSyntax
+import Testing
+@testable import SyntaxParser
 
 struct MockTypeTests {
-    @Test func `init fails without mock annotation comment`() async throws {
+    @Test func `init fails without mock annotation comment`() throws {
         let source = Parser.parse(source: """
         // This is a regular comment
         protocol MyProtocol {
@@ -32,7 +25,7 @@ struct MockTypeTests {
     }
 
     @Test(arguments: ["foo", "bar"])
-    func `init succeeds when type has matching annotation`(annotationKey: String) async throws {
+    func `init succeeds when type has matching annotation`(annotationKey: String) throws {
         let source = Parser.parse(source: """
         // \(annotationKey):AutoMockable
         protocol MyProtocol {
@@ -53,7 +46,5 @@ struct MockTypeTests {
     }
 
     @Test
-    func `declaration`() {
-        
-    }
+    func `declaration`() {}
 }

@@ -72,7 +72,7 @@ import Testing
     }
 
     @Test
-    func `collects multiple types`() throws {
+    func `collects multiple types`() {
         let protocolSource = """
         protocol MyProtocol {
             func doSomething()

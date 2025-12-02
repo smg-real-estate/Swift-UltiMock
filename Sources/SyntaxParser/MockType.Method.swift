@@ -11,7 +11,7 @@ extension MockType {
             let parameters = declaration.signature.parameterClause.parameters
             let isAsync = declaration.signature.effectSpecifiers?.asyncSpecifier != nil
 
-            if isAsync && !parameters.isEmpty {
+            if isAsync, !parameters.isEmpty {
                 name += "_async"
             }
             parts.append(name)
@@ -52,15 +52,15 @@ extension MockType {
                 parts.append("where")
                 for requirement in whereClause.requirements {
                     switch requirement.requirement {
-                    case .conformanceRequirement(let conformance):
+                    case let .conformanceRequirement(conformance):
                         let left = conformance.leftType.description.trimmingCharacters(in: .whitespaces)
                         let right = conformance.rightType.description.trimmingCharacters(in: .whitespaces)
                         parts.append("\(left)_con_\(right)")
-                    case .sameTypeRequirement(let sameType):
+                    case let .sameTypeRequirement(sameType):
                         let left = sameType.leftType.description.trimmingCharacters(in: .whitespaces)
                         let right = sameType.rightType.description.trimmingCharacters(in: .whitespaces)
                         parts.append("\(left)_eq_\(right)")
-                    case .layoutRequirement(let layout):
+                    case let .layoutRequirement(layout):
                         let left = layout.type.description.trimmingCharacters(in: .whitespaces)
                         let right = layout.layoutSpecifier.description.trimmingCharacters(in: .whitespaces)
                         parts.append("\(left)_con_\(right)")
