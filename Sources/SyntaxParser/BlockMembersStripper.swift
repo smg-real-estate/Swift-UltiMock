@@ -15,6 +15,46 @@ final class ImplementationStripper: SyntaxRewriter {
         .init(statements: [])
     }
 
+    override func visit(_ node: VariableDeclSyntax) -> DeclSyntax {
+        if node.bindingSpecifier.tokenKind == .keyword(.let) {
+            return node.with(\.bindingSpecifier.tokenKind, .keyword(.var))
+                .with(\.bindings, PatternBindingListSyntax(
+                    node.bindings.map { binding in
+                        binding.with(\.accessorBlock, AccessorBlockSyntax(
+                            accessors: .accessors(AccessorDeclListSyntax([
+                                AccessorDeclSyntax(accessorSpecifier: .keyword(.get))
+                                    .with(\.leadingTrivia, [.spaces(1)])
+                                    .with(\.trailingTrivia, [.spaces(1)]),
+                            ]))
+                        ))
+                        .with(\.initializer, nil)
+                    }
+                ))
+                .cast(DeclSyntax.self)
+        }
+
+        if node.bindings.first?.accessorBlock == nil {
+            return node.with(\.bindingSpecifier.tokenKind, .keyword(.var))
+                .with(\.bindings, PatternBindingListSyntax(
+                    node.bindings.map { binding in
+                        binding.with(\.accessorBlock, AccessorBlockSyntax(
+                            accessors: .accessors(AccessorDeclListSyntax([
+                                AccessorDeclSyntax(accessorSpecifier: .keyword(.get))
+                                    .with(\.leadingTrivia, [.spaces(1)])
+                                    .with(\.trailingTrivia, [.spaces(1)]),
+                                AccessorDeclSyntax(accessorSpecifier: .keyword(.set))
+                                    .with(\.leadingTrivia, [])
+                                    .with(\.trailingTrivia, [.spaces(1)]),
+                            ]))
+                        ))
+                        .with(\.initializer, nil)
+                    }
+                ))
+                .cast(DeclSyntax.self)
+        }
+        return super.visit(node)
+    }
+
     override func visit(_ node: AccessorBlockSyntax) -> AccessorBlockSyntax {
         accessorStripper.rewrite(node).cast(AccessorBlockSyntax.self)
     }

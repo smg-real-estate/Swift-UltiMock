@@ -39,6 +39,28 @@ struct BlockMembersStripperTests {
         #expect(stripped.description == expected.description)
     }
 
+    @Test func `strips stored property values`() {
+        let source = Parser.parse(source: """
+            struct Foo {
+                let readonly: Int = 42
+                 
+                var readwrite: Int = 0
+            }
+        """)
+
+        let expected = Parser.parse(source: """
+            struct Foo {
+                var readonly: Int { get }
+                 
+                var readwrite: Int { get set }
+            }
+        """)
+
+        let stripped = source.strippingImplementation()
+
+        #expect(stripped.description == expected.description)
+    }
+
     @Test func `strips computed property implementation`() {
         let source = Parser.parse(source: """
             struct Foo {
