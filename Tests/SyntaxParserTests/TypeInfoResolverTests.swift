@@ -28,5 +28,4 @@ struct Test {
 //        #expect(classB.methods.count == 1)
 //        #expect(classB.methods.first?.name == "method")
     }
-
 }

@@ -328,7 +328,6 @@ struct MockedTypeInfo {
 
             properties.unique(by: \.setterSignature)
                 .map { "\n" + $0.mockExpectSetter(forwarding: mocksClass) }
-
         }
 
         if !subscripts.isEmpty {

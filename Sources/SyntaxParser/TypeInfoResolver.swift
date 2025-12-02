@@ -58,11 +58,11 @@ extension TypeInfoResolver {
 private extension TypeInfoResolver {
     func merge(base: Syntax.TypeInfo, with other: Syntax.TypeInfo) -> Syntax.TypeInfo {
         var merged = base
-        merged.methods += other.methods
-        merged.properties += other.properties
-        merged.subscripts += other.subscripts
+//        merged.methods += other.methods
+//        merged.properties += other.properties
+//        merged.subscripts += other.subscripts
 //        merged.comment = base.comment ?? other.comment
-        merged.associatedTypes += other.associatedTypes
+//        merged.associatedTypes += other.associatedTypes
 //        merged.genericRequirements += other.genericRequirements
         return merged
     }

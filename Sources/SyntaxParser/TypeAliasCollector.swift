@@ -1,7 +1,7 @@
 import SwiftSyntax
 
 struct TypeAliasCollector {
-    func collect(from source: SourceFileSyntax) -> [String: [String : AliasDefinition]] {
+    func collect(from source: SourceFileSyntax) -> [String: [String: AliasDefinition]] {
         let aliasBuilder = AliasTableBuilder(viewMode: .fixedUp)
         aliasBuilder.walk(source)
 
@@ -20,7 +20,7 @@ final class AliasTableBuilder: SyntaxVisitor {
     }
 
     override func visit(_ node: StructDeclSyntax) -> SyntaxVisitorContinueKind {
-        scopeStack.append(node.identifier.text)
+        scopeStack.append(node.name.text)
         return .visitChildren
     }
 
@@ -29,7 +29,7 @@ final class AliasTableBuilder: SyntaxVisitor {
     }
 
     override func visit(_ node: ClassDeclSyntax) -> SyntaxVisitorContinueKind {
-        scopeStack.append(node.identifier.text)
+        scopeStack.append(node.name.text)
         return .visitChildren
     }
 
@@ -38,7 +38,7 @@ final class AliasTableBuilder: SyntaxVisitor {
     }
 
     override func visit(_ node: EnumDeclSyntax) -> SyntaxVisitorContinueKind {
-        scopeStack.append(node.identifier.text)
+        scopeStack.append(node.name.text)
         return .visitChildren
     }
 
@@ -47,7 +47,7 @@ final class AliasTableBuilder: SyntaxVisitor {
     }
 
     override func visit(_ node: ProtocolDeclSyntax) -> SyntaxVisitorContinueKind {
-        scopeStack.append(node.identifier.text)
+        scopeStack.append(node.name.text)
         return .visitChildren
     }
 
@@ -56,7 +56,7 @@ final class AliasTableBuilder: SyntaxVisitor {
     }
 
     override func visit(_ node: ExtensionDeclSyntax) -> SyntaxVisitorContinueKind {
-        scopeStack.append(trimmedDescription(of: node.extendedType))
+        scopeStack.append(node.extendedType.trimmedDescription)
         return .visitChildren
     }
 
@@ -64,11 +64,11 @@ final class AliasTableBuilder: SyntaxVisitor {
         scopeStack.removeLast()
     }
 
-    override func visit(_ node: TypealiasDeclSyntax) -> SyntaxVisitorContinueKind {
+    override func visit(_ node: TypeAliasDeclSyntax) -> SyntaxVisitorContinueKind {
         let target = TypeSyntax(node.initializer.value)
-        let generics = node.genericParameterClause?.genericParameterList.map(\.name.text) ?? []
-        let text = trimmedDescription(of: target)
-        let alias = AliasDefinition(name: node.identifier.text, genericParameters: generics, text: text)
+        let generics = node.genericParameterClause?.parameters.map(\.name.text) ?? []
+        let text = target.trimmedDescription
+        let alias = AliasDefinition(name: node.name.text, genericParameters: generics, text: text)
         aliasesByScope[currentScopeKey, default: [:]][alias.name] = alias
         return .skipChildren
     }

@@ -231,7 +231,7 @@ struct MockedProperty {
 
         return result
     }
-    
+
     func defaultGetterPerformClosure(forwarding: Bool) -> String {
         forwarding ? " = { $0() }" : ""
     }

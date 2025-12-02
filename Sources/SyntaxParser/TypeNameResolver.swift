@@ -1,5 +1,5 @@
 struct TypeNameResolver {
-    let typeAliases: [String: [String : AliasDefinition]]
+    let typeAliases: [String: [String: AliasDefinition]]
 
     func resolvedTypeName(for name: String, scope: String) -> String {
         var currentScope = scope

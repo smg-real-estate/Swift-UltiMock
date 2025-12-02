@@ -1,5 +1,5 @@
 {
-  "originHash" : "a93c22236a1ed2aa82c1d0ed769656474f027d0a437b9369af563df1fd6ddd20",
+  "originHash" : "394bda995db9ef3e56c13f1b78a3d18566df64d66e0758d59b068de4d21c5bd7",
   "pins" : [
     {
       "identity" : "artifactbundlegen",
@@ -51,8 +51,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-syntax.git",
       "state" : {
-        "revision" : "2c49d66d34dfd6f8130afdba889de77504b58ec0",
-        "version" : "508.0.1"
+        "revision" : "64889f0c732f210a935a0ad7cda38f77f876262d",
+        "version" : "509.1.1"
       }
     },
     {
