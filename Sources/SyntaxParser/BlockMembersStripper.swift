@@ -8,15 +8,24 @@ extension SyntaxProtocol {
     }
 }
 
-final class ImplementationStripper: SyntaxRewriter {
-    let accessorStripper = AccessorBlockStripper()
+extension AccessorBlockSyntax {
+    var isGetterOnly: Bool {
+        switch accessors {
+        case let .accessors(list):
+            list.contains { $0.accessorSpecifier.tokenKind == .keyword(.set) } == false
+        case .getter:
+            true
+        }
+    }
+}
 
+final class ImplementationStripper: SyntaxRewriter {
     override func visit(_ node: CodeBlockSyntax) -> CodeBlockSyntax {
         .init(statements: [])
     }
 
     override func visit(_ node: VariableDeclSyntax) -> DeclSyntax {
-        if node.bindingSpecifier.tokenKind == .keyword(.let) {
+        if node.bindingSpecifier.tokenKind == .keyword(.let) || node.bindings.first?.accessorBlock?.isGetterOnly == true {
             return node.with(\.bindingSpecifier.tokenKind, .keyword(.var))
                 .with(\.bindings, PatternBindingListSyntax(
                     node.bindings.map { binding in
@@ -33,60 +42,22 @@ final class ImplementationStripper: SyntaxRewriter {
                 .cast(DeclSyntax.self)
         }
 
-        if node.bindings.first?.accessorBlock == nil {
-            return node.with(\.bindingSpecifier.tokenKind, .keyword(.var))
-                .with(\.bindings, PatternBindingListSyntax(
-                    node.bindings.map { binding in
-                        binding.with(\.accessorBlock, AccessorBlockSyntax(
-                            accessors: .accessors(AccessorDeclListSyntax([
-                                AccessorDeclSyntax(accessorSpecifier: .keyword(.get))
-                                    .with(\.leadingTrivia, [.spaces(1)])
-                                    .with(\.trailingTrivia, [.spaces(1)]),
-                                AccessorDeclSyntax(accessorSpecifier: .keyword(.set))
-                                    .with(\.leadingTrivia, [])
-                                    .with(\.trailingTrivia, [.spaces(1)]),
-                            ]))
-                        ))
-                        .with(\.initializer, nil)
-                    }
-                ))
-                .cast(DeclSyntax.self)
-        }
-        return super.visit(node)
-    }
-
-    override func visit(_ node: AccessorBlockSyntax) -> AccessorBlockSyntax {
-        accessorStripper.rewrite(node).cast(AccessorBlockSyntax.self)
-    }
-}
-
-final class AccessorBlockStripper: SyntaxRewriter {
-    override func visit(_ node: AccessorDeclListSyntax) -> AccessorDeclListSyntax {
-        super.visit(node).with(\.trailingTrivia, [.spaces(1)])
-    }
-
-    override func visit(_ token: TokenSyntax) -> TokenSyntax {
-        token.trimmed
-    }
-
-    override func visitAny(_ node: SwiftSyntax.Syntax) -> SwiftSyntax.Syntax? {
-        if node.kind == .codeBlockItemList {
-            return SwiftSyntax.Syntax(AccessorDeclListSyntax([
-                AccessorDeclSyntax(accessorSpecifier: .keyword(.get))
-                    .with(\.leadingTrivia, [.spaces(1)])
-                    .with(\.trailingTrivia, [.spaces(1)])
-            ]))
-        }
-        return nil
-    }
-
-    override func visit(_ node: AccessorDeclSyntax) -> DeclSyntax {
-        AccessorDeclSyntax(
-            attributes: node.attributes,
-            accessorSpecifier: node.accessorSpecifier
-        )
-        .with(\.leadingTrivia, [.spaces(1)])
-        .with(\.trailingTrivia, [])
-        .cast(DeclSyntax.self)
+        return node.with(\.bindingSpecifier.tokenKind, .keyword(.var))
+            .with(\.bindings, PatternBindingListSyntax(
+                node.bindings.map { binding in
+                    binding.with(\.accessorBlock, AccessorBlockSyntax(
+                        accessors: .accessors(AccessorDeclListSyntax([
+                            AccessorDeclSyntax(accessorSpecifier: .keyword(.get))
+                                .with(\.leadingTrivia, [.spaces(1)])
+                                .with(\.trailingTrivia, [.spaces(1)]),
+                            AccessorDeclSyntax(accessorSpecifier: .keyword(.set))
+                                .with(\.leadingTrivia, [])
+                                .with(\.trailingTrivia, [.spaces(1)]),
+                        ]))
+                    ))
+                    .with(\.initializer, nil)
+                }
+            ))
+            .cast(DeclSyntax.self)
     }
 }
