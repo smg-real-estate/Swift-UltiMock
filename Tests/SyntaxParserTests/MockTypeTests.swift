@@ -51,4 +51,9 @@ struct MockTypeTests {
 
         #expect(mockType != nil)
     }
+
+    @Test
+    func `declaration`() {
+        
+    }
 }

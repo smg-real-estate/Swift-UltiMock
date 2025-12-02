@@ -1,7 +1,7 @@
 import SwiftSyntax
 
 struct MockType {
-    let declaration: DeclSyntax
+    let mockedType: Syntax.TypeInfo
 
     init?(_ typeInfo: Syntax.TypeInfo, annotationKeys: [String] = ["sourcery", "UltiMock"]) {
         let hasAnnotation = typeInfo.declaration.leadingTrivia.contains { piece in
@@ -19,6 +19,10 @@ struct MockType {
         }
 
         guard hasAnnotation else { return nil }
-        self.declaration = typeInfo.declaration
+        self.mockedType = typeInfo
+    }
+
+    var declaration: ClassDeclSyntax {
+        fatalError()
     }
 }
