@@ -50,7 +50,7 @@ private final class Visitor: SyntaxVisitor {
         typesStack.append(
             .init(
                 scope: (typesStack.last?.scope ?? []) + [node.name.text],
-                declaration: DeclSyntax(node)
+                declaration: DeclSyntax(node).detached
             )
         )
         return .visitChildren
@@ -64,7 +64,7 @@ private final class Visitor: SyntaxVisitor {
         typesStack.append(
             .init(
                 scope: currentScope,
-                declaration: DeclSyntax(node)
+                declaration: DeclSyntax(node).detached
             )
         )
         return .visitChildren
@@ -78,7 +78,7 @@ private final class Visitor: SyntaxVisitor {
         typesStack.append(
             .init(
                 scope: currentScope,
-                declaration: DeclSyntax(node)
+                declaration: DeclSyntax(node).detached
             )
         )
         return .visitChildren
@@ -92,7 +92,7 @@ private final class Visitor: SyntaxVisitor {
         typesStack.append(
             .init(
                 scope: currentScope,
-                declaration: DeclSyntax(node)
+                declaration: DeclSyntax(node).detached
             )
         )
         return .visitChildren

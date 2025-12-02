@@ -25,6 +25,7 @@ import Testing
 
         let expectedDeclaration = try declaration(from: protocolSource)
         #expect(type.declaration.description == expectedDeclaration.description)
+        #expect(type.declaration.parent == nil)
     }
 
     @Test
@@ -60,13 +61,14 @@ import Testing
         class MyClass {
             func doSomething() {}
 
-            var immutableProperty: Int { get }
-            var mutableProperty: Int { get set }
+            let immutableProperty: Int
+            var mutableProperty: Int
             var computedReadonly: Int { get }
             var computedReadwrite: Int { get set }
         }
         """)
         #expect(type.declaration.description == expectedDeclaration.description)
+        #expect(type.declaration.parent == nil)
     }
 
     @Test

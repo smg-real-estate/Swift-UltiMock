@@ -19,12 +19,29 @@ extension AccessorBlockSyntax {
     }
 }
 
+extension VariableDeclSyntax {
+    var hasInitializer: Bool {
+        bindings.contains { $0.initializer != nil }
+    }
+}
+
 final class ImplementationStripper: SyntaxRewriter {
     override func visit(_ node: CodeBlockSyntax) -> CodeBlockSyntax {
         .init(statements: [])
     }
 
     override func visit(_ node: VariableDeclSyntax) -> DeclSyntax {
+        if node.hasInitializer {
+            return node.with(\.bindings, PatternBindingListSyntax(
+                    node.bindings.map { binding in
+                        binding
+                            .with(\.typeAnnotation, binding.typeAnnotation?.with(\.trailingTrivia, []))
+                            .with(\.initializer, nil)
+                    }
+                ))
+                .cast(DeclSyntax.self)
+        }
+
         if node.bindingSpecifier.tokenKind == .keyword(.let) || node.bindings.first?.accessorBlock?.isGetterOnly == true {
             return node.with(\.bindingSpecifier.tokenKind, .keyword(.var))
                 .with(\.bindings, PatternBindingListSyntax(

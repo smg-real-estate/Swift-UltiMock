@@ -50,9 +50,9 @@ struct ImplementationStripperTests {
 
         let expected = Parser.parse(source: """
             struct Foo {
-                var readonly: Int { get }
+                let readonly: Int
                  
-                var readwrite: Int { get set }
+                var readwrite: Int
             }
         """)
 
