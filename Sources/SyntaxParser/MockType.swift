@@ -54,6 +54,26 @@ struct MockType {
 
             parts.append("ret_\(returnTypeString)")
 
+            if let whereClause = declaration.genericWhereClause {
+                parts.append("where")
+                for requirement in whereClause.requirements {
+                    switch requirement.requirement {
+                    case .conformanceRequirement(let conformance):
+                        let left = conformance.leftType.description.trimmingCharacters(in: .whitespaces)
+                        let right = conformance.rightType.description.trimmingCharacters(in: .whitespaces)
+                        parts.append("\(left)_con_\(right)")
+                    case .sameTypeRequirement(let sameType):
+                        let left = sameType.leftType.description.trimmingCharacters(in: .whitespaces)
+                        let right = sameType.rightType.description.trimmingCharacters(in: .whitespaces)
+                        parts.append("\(left)_eq_\(right)")
+                    case .layoutRequirement(let layout):
+                        let left = layout.type.description.trimmingCharacters(in: .whitespaces)
+                        let right = layout.layoutConstraint.description.trimmingCharacters(in: .whitespaces)
+                        parts.append("\(left)_con_\(right)")
+                    }
+                }
+            }
+
             return parts.joined(separator: "_")
         }
     }
