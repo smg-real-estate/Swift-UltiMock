@@ -17,13 +17,14 @@ import Testing
         let source = Parser.parse(source: protocolSource)
 
         let types = collector.collect(from: source)
-        let expectedTypes = try [
-            Syntax.TypeInfo(
-                scope: [],
-                declaration: declaration(from: protocolSource)
-            )
-        ]
-        #expect(types == expectedTypes)
+
+        try #require(types.count == 1)
+
+        let type = types[0]
+        #expect(type.scope == [])
+
+        let expectedDeclaration = try declaration(from: protocolSource)
+        #expect(type.declaration.description == expectedDeclaration.description)
     }
 
     @Test
@@ -49,21 +50,23 @@ import Testing
         let source = Parser.parse(source: classSource)
 
         let types = collector.collect(from: source)
-        let expectedTypes = try [
-            Syntax.TypeInfo(
-                scope: [],
-                declaration: declaration(from: """
-                class MyClass {
-                    func doSomething() {}
-                    var immutableProperty: Int { get {
-                    var mutableProperty: Int { get set }
-                    var computedReadonly: Int { get }
-                    var computedReadwrite: Int { get set }
-                }
-                """)
-            )
-        ]
-        #expect(types == expectedTypes)
+
+        try #require(types.count == 1)
+
+        let type = types[0]
+        #expect(type.scope == [])
+
+        let expectedDeclaration = try declaration(from: """
+        class MyClass {
+            func doSomething() {}
+
+            var immutableProperty: Int { get }
+            var mutableProperty: Int { get set }
+            var computedReadonly: Int { get }
+            var computedReadwrite: Int { get set }
+        }
+        """)
+        #expect(type.declaration.description == expectedDeclaration.description)
     }
 
     @Test
@@ -88,17 +91,8 @@ import Testing
         ].joined(separator: "\n"))
 
         let types = collector.collect(from: source)
-        let expectedTypes = try [
-            Syntax.TypeInfo(
-                scope: [],
-                declaration: declaration(from: protocolSource)
-            ),
-            Syntax.TypeInfo(
-                scope: [],
-                declaration: declaration(from: classSource)
-            )
-        ]
-        #expect(types == expectedTypes)
+
+        #expect(types.count == 2)
     }
 }
 

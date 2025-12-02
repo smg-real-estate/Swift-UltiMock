@@ -2,7 +2,7 @@ import SwiftParser
 import Testing
 @testable import SyntaxParser
 
-struct BlockMembersStripperTests {
+struct ImplementationStripperTests {
     @Test func `strips function implementation`() {
         let source = Parser.parse(source: """
             func example<T>(_ value: T) -> Int {

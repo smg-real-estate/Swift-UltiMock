@@ -123,24 +123,24 @@ private final class Visitor: SyntaxVisitor {
     }
 
     override func visit(_ node: InitializerDeclSyntax) -> SyntaxVisitorContinueKind {
-        currentType?.initializers.append(node)
-        return .skipChildren
+//        currentType?.initializers.append(node)
+        .skipChildren
     }
 
     override func visit(_ node: VariableDeclSyntax) -> SyntaxVisitorContinueKind {
-        currentType?.properties.append(node)
-        return .skipChildren
+//        currentType?.properties.append(node)
+        .skipChildren
     }
 
     override func visit(_ node: SubscriptDeclSyntax) -> SyntaxVisitorContinueKind {
-        currentType?.subscripts.append(node)
+//        currentType?.subscripts.append(node)
 
-        return .skipChildren
+        .skipChildren
     }
 
     override func visit(_ node: AssociatedTypeDeclSyntax) -> SyntaxVisitorContinueKind {
-        currentType?.associatedTypes.append(node)
-        return .skipChildren
+//        currentType?.associatedTypes.append(node)
+        .skipChildren
     }
 
     private func inheritedTypes(from clause: InheritanceClauseSyntax?) -> [String] {

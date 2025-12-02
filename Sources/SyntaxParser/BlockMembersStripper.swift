@@ -30,9 +30,10 @@ final class ImplementationStripper: SyntaxRewriter {
                 .with(\.bindings, PatternBindingListSyntax(
                     node.bindings.map { binding in
                         binding.with(\.accessorBlock, AccessorBlockSyntax(
+                            leftBrace: .leftBraceToken().with(\.trailingTrivia, [.spaces(1)]),
                             accessors: .accessors(AccessorDeclListSyntax([
                                 AccessorDeclSyntax(accessorSpecifier: .keyword(.get))
-                                    .with(\.leadingTrivia, [.spaces(1)])
+                                    .with(\.leadingTrivia, [])
                                     .with(\.trailingTrivia, [.spaces(1)]),
                             ]))
                         ))
@@ -46,9 +47,10 @@ final class ImplementationStripper: SyntaxRewriter {
             .with(\.bindings, PatternBindingListSyntax(
                 node.bindings.map { binding in
                     binding.with(\.accessorBlock, AccessorBlockSyntax(
+                        leftBrace: .leftBraceToken().with(\.trailingTrivia, [.spaces(1)]),
                         accessors: .accessors(AccessorDeclListSyntax([
                             AccessorDeclSyntax(accessorSpecifier: .keyword(.get))
-                                .with(\.leadingTrivia, [.spaces(1)])
+                                .with(\.leadingTrivia, [])
                                 .with(\.trailingTrivia, [.spaces(1)]),
                             AccessorDeclSyntax(accessorSpecifier: .keyword(.set))
                                 .with(\.leadingTrivia, [])

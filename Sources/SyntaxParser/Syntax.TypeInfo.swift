@@ -9,6 +9,6 @@ public extension Syntax {
         public internal(set) var methods: [FunctionDeclSyntax] = []
         public internal(set) var properties: [VariableDeclSyntax] = []
         public internal(set) var subscripts: [SubscriptDeclSyntax] = []
-        public internal(set) var associatedTypes: [AssociatedtypeDeclSyntax] = []
+        public internal(set) var associatedTypes: [AssociatedTypeDeclSyntax] = []
     }
 }
