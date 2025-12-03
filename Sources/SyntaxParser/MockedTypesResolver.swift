@@ -74,6 +74,41 @@ private extension MockedTypesResolver {
             return []
         }
 
+        var result: [ProtocolDeclSyntax] = []
+        var visited: Set<SyntaxIdentifier> = []
+
+        for inheritedType in inherited {
+            let typeName = inheritedType.type.trimmedDescription
+            guard let decl = typeMap[typeName],
+                  let protocolDecl = decl.as(ProtocolDeclSyntax.self)
+            else {
+                continue
+            }
+            collectInheritedProtocols(protocolDecl, into: &result, visited: &visited, using: typeMap)
+        }
+
+        return result
+    }
+
+    func collectInheritedProtocols(_ protocol: ProtocolDeclSyntax, into result: inout [ProtocolDeclSyntax], visited: inout Set<SyntaxIdentifier>, using typeMap: [String: DeclSyntax]) {
+        guard !visited.contains(`protocol`.id) else {
+            return
+        }
+
+        visited.insert(`protocol`.id)
+        result.append(`protocol`)
+
+        let nestedInherited = resolveDirectInheritedProtocols(from: `protocol`.inheritanceClause, using: typeMap)
+        for inherited in nestedInherited {
+            collectInheritedProtocols(inherited, into: &result, visited: &visited, using: typeMap)
+        }
+    }
+
+    func resolveDirectInheritedProtocols(from clause: InheritanceClauseSyntax?, using typeMap: [String: DeclSyntax]) -> [ProtocolDeclSyntax] {
+        guard let inherited = clause?.inheritedTypes else {
+            return []
+        }
+
         return inherited.compactMap { inheritedType in
             let typeName = inheritedType.type.trimmedDescription
             guard let decl = typeMap[typeName] else {

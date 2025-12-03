@@ -76,14 +76,18 @@ final class MockedTypesResolverTests {
         ])
     }
 
-    @Test func `resolves inherited protocol`() {
+    @Test func `resolves inherited protocols also in different files`() {
         let types = TypesCollector().collect(from: """
         protocol A {
             func doSomething()
         }
 
-        // UltiMock:AutoMockable
         protocol B: A {
+            func doSomethingElse()
+        }
+        """) + TypesCollector().collect(from: """
+        // UltiMock:AutoMockable
+        protocol C: B {
             func doSomethingElse()
         }
         """)
@@ -92,8 +96,11 @@ final class MockedTypesResolverTests {
 
         #expect(casted(resolved) == [
             MockedProtocol(
-                declaration: types[1].declaration.cast(ProtocolDeclSyntax.self),
-                inherited: [types[0].declaration.cast(ProtocolDeclSyntax.self)]
+                declaration: types[2].declaration.cast(ProtocolDeclSyntax.self),
+                inherited: [
+                    types[1].declaration.cast(ProtocolDeclSyntax.self),
+                    types[0].declaration.cast(ProtocolDeclSyntax.self)
+                ]
             )
         ])
     }
