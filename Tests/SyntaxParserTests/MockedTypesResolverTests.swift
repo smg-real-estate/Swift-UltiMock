@@ -3,7 +3,7 @@ import Testing
 @testable import SyntaxParser
 
 final class MockedTypesResolverTests {
-    var typeAliases: [String: [String: AliasDefinition]] = [:]
+    var typeAliases: [String: [String: TypeAliasDeclSyntax]] = [:]
     lazy var sut = MockedTypesResolver(
         typeAliases: typeAliases
     )
@@ -29,7 +29,7 @@ final class MockedTypesResolverTests {
         let types = TypesCollector().collect(from: """
         // \(annotationKey):AutoMockable
         protocol A {
-            func doSomething()
+            func doSomething(with value: Int) -> String
         }
         """)
 

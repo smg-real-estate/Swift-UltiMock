@@ -38,28 +38,33 @@ struct TypeAliasCollectorTests {
 
         let aliases = sut.collect(from: source)
 
-        #expect(aliases == [
-            "": [
-                "A": AliasDefinition(name: "A", genericParameters: [], text: "Int"),
-                "B": AliasDefinition(name: "B", genericParameters: [], text: "A"),
-                "C": AliasDefinition(name: "C", genericParameters: ["T"], text: "[T]"),
-            ],
-            "Struct": [
-                "B": AliasDefinition(name: "B", genericParameters: [], text: "Double"),
-                "G": AliasDefinition(name: "G", genericParameters: [], text: "Character")
-            ],
-            "Struct.Enum": [
-                "D": AliasDefinition(name: "D", genericParameters: [], text: "String")
-            ],
-            "Enum": [
-                "D": AliasDefinition(name: "D", genericParameters: [], text: "String")
-            ],
-            "Class": [
-                "E": AliasDefinition(name: "E", genericParameters: [], text: "Float")
-            ],
-            "Protocol": [
-                "F": AliasDefinition(name: "F", genericParameters: [], text: "Bool")
-            ]
-        ])
+        #expect(aliases[""]?["A"]?.name.text == "A")
+        #expect(aliases[""]?["A"]?.initializer.value.trimmedDescription == "Int")
+        #expect(aliases[""]?["A"]?.genericParameterClause?.parameters.map(\.name.text) == nil)
+
+        #expect(aliases[""]?["B"]?.name.text == "B")
+        #expect(aliases[""]?["B"]?.initializer.value.trimmedDescription == "A")
+
+        #expect(aliases[""]?["C"]?.name.text == "C")
+        #expect(aliases[""]?["C"]?.initializer.value.trimmedDescription == "[T]")
+        #expect(aliases[""]?["C"]?.genericParameterClause?.parameters.map(\.name.text) == ["T"])
+
+        #expect(aliases["Struct"]?["B"]?.name.text == "B")
+        #expect(aliases["Struct"]?["B"]?.initializer.value.trimmedDescription == "Double")
+
+        #expect(aliases["Struct"]?["G"]?.name.text == "G")
+        #expect(aliases["Struct"]?["G"]?.initializer.value.trimmedDescription == "Character")
+
+        #expect(aliases["Struct.Enum"]?["D"]?.name.text == "D")
+        #expect(aliases["Struct.Enum"]?["D"]?.initializer.value.trimmedDescription == "String")
+
+        #expect(aliases["Enum"]?["D"]?.name.text == "D")
+        #expect(aliases["Enum"]?["D"]?.initializer.value.trimmedDescription == "String")
+
+        #expect(aliases["Class"]?["E"]?.name.text == "E")
+        #expect(aliases["Class"]?["E"]?.initializer.value.trimmedDescription == "Float")
+
+        #expect(aliases["Protocol"]?["F"]?.name.text == "F")
+        #expect(aliases["Protocol"]?["F"]?.initializer.value.trimmedDescription == "Bool")
     }
 }

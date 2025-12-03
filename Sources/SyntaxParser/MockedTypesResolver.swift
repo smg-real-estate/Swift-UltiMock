@@ -3,7 +3,7 @@ import SwiftSyntax
 protocol MockedType {}
 
 struct MockedTypesResolver {
-    let typeAliases: [String: [String: AliasDefinition]]
+    let typeAliases: [String: [String: TypeAliasDeclSyntax]]
     var annotationKeys: [String] = ["sourcery", "UltiMock"]
 
     func resolve(_ types: [Syntax.TypeInfo]) -> [MockedType] {

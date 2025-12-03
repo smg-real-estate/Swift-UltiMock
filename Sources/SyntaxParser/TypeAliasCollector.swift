@@ -1,7 +1,7 @@
 import SwiftSyntax
 
 struct TypeAliasCollector {
-    func collect(from source: SourceFileSyntax) -> [String: [String: AliasDefinition]] {
+    func collect(from source: SourceFileSyntax) -> [String: [String: TypeAliasDeclSyntax]] {
         let aliasBuilder = AliasTableBuilder(viewMode: .fixedUp)
         aliasBuilder.walk(source)
 
@@ -12,7 +12,7 @@ struct TypeAliasCollector {
 final class AliasTableBuilder: SyntaxVisitor {
     static let globalScopeKey = ""
 
-    private(set) var aliasesByScope: [String: [String: AliasDefinition]] = [:]
+    private(set) var aliasesByScope: [String: [String: TypeAliasDeclSyntax]] = [:]
     private var scopeStack: [String] = []
 
     override init(viewMode: SyntaxTreeViewMode = .fixedUp) {
@@ -65,21 +65,11 @@ final class AliasTableBuilder: SyntaxVisitor {
     }
 
     override func visit(_ node: TypeAliasDeclSyntax) -> SyntaxVisitorContinueKind {
-        let target = TypeSyntax(node.initializer.value)
-        let generics = node.genericParameterClause?.parameters.map(\.name.text) ?? []
-        let text = target.trimmedDescription
-        let alias = AliasDefinition(name: node.name.text, genericParameters: generics, text: text)
-        aliasesByScope[currentScopeKey, default: [:]][alias.name] = alias
+        aliasesByScope[currentScopeKey, default: [:]][node.name.text] = node
         return .skipChildren
     }
 
     private var currentScopeKey: String {
         scopeStack.joined(separator: ".")
     }
-}
-
-struct AliasDefinition: Equatable {
-    let name: String
-    let genericParameters: [String]
-    let text: String
 }
