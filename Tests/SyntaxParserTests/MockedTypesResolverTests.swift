@@ -1,3 +1,4 @@
+import SwiftParser
 import SwiftSyntax
 import Testing
 @testable import SyntaxParser
@@ -272,6 +273,42 @@ final class MockedTypesResolverTests {
                 ]
             )
         ])
+    }
+
+    @Test func `resolves aliased types`() throws {
+        let source = Parser.parse(source: """
+            class Parent {
+                func doSomething() {}
+            }
+
+            typealias ParentAlias = Parent
+            typealias Count = Int
+
+            // UltiMock:AutoMockable
+            class Child: ParentAlias {
+                typealias Amount = Double
+                func doMore(count: Count) {}
+                var count: Count
+                var amount: Amount
+            }
+        """)
+
+        typeAliases = TypeAliasCollector().collect(from: source)
+
+        let types = TypesCollector().collect(from: source)
+
+        let resolved = try #require(sut.resolve(types).first as? MockedClass)
+
+        #expect(resolved.superclasses == [
+            types[0].declaration.cast(ClassDeclSyntax.self)
+        ])
+        #expect(resolved.declaration.trimmedDescription == """
+        class Child: Parent {
+                func doMore(count: Int) {}
+                var count: Int { get set }
+                var amount: Double { get set }
+            }
+        """)
     }
 }
 

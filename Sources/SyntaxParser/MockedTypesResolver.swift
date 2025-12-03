@@ -23,6 +23,29 @@ struct MockedTypesResolver {
             return mocked
         }
     }
+
+    func resolveTypeAlias(_ typeName: String, in scope: String) -> String {
+        let scopes = generateScopeChain(scope)
+        for scopeKey in scopes {
+            if let alias = typeAliases[scopeKey]?[typeName] {
+                return alias.initializer.value.trimmedDescription
+            }
+        }
+        return typeName
+    }
+
+    private func generateScopeChain(_ scope: String) -> [String] {
+        var result: [String] = [scope]
+        var components = scope.split(separator: ".").map(String.init)
+
+        while !components.isEmpty {
+            components.removeLast()
+            result.append(components.joined(separator: "."))
+        }
+
+        result.append("")
+        return result
+    }
 }
 
 private extension MockedTypesResolver {
@@ -53,21 +76,51 @@ private extension MockedTypesResolver {
     func createMockedType(from decl: DeclSyntax, using typeMap: [String: DeclSyntax]) -> MockedType? {
         if let protocolDecl = decl.as(ProtocolDeclSyntax.self) {
             let inherited = resolveInheritedProtocols(from: protocolDecl.inheritanceClause, using: typeMap)
+            let scopeKey = protocolDecl.name.text
+            let rewrittenDecl: ProtocolDeclSyntax
+
+            if hasTypeAliases(in: scopeKey) {
+                let rewriter = TypeAliasRewriter(resolver: self, scope: scopeKey)
+                rewrittenDecl = rewriter.rewrite(protocolDecl).as(ProtocolDeclSyntax.self)!
+            } else {
+                rewrittenDecl = protocolDecl
+            }
+
             return MockedProtocol(
-                declaration: protocolDecl,
+                declaration: rewrittenDecl,
                 inherited: inherited
             )
         }
         if let classDecl = decl.as(ClassDeclSyntax.self) {
             let superclasses = resolveInheritedClasses(from: classDecl.inheritanceClause, using: typeMap)
             let protocols = resolveAllProtocols(from: classDecl.inheritanceClause, superclasses: superclasses, using: typeMap)
+            let scopeKey = classDecl.name.text
+            let rewrittenDecl: ClassDeclSyntax
+
+            if hasTypeAliases(in: scopeKey) {
+                let rewriter = TypeAliasRewriter(resolver: self, scope: scopeKey)
+                rewrittenDecl = rewriter.rewrite(classDecl).as(ClassDeclSyntax.self)!
+            } else {
+                rewrittenDecl = classDecl
+            }
+
             return MockedClass(
-                declaration: classDecl,
+                declaration: rewrittenDecl,
                 superclasses: superclasses,
                 protocols: protocols
             )
         }
         return nil
+    }
+
+    func hasTypeAliases(in scope: String) -> Bool {
+        let scopes = generateScopeChain(scope)
+        for scopeKey in scopes {
+            if let aliases = typeAliases[scopeKey], !aliases.isEmpty {
+                return true
+            }
+        }
+        return false
     }
 
     func resolveInheritedProtocols(from clause: InheritanceClauseSyntax?, using typeMap: [String: DeclSyntax]) -> [ProtocolDeclSyntax] {
@@ -128,7 +181,12 @@ private extension MockedTypesResolver {
         var visited: Set<SyntaxIdentifier> = []
 
         for inheritedType in inherited {
-            let typeName = inheritedType.type.trimmedDescription
+            var typeName = inheritedType.type.trimmedDescription
+
+            if typeMap[typeName] == nil {
+                typeName = resolveTypeAlias(typeName, in: "")
+            }
+
             guard let decl = typeMap[typeName],
                   let classDecl = decl.as(ClassDeclSyntax.self)
             else {
@@ -219,5 +277,81 @@ private extension Syntax.TypeInfo {
             return c.name.text
         }
         return nil
+    }
+}
+
+final class TypeAliasRewriter: SyntaxRewriter {
+    let resolver: MockedTypesResolver
+    let scope: String
+
+    init(resolver: MockedTypesResolver, scope: String) {
+        self.resolver = resolver
+        self.scope = scope
+        super.init(viewMode: .fixedUp)
+    }
+
+    override func visit(_ node: IdentifierTypeSyntax) -> TypeSyntax {
+        let typeName = node.name.text
+        let resolvedTypeName = resolver.resolveTypeAlias(typeName, in: scope)
+
+        if resolvedTypeName != typeName {
+            var newIdentifier = TokenSyntax.identifier(resolvedTypeName)
+            newIdentifier.leadingTrivia = node.name.leadingTrivia
+            newIdentifier.trailingTrivia = node.name.trailingTrivia
+
+            var newType = IdentifierTypeSyntax(
+                name: newIdentifier,
+                genericArgumentClause: node.genericArgumentClause
+            )
+            newType.leadingTrivia = node.leadingTrivia
+            newType.trailingTrivia = node.trailingTrivia
+
+            return TypeSyntax(newType)
+        }
+
+        return super.visit(node)
+    }
+
+    override func visit(_ node: AccessorBlockSyntax) -> AccessorBlockSyntax {
+        var result = super.visit(node)
+
+        // Ensure accessor blocks have a leading space
+        if result.leadingTrivia.isEmpty {
+            result.leadingTrivia = .space
+        }
+
+        return result
+    }
+
+    override func visit(_ node: InheritedTypeSyntax) -> InheritedTypeSyntax {
+        if let identifierType = node.type.as(IdentifierTypeSyntax.self) {
+            let typeName = identifierType.name.text
+            let resolvedTypeName = resolver.resolveTypeAlias(typeName, in: scope)
+
+            if resolvedTypeName != typeName {
+                var newIdentifier = TokenSyntax.identifier(resolvedTypeName)
+                newIdentifier.leadingTrivia = identifierType.name.leadingTrivia
+                newIdentifier.trailingTrivia = identifierType.name.trailingTrivia
+
+                var newType = IdentifierTypeSyntax(
+                    name: newIdentifier,
+                    genericArgumentClause: identifierType.genericArgumentClause
+                )
+                newType.leadingTrivia = identifierType.leadingTrivia
+                newType.trailingTrivia = identifierType.trailingTrivia
+
+                return node.with(\.type, TypeSyntax(newType))
+            }
+        }
+
+        return super.visit(node)
+    }
+
+    override func visit(_ node: MemberBlockItemListSyntax) -> MemberBlockItemListSyntax {
+        let visited = super.visit(node)
+        let filtered = visited.filter { item in
+            !item.decl.is(TypeAliasDeclSyntax.self)
+        }
+        return MemberBlockItemListSyntax(filtered)
     }
 }
