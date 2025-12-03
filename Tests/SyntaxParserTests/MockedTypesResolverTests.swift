@@ -50,7 +50,8 @@ final class MockedTypesResolverTests {
 
         #expect(casted(resolved) == [
             MockedProtocol(
-                declaration: types[0].declaration.cast(ProtocolDeclSyntax.self)
+                declaration: types[0].declaration.cast(ProtocolDeclSyntax.self),
+                inherited: []
             )
         ])
     }
@@ -69,7 +70,8 @@ final class MockedTypesResolverTests {
 
         #expect(casted(resolved) == [
             MockedProtocol(
-                declaration: types[0].declaration.cast(ProtocolDeclSyntax.self)
+                declaration: types[0].declaration.cast(ProtocolDeclSyntax.self),
+                inherited: []
             )
         ])
     }
@@ -86,7 +88,9 @@ final class MockedTypesResolverTests {
 
         #expect(casted(resolved) == [
             MockedClass(
-                declaration: types[0].declaration.cast(ClassDeclSyntax.self)
+                declaration: types[0].declaration.cast(ClassDeclSyntax.self),
+                superclasses: [],
+                protocols: []
             )
         ])
     }
@@ -105,7 +109,9 @@ final class MockedTypesResolverTests {
 
         #expect(casted(resolved) == [
             MockedClass(
-                declaration: types[0].declaration.cast(ClassDeclSyntax.self)
+                declaration: types[0].declaration.cast(ClassDeclSyntax.self),
+                superclasses: [],
+                protocols: []
             )
         ])
     }

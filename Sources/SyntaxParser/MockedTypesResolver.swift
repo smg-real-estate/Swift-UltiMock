@@ -52,10 +52,17 @@ private extension MockedTypesResolver {
 
     func createMockedType(from decl: DeclSyntax) -> MockedType? {
         if let protocolDecl = decl.as(ProtocolDeclSyntax.self) {
-            return MockedProtocol(declaration: protocolDecl)
+            return MockedProtocol(
+                declaration: protocolDecl,
+                inherited: []
+            )
         }
         if let classDecl = decl.as(ClassDeclSyntax.self) {
-            return MockedClass(declaration: classDecl)
+            return MockedClass(
+                declaration: classDecl,
+                superclasses: [],
+                protocols: []
+            )
         }
         return nil
     }
