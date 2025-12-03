@@ -59,7 +59,8 @@ private extension MockedTypesResolver {
             )
         }
         if let classDecl = decl.as(ClassDeclSyntax.self) {
-            let (superclasses, protocols) = resolveInheritedTypes(from: classDecl.inheritanceClause, using: typeMap)
+            let superclasses = resolveInheritedClasses(from: classDecl.inheritanceClause, using: typeMap)
+            let protocols = resolveAllProtocols(from: classDecl.inheritanceClause, superclasses: superclasses, using: typeMap)
             return MockedClass(
                 declaration: classDecl,
                 superclasses: superclasses,
@@ -118,28 +119,78 @@ private extension MockedTypesResolver {
         }
     }
 
-    func resolveInheritedTypes(from clause: InheritanceClauseSyntax?, using typeMap: [String: DeclSyntax]) -> ([ClassDeclSyntax], [ProtocolDeclSyntax]) {
+    func resolveInheritedClasses(from clause: InheritanceClauseSyntax?, using typeMap: [String: DeclSyntax]) -> [ClassDeclSyntax] {
         guard let inherited = clause?.inheritedTypes else {
-            return ([], [])
+            return []
         }
 
-        var superclasses: [ClassDeclSyntax] = []
-        var protocols: [ProtocolDeclSyntax] = []
+        var result: [ClassDeclSyntax] = []
+        var visited: Set<SyntaxIdentifier> = []
 
         for inheritedType in inherited {
             let typeName = inheritedType.type.trimmedDescription
-            guard let decl = typeMap[typeName] else {
+            guard let decl = typeMap[typeName],
+                  let classDecl = decl.as(ClassDeclSyntax.self)
+            else {
                 continue
             }
+            collectInheritedClasses(classDecl, into: &result, visited: &visited, using: typeMap)
+        }
 
-            if let classDecl = decl.as(ClassDeclSyntax.self) {
-                superclasses.append(classDecl)
-            } else if let protocolDecl = decl.as(ProtocolDeclSyntax.self) {
-                protocols.append(protocolDecl)
+        return result
+    }
+
+    func collectInheritedClasses(_ classDecl: ClassDeclSyntax, into result: inout [ClassDeclSyntax], visited: inout Set<SyntaxIdentifier>, using typeMap: [String: DeclSyntax]) {
+        guard !visited.contains(classDecl.id) else {
+            return
+        }
+
+        visited.insert(classDecl.id)
+        result.append(classDecl)
+
+        let nestedInherited = resolveDirectInheritedClasses(from: classDecl.inheritanceClause, using: typeMap)
+        for inherited in nestedInherited {
+            collectInheritedClasses(inherited, into: &result, visited: &visited, using: typeMap)
+        }
+    }
+
+    func resolveDirectInheritedClasses(from clause: InheritanceClauseSyntax?, using typeMap: [String: DeclSyntax]) -> [ClassDeclSyntax] {
+        guard let inherited = clause?.inheritedTypes else {
+            return []
+        }
+
+        return inherited.compactMap { inheritedType in
+            let typeName = inheritedType.type.trimmedDescription
+            guard let decl = typeMap[typeName] else {
+                return nil
+            }
+            return decl.as(ClassDeclSyntax.self)
+        }
+    }
+
+    func resolveAllProtocols(from clause: InheritanceClauseSyntax?, superclasses: [ClassDeclSyntax], using typeMap: [String: DeclSyntax]) -> [ProtocolDeclSyntax] {
+        var result: [ProtocolDeclSyntax] = []
+        var visited: Set<SyntaxIdentifier> = []
+
+        let directProtocols = resolveInheritedProtocols(from: clause, using: typeMap)
+        for protocolDecl in directProtocols {
+            if !visited.contains(protocolDecl.id) {
+                visited.insert(protocolDecl.id)
+                result.append(protocolDecl)
             }
         }
 
-        return (superclasses, protocols)
+        for superclass in superclasses {
+            let superclassProtocols = resolveInheritedProtocols(from: superclass.inheritanceClause, using: typeMap)
+            for protocolDecl in superclassProtocols {
+                if !visited.contains(protocolDecl.id) {
+                    visited.insert(protocolDecl.id)
+                    result.append(protocolDecl)
+                }
+            }
+        }
+
+        return result
     }
 
     func hasAnnotation(_ decl: some SyntaxProtocol) -> Bool {

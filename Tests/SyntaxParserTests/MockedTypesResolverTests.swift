@@ -144,6 +144,135 @@ final class MockedTypesResolverTests {
             )
         ])
     }
+
+    @Test func `resolves multi-level class inheritance`() {
+        let types = TypesCollector().collect(from: """
+        class A {
+            func doSomething()
+        }
+
+        class B: A {
+            func doSomethingElse()
+        }
+
+        // UltiMock:AutoMockable
+        class C: B {
+            func doMore()
+        }
+        """)
+
+        let resolved = sut.resolve(types)
+
+        #expect(casted(resolved) == [
+            MockedClass(
+                declaration: types[2].declaration.cast(ClassDeclSyntax.self),
+                superclasses: [
+                    types[1].declaration.cast(ClassDeclSyntax.self),
+                    types[0].declaration.cast(ClassDeclSyntax.self)
+                ],
+                protocols: []
+            )
+        ])
+    }
+
+    @Test func `resolves class with multiple protocols`() {
+        let types = TypesCollector().collect(from: """
+        protocol A {
+            func doSomething()
+        }
+
+        protocol B {
+            func doSomethingElse()
+        }
+
+        // UltiMock:AutoMockable
+        class C: A, B {
+            func doSomething() {}
+            func doSomethingElse() {}
+        }
+        """)
+
+        let resolved = sut.resolve(types)
+
+        #expect(casted(resolved) == [
+            MockedClass(
+                declaration: types[2].declaration.cast(ClassDeclSyntax.self),
+                superclasses: [],
+                protocols: [
+                    types[0].declaration.cast(ProtocolDeclSyntax.self),
+                    types[1].declaration.cast(ProtocolDeclSyntax.self)
+                ]
+            )
+        ])
+    }
+
+    @Test func `resolves transitive protocols from class protocol conformance`() {
+        let types = TypesCollector().collect(from: """
+        protocol A {
+            func doSomething()
+        }
+
+        protocol B: A {
+            func doSomethingElse()
+        }
+
+        // UltiMock:AutoMockable
+        class C: B {
+            func doSomething() {}
+            func doSomethingElse() {}
+        }
+        """)
+
+        let resolved = sut.resolve(types)
+
+        #expect(casted(resolved) == [
+            MockedClass(
+                declaration: types[2].declaration.cast(ClassDeclSyntax.self),
+                superclasses: [],
+                protocols: [
+                    types[1].declaration.cast(ProtocolDeclSyntax.self),
+                    types[0].declaration.cast(ProtocolDeclSyntax.self)
+                ]
+            )
+        ])
+    }
+
+    @Test func `resolves protocols from superclasses`() {
+        let types = TypesCollector().collect(from: """
+        protocol A {
+            func doSomething()
+        }
+
+        protocol B {
+            func doSomethingElse()
+        }
+
+        class Parent: A, B {
+            func doSomething() {}
+            func doSomethingElse() {}
+        }
+
+        // UltiMock:AutoMockable
+        class Child: Parent {
+            func doMore() {}
+        }
+        """)
+
+        let resolved = sut.resolve(types)
+
+        #expect(casted(resolved) == [
+            MockedClass(
+                declaration: types[3].declaration.cast(ClassDeclSyntax.self),
+                superclasses: [
+                    types[2].declaration.cast(ClassDeclSyntax.self)
+                ],
+                protocols: [
+                    types[0].declaration.cast(ProtocolDeclSyntax.self),
+                    types[1].declaration.cast(ProtocolDeclSyntax.self)
+                ]
+            )
+        ])
+    }
 }
 
 func casted<B>(_ value: some Any, to type: B.Type = B.self) -> B? {
