@@ -76,6 +76,28 @@ final class MockedTypesResolverTests {
         ])
     }
 
+    @Test func `resolves inherited protocol`() {
+        let types = TypesCollector().collect(from: """
+        protocol A {
+            func doSomething()
+        }
+
+        // UltiMock:AutoMockable
+        protocol B: A {
+            func doSomethingElse()
+        }
+        """)
+
+        let resolved = sut.resolve(types)
+
+        #expect(casted(resolved) == [
+            MockedProtocol(
+                declaration: types[1].declaration.cast(ProtocolDeclSyntax.self),
+                inherited: [types[0].declaration.cast(ProtocolDeclSyntax.self)]
+            )
+        ])
+    }
+
     @Test func `resolves annotated classes`() {
         let types = TypesCollector().collect(from: """
         // UltiMock:AutoMockable

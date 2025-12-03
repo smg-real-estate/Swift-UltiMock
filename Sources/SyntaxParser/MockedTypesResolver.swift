@@ -14,7 +14,7 @@ struct MockedTypesResolver {
             guard hasAnnotation(type.declaration),
                   let decl = resolveDeclaration(for: type, using: typeMap),
                   !visitedIDs.contains(decl.id),
-                  let mocked = createMockedType(from: decl)
+                  let mocked = createMockedType(from: decl, using: typeMap)
             else {
                 return nil
             }
@@ -50,21 +50,61 @@ private extension MockedTypesResolver {
         return nil
     }
 
-    func createMockedType(from decl: DeclSyntax) -> MockedType? {
+    func createMockedType(from decl: DeclSyntax, using typeMap: [String: DeclSyntax]) -> MockedType? {
         if let protocolDecl = decl.as(ProtocolDeclSyntax.self) {
+            let inherited = resolveInheritedProtocols(from: protocolDecl.inheritanceClause, using: typeMap)
             return MockedProtocol(
                 declaration: protocolDecl,
-                inherited: []
+                inherited: inherited
             )
         }
         if let classDecl = decl.as(ClassDeclSyntax.self) {
+            let (superclasses, protocols) = resolveInheritedTypes(from: classDecl.inheritanceClause, using: typeMap)
             return MockedClass(
                 declaration: classDecl,
-                superclasses: [],
-                protocols: []
+                superclasses: superclasses,
+                protocols: protocols
             )
         }
         return nil
+    }
+
+    func resolveInheritedProtocols(from clause: InheritanceClauseSyntax?, using typeMap: [String: DeclSyntax]) -> [ProtocolDeclSyntax] {
+        guard let inherited = clause?.inheritedTypes else {
+            return []
+        }
+
+        return inherited.compactMap { inheritedType in
+            let typeName = inheritedType.type.trimmedDescription
+            guard let decl = typeMap[typeName] else {
+                return nil
+            }
+            return decl.as(ProtocolDeclSyntax.self)
+        }
+    }
+
+    func resolveInheritedTypes(from clause: InheritanceClauseSyntax?, using typeMap: [String: DeclSyntax]) -> ([ClassDeclSyntax], [ProtocolDeclSyntax]) {
+        guard let inherited = clause?.inheritedTypes else {
+            return ([], [])
+        }
+
+        var superclasses: [ClassDeclSyntax] = []
+        var protocols: [ProtocolDeclSyntax] = []
+
+        for inheritedType in inherited {
+            let typeName = inheritedType.type.trimmedDescription
+            guard let decl = typeMap[typeName] else {
+                continue
+            }
+
+            if let classDecl = decl.as(ClassDeclSyntax.self) {
+                superclasses.append(classDecl)
+            } else if let protocolDecl = decl.as(ProtocolDeclSyntax.self) {
+                protocols.append(protocolDecl)
+            }
+        }
+
+        return (superclasses, protocols)
     }
 
     func hasAnnotation(_ decl: some SyntaxProtocol) -> Bool {
