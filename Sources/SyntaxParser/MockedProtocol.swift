@@ -6,9 +6,9 @@ struct MockedProtocol: MockedType, Equatable {
 
     var mock: ClassDeclSyntax {
         let name = declaration.name.text + "Mock"
-        
+
         let mockType = IdentifierTypeSyntax(name: .identifier("Mock"))
-        
+
         let sendableType = IdentifierTypeSyntax(name: .identifier("Sendable"))
         let uncheckedAttribute = AttributeSyntax(
             attributeName: IdentifierTypeSyntax(name: .identifier("unchecked")),
@@ -18,11 +18,17 @@ struct MockedProtocol: MockedType, Equatable {
             attributes: AttributeListSyntax([.attribute(uncheckedAttribute)]),
             baseType: sendableType
         )
-        
-        let allProtocols = [declaration] + inherited
+
+        let allProtocols = inherited + [declaration]
         let allAssociatedTypes = allProtocols.flatMap { protocolDecl in
             protocolDecl.memberBlock.members.compactMap { member in
                 member.decl.as(AssociatedTypeDeclSyntax.self)
+            }
+        }
+
+        let allMethods = allProtocols.flatMap { protocolDecl in
+            protocolDecl.memberBlock.members.compactMap { member in
+                member.decl.as(FunctionDeclSyntax.self)
             }
         }
 
@@ -35,12 +41,12 @@ struct MockedProtocol: MockedType, Equatable {
                 associatedTypes.append(assocType)
             }
         }
-        
+
         let genericParameterClause: GenericParameterClauseSyntax?
         if !associatedTypes.isEmpty {
             let parameters = associatedTypes.enumerated().map { index, associatedType -> GenericParameterSyntax in
-                let inheritedTypes = associatedType.inheritanceClause?.inheritedTypes.map { $0.type } ?? []
-                
+                let inheritedTypes = associatedType.inheritanceClause?.inheritedTypes.map(\.type) ?? []
+
                 let inheritedType: TypeSyntax?
                 if inheritedTypes.isEmpty {
                     inheritedType = nil
@@ -55,7 +61,7 @@ struct MockedProtocol: MockedType, Equatable {
                     }
                     inheritedType = TypeSyntax(CompositionTypeSyntax(elements: CompositionTypeElementListSyntax(elements)))
                 }
-                
+
                 return GenericParameterSyntax(
                     name: associatedType.name,
                     colon: inheritedType != nil ? .colonToken(trailingTrivia: .space) : nil,
@@ -63,14 +69,44 @@ struct MockedProtocol: MockedType, Equatable {
                     trailingComma: index < associatedTypes.count - 1 ? .commaToken(trailingTrivia: .space) : nil
                 )
             }
-            
+
             genericParameterClause = GenericParameterClauseSyntax(
                 parameters: GenericParameterListSyntax(parameters)
             )
         } else {
             genericParameterClause = nil
         }
-        
+
+        let methodCases = allMethods.map { method -> EnumCaseDeclSyntax in
+            let identifier = MockType.Method(declaration: method).stubIdentifier
+            return EnumCaseDeclSyntax(
+                leadingTrivia: .newline + .spaces(4),
+                caseKeyword: .keyword(.case, trailingTrivia: .space),
+                elements: EnumCaseElementListSyntax([
+                    EnumCaseElementSyntax(name: .identifier(identifier))
+                ])
+            )
+        }
+
+        let members: [MemberBlockItemSyntax]
+        if !methodCases.isEmpty {
+            let methodsEnum = EnumDeclSyntax(
+                leadingTrivia: .newline,
+                enumKeyword: .keyword(.enum, trailingTrivia: .space),
+                name: .identifier("Methods"),
+                memberBlock: MemberBlockSyntax(
+                    leftBrace: .leftBraceToken(leadingTrivia: .space),
+                    members: MemberBlockItemListSyntax(
+                        methodCases.map { MemberBlockItemSyntax(decl: $0) }
+                    ),
+                    rightBrace: .rightBraceToken(leadingTrivia: .newline)
+                )
+            )
+            members = [MemberBlockItemSyntax(decl: methodsEnum)]
+        } else {
+            members = []
+        }
+
         return ClassDeclSyntax(
             classKeyword: .keyword(.class, trailingTrivia: .space),
             name: .identifier(name),
@@ -87,7 +123,7 @@ struct MockedProtocol: MockedType, Equatable {
             ),
             memberBlock: MemberBlockSyntax(
                 leftBrace: .leftBraceToken(leadingTrivia: .space, trailingTrivia: .newline),
-                members: MemberBlockItemListSyntax([]),
+                members: MemberBlockItemListSyntax(members),
                 rightBrace: .rightBraceToken()
             )
         )
