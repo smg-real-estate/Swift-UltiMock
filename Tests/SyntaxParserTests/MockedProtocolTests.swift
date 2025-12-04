@@ -89,8 +89,16 @@ struct MockedProtocolTests {
         #expect(mock.memberBlock.members.first?.description == """
 
         enum Methods {
-            case doSomething_ret_Int
-            case doSomethingElse_async_with_T_async_throws_ret_String_where_T_con_Equatable
+            static var doSomething_ret_Int: MockMethod {
+                .init {
+                    "doSomething()"
+                }
+            }
+            static var doSomethingElse_async_with_T_async_throws_ret_String_where_T_con_Equatable: MockMethod {
+                .init {
+                    "doSomethingElse<T>(with: \\($0[0] ?? "nil"))"
+                }
+            }
         }
         """)
     }

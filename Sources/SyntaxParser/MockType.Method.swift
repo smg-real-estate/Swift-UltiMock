@@ -70,5 +70,31 @@ extension MockType {
 
             return parts.joined(separator: "_")
         }
+
+        var callDescription: String {
+            var description = declaration.name.text
+
+            if let genericParameterClause = declaration.genericParameterClause {
+                description += genericParameterClause.description.trimmingCharacters(in: .whitespaces)
+            }
+
+            let parameters = declaration.signature.parameterClause.parameters
+            description += "("
+            for (index, param) in parameters.enumerated() {
+                if index > 0 {
+                    description += ", "
+                }
+
+                let label = param.firstName.text
+                if label != "_" {
+                    description += "\(label): "
+                }
+
+                description += "\\($0[\(index)] ?? \"nil\")"
+            }
+            description += ")"
+
+            return description
+        }
     }
 }

@@ -1,4 +1,5 @@
 import SwiftSyntax
+import SwiftParser
 
 struct MockedProtocol: MockedType, Equatable {
     let declaration: ProtocolDeclSyntax
@@ -77,19 +78,63 @@ struct MockedProtocol: MockedType, Equatable {
             genericParameterClause = nil
         }
 
-        let methodCases = allMethods.map { method -> EnumCaseDeclSyntax in
-            let identifier = MockType.Method(declaration: method).stubIdentifier
-            return EnumCaseDeclSyntax(
+        let methodVars = allMethods.map { method -> VariableDeclSyntax in
+            let mockMethod = MockType.Method(declaration: method)
+            let identifier = mockMethod.stubIdentifier
+            let callDescription = mockMethod.callDescription
+
+            let sourceFile = Parser.parse(source: "\"\(callDescription)\"")
+            guard let item = sourceFile.statements.first?.item,
+                  case let .expr(expr) = item else {
+                fatalError("Failed to parse string literal")
+            }
+
+            return VariableDeclSyntax(
                 leadingTrivia: .newline + .spaces(4),
-                caseKeyword: .keyword(.case, trailingTrivia: .space),
-                elements: EnumCaseElementListSyntax([
-                    EnumCaseElementSyntax(name: .identifier(identifier))
+                modifiers: DeclModifierListSyntax([
+                    DeclModifierSyntax(name: .keyword(.static, trailingTrivia: .space))
+                ]),
+                bindingSpecifier: .keyword(.var, trailingTrivia: .space),
+                bindings: PatternBindingListSyntax([
+                    PatternBindingSyntax(
+                        pattern: IdentifierPatternSyntax(identifier: .identifier(identifier)),
+                        typeAnnotation: TypeAnnotationSyntax(
+                            colon: .colonToken(trailingTrivia: .space),
+                            type: IdentifierTypeSyntax(name: .identifier("MockMethod"))
+                        ),
+                        accessorBlock: AccessorBlockSyntax(
+                            leftBrace: .leftBraceToken(leadingTrivia: .space),
+                            accessors: .getter(CodeBlockItemListSyntax([
+                                CodeBlockItemSyntax(
+                                    item: .expr(ExprSyntax(FunctionCallExprSyntax(
+                                        leadingTrivia: .newline + .spaces(8),
+                                        calledExpression: MemberAccessExprSyntax(
+                                            period: .periodToken(),
+                                            name: .identifier("init")
+                                        ),
+                                        arguments: [],
+                                        trailingClosure: ClosureExprSyntax(
+                                            leftBrace: .leftBraceToken(leadingTrivia: .space),
+                                            statements: CodeBlockItemListSyntax([
+                                                CodeBlockItemSyntax(
+                                                    leadingTrivia: .newline + .spaces(12),
+                                                    item: .expr(expr)
+                                                )
+                                            ]),
+                                            rightBrace: .rightBraceToken(leadingTrivia: .newline + .spaces(8))
+                                        )
+                                    )))
+                                )
+                            ])),
+                            rightBrace: .rightBraceToken(leadingTrivia: .newline + .spaces(4))
+                        )
+                    )
                 ])
             )
         }
 
         let members: [MemberBlockItemSyntax]
-        if !methodCases.isEmpty {
+        if !methodVars.isEmpty {
             let methodsEnum = EnumDeclSyntax(
                 leadingTrivia: .newline,
                 enumKeyword: .keyword(.enum, trailingTrivia: .space),
@@ -97,7 +142,7 @@ struct MockedProtocol: MockedType, Equatable {
                 memberBlock: MemberBlockSyntax(
                     leftBrace: .leftBraceToken(leadingTrivia: .space),
                     members: MemberBlockItemListSyntax(
-                        methodCases.map { MemberBlockItemSyntax(decl: $0) }
+                        methodVars.map { MemberBlockItemSyntax(decl: $0) }
                     ),
                     rightBrace: .rightBraceToken(leadingTrivia: .newline)
                 )
