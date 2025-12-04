@@ -1,8 +1,17 @@
+import SwiftParser
 import SwiftSyntax
 
 extension MockType {
     struct Method {
         let declaration: FunctionDeclSyntax
+
+        static func collectMethods(from protocols: [ProtocolDeclSyntax]) -> [MockType.Method] {
+            protocols.flatMap { protocolDecl in
+                protocolDecl.memberBlock.members.compactMap { member in
+                    member.decl.as(FunctionDeclSyntax.self)
+                }
+            }.map { MockType.Method(declaration: $0) }
+        }
 
         var stubIdentifier: String {
             var parts: [String] = []
@@ -95,6 +104,60 @@ extension MockType {
             description += ")"
 
             return description
+        }
+
+        var variableDeclaration: VariableDeclSyntax {
+            let identifier = stubIdentifier
+            let callDescription = callDescription
+
+            let sourceFile = Parser.parse(source: "\"\(callDescription)\"")
+            guard let item = sourceFile.statements.first?.item,
+                  case let .expr(expr) = item else {
+                fatalError("Failed to parse string literal")
+            }
+
+            return VariableDeclSyntax(
+                leadingTrivia: .newline + .spaces(4),
+                modifiers: DeclModifierListSyntax([
+                    DeclModifierSyntax(name: .keyword(.static, trailingTrivia: .space))
+                ]),
+                bindingSpecifier: .keyword(.var, trailingTrivia: .space),
+                bindings: PatternBindingListSyntax([
+                    PatternBindingSyntax(
+                        pattern: IdentifierPatternSyntax(identifier: .identifier(identifier)),
+                        typeAnnotation: TypeAnnotationSyntax(
+                            colon: .colonToken(trailingTrivia: .space),
+                            type: IdentifierTypeSyntax(name: .identifier("MockMethod"))
+                        ),
+                        accessorBlock: AccessorBlockSyntax(
+                            leftBrace: .leftBraceToken(leadingTrivia: .space),
+                            accessors: .getter(CodeBlockItemListSyntax([
+                                CodeBlockItemSyntax(
+                                    item: .expr(ExprSyntax(FunctionCallExprSyntax(
+                                        leadingTrivia: .newline + .spaces(8),
+                                        calledExpression: MemberAccessExprSyntax(
+                                            period: .periodToken(),
+                                            name: .identifier("init")
+                                        ),
+                                        arguments: [],
+                                        trailingClosure: ClosureExprSyntax(
+                                            leftBrace: .leftBraceToken(leadingTrivia: .space),
+                                            statements: CodeBlockItemListSyntax([
+                                                CodeBlockItemSyntax(
+                                                    leadingTrivia: .newline + .spaces(12),
+                                                    item: .expr(expr)
+                                                )
+                                            ]),
+                                            rightBrace: .rightBraceToken(leadingTrivia: .newline + .spaces(8))
+                                        )
+                                    )))
+                                )
+                            ])),
+                            rightBrace: .rightBraceToken(leadingTrivia: .newline + .spaces(4))
+                        )
+                    )
+                ])
+            )
         }
     }
 }
