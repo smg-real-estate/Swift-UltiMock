@@ -3,8 +3,8 @@ import SwiftSyntax
 import Testing
 @testable import SyntaxParser
 
-struct MockedProtocolTests {
-    @Test func `mock contains correct declaration for simple protocol`() throws {
+struct ProtocolMockBuilderTests {
+    @Test func `mockClass contains correct declaration for a simple protocol`() throws {
         let source = Parser.parse(source: """
         protocol TestProtocol {
             func doSomething() -> Int
@@ -13,17 +13,15 @@ struct MockedProtocolTests {
 
         let declaration = try #require(source.statements.first?.item.as(ProtocolDeclSyntax.self))
 
-        let sut = MockedProtocol(declaration: declaration, inherited: [])
+        let sut = MockedProtocol(declaration: declaration, inherited: []).mockBuilder
 
-        let mock = sut.mock
-
-        #expect(mock.withoutMembers().description == """
+        #expect(sut.mockClass.withoutMembers().description == """
         class TestProtocolMock: Mock, @unchecked Sendable {
         }
         """)
     }
 
-    @Test func `mock contains correct declaration for a protocol with associated types`() throws {
+    @Test func `mockClass contains correct declaration for a protocol with associated types`() throws {
         let source = Parser.parse(source: """
         protocol TestProtocol {
             associatedtype Item
@@ -35,17 +33,15 @@ struct MockedProtocolTests {
 
         let declaration = try #require(source.statements.first?.item.as(ProtocolDeclSyntax.self))
 
-        let sut = MockedProtocol(declaration: declaration, inherited: [])
+        let sut = MockedProtocol(declaration: declaration, inherited: []).mockBuilder
 
-        let mock = sut.mock
-
-        #expect(mock.withoutMembers().description == """
+        #expect(sut.mockClass.withoutMembers().description == """
         class TestProtocolMock<Item, Identifier: Hashable>: Mock, @unchecked Sendable {
         }
         """)
     }
 
-    @Test func `mock contains declaration with generic parameters from inherited protocol with associated types`() {
+    @Test func `mockClass contains declaration with generic parameters from inherited protocol with associated types`() {
         let source = Parser.parse(source: """
         protocol Foo {
             associatedtype Item: Hashable, Codable
@@ -59,17 +55,15 @@ struct MockedProtocolTests {
 
         let types = source.statements.map { $0.item.cast(ProtocolDeclSyntax.self) }
 
-        let sut = MockedProtocol(declaration: types[1], inherited: [types[0]])
+        let sut = MockedProtocol(declaration: types[1], inherited: [types[0]]).mockBuilder
 
-        let mock = sut.mock
-
-        #expect(mock.withoutMembers().description == """
+        #expect(sut.mockClass.withoutMembers().description == """
         class BarMock<Item: Hashable & Codable, Identifier: Hashable>: Mock, @unchecked Sendable {
         }
         """)
     }
 
-    @Test func `mock contains stub identifiers for all methods`() {
+    @Test func `methodsEnum contains stub identifiers for all methods`() {
         let source = Parser.parse(source: """
         protocol Foo {
             func doSomething() -> Int
@@ -82,11 +76,9 @@ struct MockedProtocolTests {
 
         let types = source.statements.map { $0.item.cast(ProtocolDeclSyntax.self) }
 
-        let sut = MockedProtocol(declaration: types[1], inherited: [types[0]])
+        let sut = MockedProtocol(declaration: types[1], inherited: [types[0]]).mockBuilder
 
-        let mock = sut.mock
-
-        #expect(mock.memberBlock.members.first?.description == """
+        #expect(sut.methodsEnum.description == """
 
         enum Methods {
             static var doSomething_ret_Int: MockMethod {
@@ -107,5 +99,11 @@ struct MockedProtocolTests {
 extension ClassDeclSyntax {
     func withoutMembers() -> ClassDeclSyntax {
         with(\.memberBlock.members, [])
+    }
+}
+
+extension MockedProtocol {
+    var mockBuilder: ProtocolMockBuilder {
+        ProtocolMockBuilder(self)
     }
 }
