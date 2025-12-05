@@ -232,6 +232,52 @@ struct ProtocolMockBuilderTests {
         }
         """)
     }
+
+    @Test func `performMethod contains correct implementation`() {
+        let source = Parser.parse(source: """
+        protocol Foo {
+            func doSomething()
+        }
+        """)
+
+        let types = source.statements.map { $0.item.cast(ProtocolDeclSyntax.self) }
+
+        let sut = MockedProtocol(declaration: types[0], inherited: []).mockBuilder
+
+        #expect(sut.performMethod.description == """
+        private func _perform(
+            _ method: MockMethod,
+            _ parameters: [Any?] = []
+        ) -> Any {
+            let invocation = Invocation(
+                method: method,
+                parameters: parameters
+            )
+            guard let stub = recorder.next() else {
+                handleFatalFailure(
+                    "Expected no calls but received `\\(invocation)`",
+                    fileID: fileID,
+                    filePath: filePath,
+                    line: line,
+                    column: column
+                )
+            }
+            guard stub.matches(invocation) else {
+                handleFatalFailure(
+                    "Unexpected call: expected `\\(stub.expectation)`, but received `\\(invocation)`",
+                    fileID: stub.fileID,
+                    filePath: stub.filePath,
+                    line: stub.line,
+                    column: stub.column
+                )
+            }
+            defer {
+                recorder.checkVerification()
+            }
+            return stub.perform
+        }
+        """)
+    }
 }
 
 extension ClassDeclSyntax {

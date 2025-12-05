@@ -132,6 +132,7 @@ final class ProtocolMockBuilder: SyntaxBuilder {
         MemberBlockItemSyntax(decl: methodsEnum)
         MemberBlockItemSyntax(decl: methodExpectations)
         MemberBlockItemSyntax(decl: recordMethod)
+        MemberBlockItemSyntax(decl: performMethod)
     }
 
     var recordMethod: FunctionDeclSyntax {
@@ -226,6 +227,236 @@ final class ProtocolMockBuilder: SyntaxBuilder {
                             ],
                             leftParenTrivia: .newline + .spaces(8),
                             rightParenTrivia: .newline + .spaces(4)
+                        )))
+                    )
+                ]),
+                rightBrace: .rightBraceToken(leadingTrivia: .newline)
+            )
+        )
+    }
+
+    var performMethod: FunctionDeclSyntax {
+        FunctionDeclSyntax(
+            modifiers: DeclModifierListSyntax([DeclModifierSyntax(name: .keyword(.private, trailingTrivia: .space))]),
+            funcKeyword: .keyword(.func, trailingTrivia: .space),
+            name: .identifier("_perform"),
+            signature: FunctionSignatureSyntax(
+                parameterClause: FunctionParameterClauseSyntax(
+                    leftParen: .leftParenToken(trailingTrivia: .newline + .spaces(4)),
+                    parameters: FunctionParameterListSyntax([
+                        functionParameter(
+                            secondName: "method",
+                            type: "MockMethod"
+                        ),
+                        functionParameter(
+                            secondName: "parameters",
+                            type: "[Any?]",
+                            defaultValue: "[]",
+                            isLast: true
+                        )
+                    ]),
+                    rightParen: .rightParenToken(leadingTrivia: .newline)
+                ),
+                returnClause: ReturnClauseSyntax(
+                    arrow: .arrowToken(leadingTrivia: .space, trailingTrivia: .space),
+                    type: IdentifierTypeSyntax(name: .identifier("Any"))
+                )
+            ),
+            body: CodeBlockSyntax(
+                leftBrace: .leftBraceToken(leadingTrivia: .space),
+                statements: CodeBlockItemListSyntax([
+                    CodeBlockItemSyntax(
+                        leadingTrivia: .newline + .spaces(4),
+                        item: .decl(DeclSyntax(VariableDeclSyntax(
+                            bindingSpecifier: .keyword(.let, trailingTrivia: .space),
+                            bindings: PatternBindingListSyntax([
+                                PatternBindingSyntax(
+                                    pattern: IdentifierPatternSyntax(identifier: .identifier("invocation")),
+                                    initializer: InitializerClauseSyntax(
+                                        equal: .equalToken(leadingTrivia: .space, trailingTrivia: .space),
+                                        value: FunctionCallExprSyntax(
+                                            calledExpression: DeclReferenceExprSyntax(baseName: .identifier("Invocation")),
+                                            leftParen: .leftParenToken(trailingTrivia: .newline + .spaces(8)),
+                                            arguments: LabeledExprListSyntax([
+                                                labeledExpr(
+                                                    label: "method",
+                                                    expression: DeclReferenceExprSyntax(baseName: .identifier("method")),
+                                                    trailingTrivia: .newline + .spaces(8)
+                                                ),
+                                                labeledExpr(
+                                                    label: "parameters",
+                                                    expression: DeclReferenceExprSyntax(baseName: .identifier("parameters")),
+                                                    isLast: true
+                                                )
+                                            ]),
+                                            rightParen: .rightParenToken(leadingTrivia: .newline + .spaces(4))
+                                        )
+                                    )
+                                )
+                            ])
+                        )))
+                    ),
+                    CodeBlockItemSyntax(
+                        leadingTrivia: .newline + .spaces(4),
+                        item: .stmt(StmtSyntax(GuardStmtSyntax(
+                            guardKeyword: .keyword(.guard, trailingTrivia: .space),
+                            conditions: ConditionElementListSyntax([
+                                ConditionElementSyntax(
+                                    condition: .matchingPattern(MatchingPatternConditionSyntax(
+                                        caseKeyword: .keyword(.let, trailingTrivia: .space),
+                                        pattern: IdentifierPatternSyntax(identifier: .identifier("stub")),
+                                        initializer: InitializerClauseSyntax(
+                                            equal: .equalToken(leadingTrivia: .space, trailingTrivia: .space),
+                                            value: FunctionCallExprSyntax(
+                                                calledExpression: MemberAccessExprSyntax(
+                                                    base: DeclReferenceExprSyntax(baseName: .identifier("recorder")),
+                                                    name: .identifier("next")
+                                                ),
+                                                leftParen: .leftParenToken(),
+                                                arguments: LabeledExprListSyntax([]),
+                                                rightParen: .rightParenToken()
+                                            )
+                                        )
+                                    ))
+                                )
+                            ]),
+                            elseKeyword: .keyword(.else, leadingTrivia: .space, trailingTrivia: .space),
+                            body: CodeBlockSyntax(
+                                leftBrace: .leftBraceToken(trailingTrivia: .newline),
+                                statements: CodeBlockItemListSyntax([
+                                    CodeBlockItemSyntax(
+                                        leadingTrivia: .spaces(8),
+                                        item: .expr(ExprSyntax(functionCall(
+                                            calledExpression: DeclReferenceExprSyntax(baseName: .identifier("handleFatalFailure")),
+                                            arguments: [
+                                                labeledExpr(expression: StringLiteralExprSyntax(
+                                                    openingQuote: .stringQuoteToken(),
+                                                    segments: StringLiteralSegmentListSyntax([
+                                                        .stringSegment(StringSegmentSyntax(content: .stringSegment("Expected no calls but received `"))),
+                                                        .expressionSegment(ExpressionSegmentSyntax(
+                                                            backslash: .backslashToken(),
+                                                            leftParen: .leftParenToken(),
+                                                            expressions: LabeledExprListSyntax([
+                                                                LabeledExprSyntax(expression: DeclReferenceExprSyntax(baseName: .identifier("invocation")))
+                                                            ]),
+                                                            rightParen: .rightParenToken()
+                                                        )),
+                                                        .stringSegment(StringSegmentSyntax(content: .stringSegment("`")))
+                                                    ]),
+                                                    closingQuote: .stringQuoteToken()
+                                                )),
+                                                labeledExpr(label: "fileID", expression: DeclReferenceExprSyntax(baseName: .identifier("fileID"))),
+                                                labeledExpr(label: "filePath", expression: DeclReferenceExprSyntax(baseName: .identifier("filePath"))),
+                                                labeledExpr(label: "line", expression: DeclReferenceExprSyntax(baseName: .identifier("line"))),
+                                                labeledExpr(label: "column", expression: DeclReferenceExprSyntax(baseName: .identifier("column")), isLast: true)
+                                            ]
+                                        )))
+                                    )
+                                ]),
+                                rightBrace: .rightBraceToken(leadingTrivia: .newline + .spaces(4))
+                            )
+                        )))
+                    ),
+                    CodeBlockItemSyntax(
+                        leadingTrivia: .newline + .spaces(4),
+                        item: .stmt(StmtSyntax(GuardStmtSyntax(
+                            guardKeyword: .keyword(.guard, trailingTrivia: .space),
+                            conditions: ConditionElementListSyntax([
+                                ConditionElementSyntax(
+                                    condition: .expression(ExprSyntax(FunctionCallExprSyntax(
+                                        calledExpression: MemberAccessExprSyntax(
+                                            base: DeclReferenceExprSyntax(baseName: .identifier("stub")),
+                                            name: .identifier("matches")
+                                        ),
+                                        leftParen: .leftParenToken(),
+                                        arguments: LabeledExprListSyntax([
+                                            LabeledExprSyntax(expression: DeclReferenceExprSyntax(baseName: .identifier("invocation")))
+                                        ]),
+                                        rightParen: .rightParenToken()
+                                    )))
+                                )
+                            ]),
+                            elseKeyword: .keyword(.else, leadingTrivia: .space, trailingTrivia: .space),
+                            body: CodeBlockSyntax(
+                                leftBrace: .leftBraceToken(trailingTrivia: .newline),
+                                statements: CodeBlockItemListSyntax([
+                                    CodeBlockItemSyntax(
+                                        leadingTrivia: .spaces(8),
+                                        item: .expr(ExprSyntax(functionCall(
+                                            calledExpression: DeclReferenceExprSyntax(baseName: .identifier("handleFatalFailure")),
+                                            arguments: [
+                                                labeledExpr(expression: StringLiteralExprSyntax(
+                                                    openingQuote: .stringQuoteToken(),
+                                                    segments: StringLiteralSegmentListSyntax([
+                                                        .stringSegment(StringSegmentSyntax(content: .stringSegment("Unexpected call: expected `"))),
+                                                        .expressionSegment(ExpressionSegmentSyntax(
+                                                            backslash: .backslashToken(),
+                                                            leftParen: .leftParenToken(),
+                                                            expressions: LabeledExprListSyntax([
+                                                                LabeledExprSyntax(expression: MemberAccessExprSyntax(
+                                                                    base: DeclReferenceExprSyntax(baseName: .identifier("stub")),
+                                                                    name: .identifier("expectation")
+                                                                ))
+                                                            ]),
+                                                            rightParen: .rightParenToken()
+                                                        )),
+                                                        .stringSegment(StringSegmentSyntax(content: .stringSegment("`, but received `"))),
+                                                        .expressionSegment(ExpressionSegmentSyntax(
+                                                            backslash: .backslashToken(),
+                                                            leftParen: .leftParenToken(),
+                                                            expressions: LabeledExprListSyntax([
+                                                                LabeledExprSyntax(expression: DeclReferenceExprSyntax(baseName: .identifier("invocation")))
+                                                            ]),
+                                                            rightParen: .rightParenToken()
+                                                        )),
+                                                        .stringSegment(StringSegmentSyntax(content: .stringSegment("`")))
+                                                    ]),
+                                                    closingQuote: .stringQuoteToken()
+                                                )),
+                                                labeledExpr(label: "fileID", expression: MemberAccessExprSyntax(base: DeclReferenceExprSyntax(baseName: .identifier("stub")), name: .identifier("fileID"))),
+                                                labeledExpr(label: "filePath", expression: MemberAccessExprSyntax(base: DeclReferenceExprSyntax(baseName: .identifier("stub")), name: .identifier("filePath"))),
+                                                labeledExpr(label: "line", expression: MemberAccessExprSyntax(base: DeclReferenceExprSyntax(baseName: .identifier("stub")), name: .identifier("line"))),
+                                                labeledExpr(label: "column", expression: MemberAccessExprSyntax(base: DeclReferenceExprSyntax(baseName: .identifier("stub")), name: .identifier("column")), isLast: true)
+                                            ]
+                                        )))
+                                    )
+                                ]),
+                                rightBrace: .rightBraceToken(leadingTrivia: .newline + .spaces(4))
+                            )
+                        )))
+                    ),
+                    CodeBlockItemSyntax(
+                        leadingTrivia: .newline + .spaces(4),
+                        item: .stmt(StmtSyntax(DeferStmtSyntax(
+                            deferKeyword: .keyword(.defer, trailingTrivia: .space),
+                            body: CodeBlockSyntax(
+                                leftBrace: .leftBraceToken(),
+                                statements: CodeBlockItemListSyntax([
+                                    CodeBlockItemSyntax(
+                                        leadingTrivia: .newline + .spaces(8),
+                                        item: .expr(ExprSyntax(FunctionCallExprSyntax(
+                                            calledExpression: MemberAccessExprSyntax(
+                                                base: DeclReferenceExprSyntax(baseName: .identifier("recorder")),
+                                                name: .identifier("checkVerification")
+                                            ),
+                                            leftParen: .leftParenToken(),
+                                            arguments: LabeledExprListSyntax([]),
+                                            rightParen: .rightParenToken()
+                                        )))
+                                    )
+                                ]),
+                                rightBrace: .rightBraceToken(leadingTrivia: .newline + .spaces(4))
+                            )
+                        )))
+                    ),
+                    CodeBlockItemSyntax(
+                        leadingTrivia: .newline + .spaces(4),
+                        item: .stmt(StmtSyntax(ReturnStmtSyntax(
+                            returnKeyword: .keyword(.return, trailingTrivia: .space),
+                            expression: MemberAccessExprSyntax(
+                                base: DeclReferenceExprSyntax(baseName: .identifier("stub")),
+                                name: .identifier("perform")
+                            )
                         )))
                     )
                 ]),
