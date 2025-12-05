@@ -94,6 +94,72 @@ final class ProtocolMockBuilder {
         property(name: "column", type: "Int")
     }
 
+    var initializer: InitializerDeclSyntax {
+        InitializerDeclSyntax(
+            leadingTrivia: .newline,
+            modifiers: DeclModifierListSyntax([DeclModifierSyntax(name: .keyword(.public, trailingTrivia: .space))]),
+            initKeyword: .keyword(.`init`),
+            signature: FunctionSignatureSyntax(
+                parameterClause: FunctionParameterClauseSyntax(
+                    leftParen: .leftParenToken(trailingTrivia: .newline + .spaces(4)),
+                    parameters: FunctionParameterListSyntax([
+                        FunctionParameterSyntax(
+                            firstName: .identifier("fileID"),
+                            colon: .colonToken(trailingTrivia: .space),
+                            type: IdentifierTypeSyntax(name: .identifier("String")),
+                            defaultValue: InitializerClauseSyntax(
+                                equal: .equalToken(leadingTrivia: .space, trailingTrivia: .space),
+                                value: ExprSyntax(DeclReferenceExprSyntax(baseName: .identifier("#fileID")))
+                            ),
+                            trailingComma: .commaToken(trailingTrivia: .newline + .spaces(4))
+                        ),
+                        FunctionParameterSyntax(
+                            firstName: .identifier("filePath"),
+                            colon: .colonToken(trailingTrivia: .space),
+                            type: IdentifierTypeSyntax(name: .identifier("StaticString")),
+                            defaultValue: InitializerClauseSyntax(
+                                equal: .equalToken(leadingTrivia: .space, trailingTrivia: .space),
+                                value: ExprSyntax(DeclReferenceExprSyntax(baseName: .identifier("#filePath")))
+                            ),
+                            trailingComma: .commaToken(trailingTrivia: .newline + .spaces(4))
+                        ),
+                        FunctionParameterSyntax(
+                            firstName: .identifier("line"),
+                            colon: .colonToken(trailingTrivia: .space),
+                            type: IdentifierTypeSyntax(name: .identifier("UInt")),
+                            defaultValue: InitializerClauseSyntax(
+                                equal: .equalToken(leadingTrivia: .space, trailingTrivia: .space),
+                                value: ExprSyntax(DeclReferenceExprSyntax(baseName: .identifier("#line")))
+                            ),
+                            trailingComma: .commaToken(trailingTrivia: .newline + .spaces(4))
+                        ),
+                        FunctionParameterSyntax(
+                            firstName: .identifier("column"),
+                            colon: .colonToken(trailingTrivia: .space),
+                            type: IdentifierTypeSyntax(name: .identifier("Int")),
+                            defaultValue: InitializerClauseSyntax(
+                                equal: .equalToken(leadingTrivia: .space, trailingTrivia: .space),
+                                value: ExprSyntax(DeclReferenceExprSyntax(baseName: .identifier("#column")))
+                            )
+                        )
+                    ]),
+                    rightParen: .rightParenToken(leadingTrivia: .newline)
+                )
+            ),
+            body: CodeBlockSyntax(
+                leadingTrivia: .space,
+                leftBrace: .leftBraceToken(),
+                statements: CodeBlockItemListSyntax([
+                    assignmentCodeBlockItem(target: "self.fileID", value: "fileID"),
+                    assignmentCodeBlockItem(target: "self.filePath", value: "filePath"),
+                    assignmentCodeBlockItem(target: "self.line", value: "line"),
+                    assignmentCodeBlockItem(target: "self.column", value: "column")
+                ]),
+                rightBrace: .rightBraceToken(leadingTrivia: .newline)
+            )
+        )
+    }
+
     @ArrayBuilder<MemberBlockItemSyntax>
     var members: [MemberBlockItemSyntax] {
         properties
@@ -165,5 +231,23 @@ func property(
                 )
             ])
         )
+    )
+}
+
+func assignmentCodeBlockItem(
+    target: String,
+    value: String,
+    isLast: Bool = false
+) -> CodeBlockItemSyntax {
+    CodeBlockItemSyntax(
+        leadingTrivia: .newline + .spaces(4),
+        item: .expr(ExprSyntax(SequenceExprSyntax(
+            elements: ExprListSyntax([
+                ExprSyntax(DeclReferenceExprSyntax(baseName: .identifier(target))),
+                ExprSyntax(AssignmentExprSyntax(equal: .equalToken(leadingTrivia: .space, trailingTrivia: .space))),
+                ExprSyntax(DeclReferenceExprSyntax(baseName: .identifier(value)))
+            ])
+        ))),
+        trailingTrivia: isLast ? .newline : []
     )
 }

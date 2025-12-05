@@ -162,6 +162,33 @@ struct ProtocolMockBuilderTests {
         private let column: Int
         """)
     }
+
+    @Test func `initializer is correct`() {
+        let source = Parser.parse(source: """
+        protocol Foo {
+            func doSomething() -> Int
+        }
+        """)
+
+        let types = source.statements.map { $0.item.cast(ProtocolDeclSyntax.self) }
+
+        let sut = MockedProtocol(declaration: types[0], inherited: []).mockBuilder
+
+        #expect(sut.initializer.description.debugDescription == """
+
+        public init(
+            fileID: String = #fileID,
+            filePath: StaticString = #filePath,
+            line: UInt = #line,
+            column: Int = #column
+        ) {
+            self.fileID = fileID
+            self.filePath = filePath
+            self.line = line
+            self.column = column
+        }
+        """.debugDescription)
+    }
 }
 
 extension ClassDeclSyntax {
