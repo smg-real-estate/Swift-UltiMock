@@ -103,45 +103,10 @@ final class ProtocolMockBuilder: SyntaxBuilder {
                 parameterClause: FunctionParameterClauseSyntax(
                     leftParen: .leftParenToken(trailingTrivia: .newline + .spaces(4)),
                     parameters: FunctionParameterListSyntax([
-                        FunctionParameterSyntax(
-                            firstName: .identifier("fileID"),
-                            colon: .colonToken(trailingTrivia: .space),
-                            type: IdentifierTypeSyntax(name: .identifier("String")),
-                            defaultValue: InitializerClauseSyntax(
-                                equal: .equalToken(leadingTrivia: .space, trailingTrivia: .space),
-                                value: ExprSyntax(DeclReferenceExprSyntax(baseName: .identifier("#fileID")))
-                            ),
-                            trailingComma: .commaToken(trailingTrivia: .newline + .spaces(4))
-                        ),
-                        FunctionParameterSyntax(
-                            firstName: .identifier("filePath"),
-                            colon: .colonToken(trailingTrivia: .space),
-                            type: IdentifierTypeSyntax(name: .identifier("StaticString")),
-                            defaultValue: InitializerClauseSyntax(
-                                equal: .equalToken(leadingTrivia: .space, trailingTrivia: .space),
-                                value: ExprSyntax(DeclReferenceExprSyntax(baseName: .identifier("#filePath")))
-                            ),
-                            trailingComma: .commaToken(trailingTrivia: .newline + .spaces(4))
-                        ),
-                        FunctionParameterSyntax(
-                            firstName: .identifier("line"),
-                            colon: .colonToken(trailingTrivia: .space),
-                            type: IdentifierTypeSyntax(name: .identifier("UInt")),
-                            defaultValue: InitializerClauseSyntax(
-                                equal: .equalToken(leadingTrivia: .space, trailingTrivia: .space),
-                                value: ExprSyntax(DeclReferenceExprSyntax(baseName: .identifier("#line")))
-                            ),
-                            trailingComma: .commaToken(trailingTrivia: .newline + .spaces(4))
-                        ),
-                        FunctionParameterSyntax(
-                            firstName: .identifier("column"),
-                            colon: .colonToken(trailingTrivia: .space),
-                            type: IdentifierTypeSyntax(name: .identifier("Int")),
-                            defaultValue: InitializerClauseSyntax(
-                                equal: .equalToken(leadingTrivia: .space, trailingTrivia: .space),
-                                value: ExprSyntax(DeclReferenceExprSyntax(baseName: .identifier("#column")))
-                            )
-                        )
+                        functionParameter(firstName: "fileID", type: "String", defaultValue: "#fileID"),
+                        functionParameter(firstName: "filePath", type: "StaticString", defaultValue: "#filePath"),
+                        functionParameter(firstName: "line", type: "UInt", defaultValue: "#line"),
+                        functionParameter(firstName: "column", type: "Int", defaultValue: "#column", isLast: true)
                     ]),
                     rightParen: .rightParenToken(leadingTrivia: .newline)
                 )
@@ -163,8 +128,110 @@ final class ProtocolMockBuilder: SyntaxBuilder {
     @ArrayBuilder<MemberBlockItemSyntax>
     var members: [MemberBlockItemSyntax] {
         properties
+        MemberBlockItemSyntax(decl: initializer)
         MemberBlockItemSyntax(decl: methodsEnum)
         MemberBlockItemSyntax(decl: methodExpectations)
+        MemberBlockItemSyntax(decl: recordMethod)
+    }
+
+    var recordMethod: FunctionDeclSyntax {
+        FunctionDeclSyntax(
+            modifiers: DeclModifierListSyntax([DeclModifierSyntax(name: .keyword(.private, trailingTrivia: .space))]),
+            funcKeyword: .keyword(.func, trailingTrivia: .space),
+            name: .identifier("_record"),
+            genericParameterClause: GenericParameterClauseSyntax(
+                parameters: GenericParameterListSyntax([
+                    GenericParameterSyntax(name: .identifier("P"))
+                ])
+            ),
+            signature: FunctionSignatureSyntax(
+                parameterClause: FunctionParameterClauseSyntax(
+                    leftParen: .leftParenToken(trailingTrivia: .newline + .spaces(4)),
+                    parameters: FunctionParameterListSyntax([
+                        functionParameter(
+                            secondName: .identifier("expectation"),
+                            type: TypeSyntax(MemberTypeSyntax(
+                                baseType: IdentifierTypeSyntax(name: .identifier("Recorder")),
+                                name: .identifier("Expectation")
+                            ))
+                        ),
+                        functionParameter(secondName: "fileID", type: "String"),
+                        functionParameter(secondName: "filePath", type: "StaticString"),
+                        functionParameter(secondName: "line", type: "UInt"),
+                        functionParameter(secondName: "column", type: "Int"),
+                        functionParameter(secondName: "perform", type: "P", isLast: true)
+                    ]),
+                    rightParen: .rightParenToken(leadingTrivia: .newline)
+                )
+            ),
+            body: CodeBlockSyntax(
+                leftBrace: .leftBraceToken(leadingTrivia: .space),
+                statements: CodeBlockItemListSyntax([
+                    CodeBlockItemSyntax(
+                        item: .stmt(StmtSyntax(GuardStmtSyntax(
+                            guardKeyword: .keyword(.guard, leadingTrivia: .newline + .spaces(4), trailingTrivia: .space),
+                            conditions: ConditionElementListSyntax([
+                                ConditionElementSyntax(condition: .expression(ExprSyntax(DeclReferenceExprSyntax(baseName: .identifier("isEnabled")))))
+                            ]),
+                            elseKeyword: .keyword(.else, leadingTrivia: .space, trailingTrivia: .space),
+                            body: CodeBlockSyntax(
+                                leftBrace: .leftBraceToken(trailingTrivia: .newline),
+                                statements: CodeBlockItemListSyntax([
+                                    CodeBlockItemSyntax(
+                                        leadingTrivia: .spaces(8),
+                                        item: .expr(ExprSyntax(functionCall(
+                                            calledExpression: DeclReferenceExprSyntax(baseName: .identifier("handleFatalFailure")),
+                                            arguments: [
+                                                labeledExpr(expression: StringLiteralExprSyntax(
+                                                    openingQuote: .stringQuoteToken(),
+                                                    segments: StringLiteralSegmentListSyntax([
+                                                        .stringSegment(StringSegmentSyntax(content: .stringSegment("Setting expectation on disabled mock is not allowed")))
+                                                    ]),
+                                                    closingQuote: .stringQuoteToken()
+                                                )),
+                                                labeledExpr(label: "fileID", expression: DeclReferenceExprSyntax(baseName: .identifier("fileID"))),
+                                                labeledExpr(label: "filePath", expression: DeclReferenceExprSyntax(baseName: .identifier("filePath"))),
+                                                labeledExpr(label: "line", expression: DeclReferenceExprSyntax(baseName: .identifier("line"))),
+                                                labeledExpr(label: "column", expression: DeclReferenceExprSyntax(baseName: .identifier("column")), isLast: true)
+                                            ]
+                                        )))
+                                    )
+                                ]),
+                                rightBrace: .rightBraceToken(leadingTrivia: .newline + .spaces(4))
+                            )
+                        )))
+                    ),
+                    CodeBlockItemSyntax(
+                        leadingTrivia: .newline + .spaces(4),
+                        item: .expr(ExprSyntax(functionCall(
+                            calledExpression: MemberAccessExprSyntax(
+                                base: DeclReferenceExprSyntax(baseName: .identifier("recorder")),
+                                name: .identifier("record")
+                            ),
+                            arguments: [
+                                labeledExpr(
+                                    expression: functionCall(
+                                        calledExpression: MemberAccessExprSyntax(name: .keyword(.`init`)),
+                                        arguments: [
+                                            labeledExpr(expression: DeclReferenceExprSyntax(baseName: .identifier("expectation"))),
+                                            labeledExpr(expression: DeclReferenceExprSyntax(baseName: .identifier("perform"))),
+                                            labeledExpr(expression: DeclReferenceExprSyntax(baseName: .identifier("fileID"))),
+                                            labeledExpr(expression: DeclReferenceExprSyntax(baseName: .identifier("filePath"))),
+                                            labeledExpr(expression: DeclReferenceExprSyntax(baseName: .identifier("line"))),
+                                            labeledExpr(expression: DeclReferenceExprSyntax(baseName: .identifier("column")), isLast: true)
+                                        ]
+                                    ),
+                                    isLast: true
+                                )
+                            ],
+                            leftParenTrivia: .newline + .spaces(8),
+                            rightParenTrivia: .newline + .spaces(4)
+                        )))
+                    )
+                ]),
+                rightBrace: .rightBraceToken(leadingTrivia: .newline)
+            )
+        )
     }
 
     var inheritanceClause: InheritanceClauseSyntax {

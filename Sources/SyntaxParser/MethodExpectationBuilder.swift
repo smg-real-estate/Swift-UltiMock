@@ -1,6 +1,6 @@
 import SwiftSyntax
 
-struct MethodExpectationBuilder {
+struct MethodExpectationBuilder: SyntaxBuilder {
     let allMethods: [MockType.Method]
 
     var declaration: StructDeclSyntax {
@@ -72,20 +72,20 @@ struct MethodExpectationBuilder {
                 parameterClause: FunctionParameterClauseSyntax(
                     leftParen: .leftParenToken(),
                     parameters: FunctionParameterListSyntax([
-                        FunctionParameterSyntax(
-                            firstName: .identifier("method"),
-                            colon: .colonToken(trailingTrivia: .space),
-                            type: IdentifierTypeSyntax(name: .identifier("MockMethod")),
-                            trailingComma: .commaToken(trailingTrivia: .space)
+                        functionParameter(
+                            firstName: "method",
+                            type: "MockMethod",
+                            trailingTrivia: .space
                         ),
-                        FunctionParameterSyntax(
-                            firstName: .identifier("parameters"),
-                            colon: .colonToken(trailingTrivia: .space),
-                            type: ArrayTypeSyntax(
+                        functionParameter(
+                            firstName: "parameters",
+                            type: TypeSyntax(ArrayTypeSyntax(
                                 leftSquare: .leftSquareToken(),
                                 element: IdentifierTypeSyntax(name: .identifier("AnyParameter")),
                                 rightSquare: .rightSquareToken()
-                            )
+                            )),
+                            trailingTrivia: .space,
+                            isLast: true
                         )
                     ]),
                     rightParen: .rightParenToken(trailingTrivia: .space)
@@ -104,28 +104,27 @@ struct MethodExpectationBuilder {
                                     name: .identifier("expectation")
                                 )),
                                 ExprSyntax(AssignmentExprSyntax(equal: .equalToken(leadingTrivia: .space, trailingTrivia: .space))),
-                                ExprSyntax(FunctionCallExprSyntax(
+                                ExprSyntax(functionCall(
                                     calledExpression: MemberAccessExprSyntax(
                                         period: .periodToken(),
                                         name: .identifier("init")
                                     ),
-                                    leftParen: .leftParenToken(),
-                                    arguments: LabeledExprListSyntax([
-                                        LabeledExprSyntax(
+                                    arguments: [
+                                        labeledExpr(
                                             leadingTrivia: .newline + .spaces(12),
-                                            label: .identifier("method"),
-                                            colon: .colonToken(trailingTrivia: .space),
+                                            label: "method",
                                             expression: DeclReferenceExprSyntax(baseName: .identifier("method")),
-                                            trailingComma: .commaToken()
+                                            trailingTrivia: []
                                         ),
-                                        LabeledExprSyntax(
+                                        labeledExpr(
                                             leadingTrivia: .newline + .spaces(12),
-                                            label: .identifier("parameters"),
-                                            colon: .colonToken(trailingTrivia: .space),
-                                            expression: DeclReferenceExprSyntax(baseName: .identifier("parameters"))
+                                            label: "parameters",
+                                            expression: DeclReferenceExprSyntax(baseName: .identifier("parameters")),
+                                            isLast: true
                                         )
-                                    ]),
-                                    rightParen: .rightParenToken(leadingTrivia: .newline + .spaces(8))
+                                    ],
+                                    leftParenTrivia: [],
+                                    rightParenTrivia: .newline + .spaces(8)
                                 ))
                             ])
                         )))

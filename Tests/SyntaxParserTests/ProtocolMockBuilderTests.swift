@@ -174,7 +174,7 @@ struct ProtocolMockBuilderTests {
 
         let sut = MockedProtocol(declaration: types[0], inherited: []).mockBuilder
 
-        #expect(sut.initializer.description.debugDescription == """
+        #expect(sut.initializer.description == """
 
         public init(
             fileID: String = #fileID,
@@ -187,7 +187,50 @@ struct ProtocolMockBuilderTests {
             self.line = line
             self.column = column
         }
-        """.debugDescription)
+        """)
+    }
+
+    @Test func `recordMethod is correct`() {
+        let source = Parser.parse(source: """
+        protocol Foo {
+            func doSomething() -> Int
+        }
+        """)
+
+        let types = source.statements.map { $0.item.cast(ProtocolDeclSyntax.self) }
+
+        let sut = MockedProtocol(declaration: types[0], inherited: []).mockBuilder
+
+        #expect(sut.recordMethod.description == """
+        private func _record<P>(
+            _ expectation: Recorder.Expectation,
+            _ fileID: String,
+            _ filePath: StaticString,
+            _ line: UInt,
+            _ column: Int,
+            _ perform: P
+        ) {
+            guard isEnabled else {
+                handleFatalFailure(
+                    "Setting expectation on disabled mock is not allowed",
+                    fileID: fileID,
+                    filePath: filePath,
+                    line: line,
+                    column: column
+                )
+            }
+            recorder.record(
+                .init(
+                    expectation,
+                    perform,
+                    fileID,
+                    filePath,
+                    line,
+                    column
+                )
+            )
+        }
+        """)
     }
 }
 
