@@ -140,6 +140,28 @@ struct ProtocolMockBuilderTests {
         }
         """)
     }
+
+    @Test func `properties is comprehensive`() {
+        let source = Parser.parse(source: """
+        protocol Foo {
+            func doSomething() -> Int
+        }
+        """)
+
+        let types = source.statements.map { $0.item.cast(ProtocolDeclSyntax.self) }
+
+        let sut = MockedProtocol(declaration: types[0], inherited: []).mockBuilder
+
+        #expect(MemberBlockItemListSyntax(sut.properties).description == """
+
+        public let recorder = Recorder()
+
+        private let fileID: String
+        private let filePath: StaticString
+        private let line: UInt
+        private let column: Int
+        """)
+    }
 }
 
 extension ClassDeclSyntax {

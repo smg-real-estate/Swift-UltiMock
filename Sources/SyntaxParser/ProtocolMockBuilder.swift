@@ -76,11 +76,32 @@ final class ProtocolMockBuilder {
     }
 
     @ArrayBuilder<MemberBlockItemSyntax>
-    var members: [MemberBlockItemSyntax] {
-        MemberBlockItemSyntax(decl: methodsEnum)
+    var properties: [MemberBlockItemSyntax] {
+        property(.public, name: "recorder", initializer: InitializerClauseSyntax(
+            equal: .equalToken(leadingTrivia: .space, trailingTrivia: .space),
+            value: FunctionCallExprSyntax(
+                calledExpression: DeclReferenceExprSyntax(baseName: .identifier("Recorder")),
+                leftParen: .leftParenToken(),
+                arguments: LabeledExprListSyntax([]),
+                rightParen: .rightParenToken()
+            )
+        ))
+        .with(\.leadingTrivia, .newline)
+
+        property(name: "fileID", type: "String").with(\.leadingTrivia, .newlines(2))
+        property(name: "filePath", type: "StaticString")
+        property(name: "line", type: "UInt")
+        property(name: "column", type: "Int")
     }
 
-    var mockClass: ClassDeclSyntax {
+    @ArrayBuilder<MemberBlockItemSyntax>
+    var members: [MemberBlockItemSyntax] {
+        properties
+        MemberBlockItemSyntax(decl: methodsEnum)
+        MemberBlockItemSyntax(decl: methodExpectations)
+    }
+
+    var inheritanceClause: InheritanceClauseSyntax {
         let mockType = IdentifierTypeSyntax(name: .identifier("Mock"))
 
         let sendableType = IdentifierTypeSyntax(name: .identifier("Sendable"))
@@ -93,20 +114,24 @@ final class ProtocolMockBuilder {
             baseType: sendableType
         )
 
-        return ClassDeclSyntax(
+        return InheritanceClauseSyntax(
+            colon: .colonToken(trailingTrivia: .space),
+            inheritedTypes: InheritedTypeListSyntax([
+                InheritedTypeSyntax(
+                    type: mockType,
+                    trailingComma: .commaToken(trailingTrivia: .space)
+                ),
+                InheritedTypeSyntax(type: uncheckedSendableType)
+            ])
+        )
+    }
+
+    var mockClass: ClassDeclSyntax {
+        ClassDeclSyntax(
             classKeyword: .keyword(.class, trailingTrivia: .space),
             name: .identifier(mockClassName),
             genericParameterClause: genericParameterClause,
-            inheritanceClause: InheritanceClauseSyntax(
-                colon: .colonToken(trailingTrivia: .space),
-                inheritedTypes: InheritedTypeListSyntax([
-                    InheritedTypeSyntax(
-                        type: mockType,
-                        trailingComma: .commaToken(trailingTrivia: .space)
-                    ),
-                    InheritedTypeSyntax(type: uncheckedSendableType)
-                ])
-            ),
+            inheritanceClause: inheritanceClause,
             memberBlock: MemberBlockSyntax(
                 leftBrace: .leftBraceToken(leadingTrivia: .space, trailingTrivia: .newline),
                 members: MemberBlockItemListSyntax(members),
@@ -114,4 +139,31 @@ final class ProtocolMockBuilder {
             )
         )
     }
+}
+
+func property(
+    _ accessLevel: Keyword = .private,
+    name: String,
+    type: String? = nil,
+    initializer: InitializerClauseSyntax? = nil
+) -> MemberBlockItemSyntax {
+    MemberBlockItemSyntax(
+        leadingTrivia: .newline,
+        decl: VariableDeclSyntax(
+            modifiers: DeclModifierListSyntax([DeclModifierSyntax(name: .keyword(accessLevel, trailingTrivia: .space))]),
+            bindingSpecifier: .keyword(.let, trailingTrivia: .space),
+            bindings: PatternBindingListSyntax([
+                PatternBindingSyntax(
+                    pattern: IdentifierPatternSyntax(identifier: .identifier(name)),
+                    typeAnnotation: type.map {
+                        TypeAnnotationSyntax(
+                            colon: .colonToken(trailingTrivia: .space),
+                            type: IdentifierTypeSyntax(name: .identifier($0))
+                        )
+                    },
+                    initializer: initializer
+                )
+            ])
+        )
+    )
 }
