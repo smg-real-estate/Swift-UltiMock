@@ -106,6 +106,163 @@ extension MockType {
             return description
         }
 
+        var expectationMethodDeclaration: FunctionDeclSyntax {
+            let parameters = declaration.signature.parameterClause.parameters
+            let methodName = declaration.name.text
+
+            // Build function parameters with Parameter<T> type
+            let functionParameters = FunctionParameterListSyntax(
+                parameters.enumerated().map { index, param -> FunctionParameterSyntax in
+                    let label = param.firstName.text
+                    let paramName = label == "_" ? (param.secondName?.text ?? "") : label
+
+                    let parameterType = IdentifierTypeSyntax(
+                        name: .identifier("Parameter"),
+                        genericArgumentClause: GenericArgumentClauseSyntax(
+                            leftAngle: .leftAngleToken(),
+                            arguments: GenericArgumentListSyntax([
+                                GenericArgumentSyntax(argument: param.type)
+                            ]),
+                            rightAngle: .rightAngleToken()
+                        )
+                    )
+
+                    return FunctionParameterSyntax(
+                        firstName: .identifier(paramName),
+                        colon: .colonToken(trailingTrivia: .space),
+                        type: parameterType,
+                        trailingComma: index < parameters.count - 1 ? .commaToken(trailingTrivia: .space) : nil
+                    )
+                }
+            )
+
+            // Build tuple elements for where clause signature
+            let whereSignatureElements = TupleTypeElementListSyntax(
+                parameters.enumerated().map { index, param -> TupleTypeElementSyntax in
+                    let label = param.firstName.text
+                    let paramName = label == "_" ? (param.secondName?.text ?? "") : label
+
+                    return TupleTypeElementSyntax(
+                        firstName: .identifier("_"),
+                        secondName: .identifier(paramName, leadingTrivia: .space),
+                        colon: .colonToken(trailingTrivia: .space),
+                        type: param.type,
+                        trailingComma: index < parameters.count - 1 ? .commaToken(trailingTrivia: .space) : nil
+                    )
+                }
+            )
+
+            let whereSignature = TypeSyntax(TupleTypeSyntax(
+                leftParen: .leftParenToken(),
+                elements: whereSignatureElements,
+                rightParen: .rightParenToken()
+            ))
+
+            let fullSignature = FunctionTypeSyntax(
+                parameters: whereSignatureElements,
+                returnClause: ReturnClauseSyntax(
+                    leadingTrivia: .space,
+                    arrow: .arrowToken(trailingTrivia: .space),
+                    type: IdentifierTypeSyntax(name: .identifier("Void"))
+                )
+            )
+
+            // Build argument list for .init call
+            let argumentList = LabeledExprListSyntax(
+                [
+                    LabeledExprSyntax(
+                        leadingTrivia: .newline + .spaces(12),
+                        label: .identifier("method"),
+                        colon: .colonToken(trailingTrivia: .space),
+                        expression: MemberAccessExprSyntax(
+                            base: DeclReferenceExprSyntax(baseName: .identifier("Methods")),
+                            period: .periodToken(),
+                            name: .identifier(stubIdentifier)
+                        ),
+                        trailingComma: .commaToken()
+                    ),
+                    LabeledExprSyntax(
+                        leadingTrivia: .newline + .spaces(12),
+                        label: .identifier("parameters"),
+                        colon: .colonToken(trailingTrivia: .space),
+                        expression: ArrayExprSyntax(
+                            leftSquare: .leftSquareToken(),
+                            elements: ArrayElementListSyntax(
+                                parameters.enumerated().map { index, param -> ArrayElementSyntax in
+                                    let label = param.firstName.text
+                                    let paramName = label == "_" ? (param.secondName?.text ?? "") : label
+
+                                    return ArrayElementSyntax(
+                                        expression: MemberAccessExprSyntax(
+                                            base: DeclReferenceExprSyntax(baseName: .identifier(paramName)),
+                                            period: .periodToken(),
+                                            name: .identifier("anyParameter")
+                                        ),
+                                        trailingComma: index < parameters.count - 1 ? .commaToken(trailingTrivia: .space) : nil
+                                    )
+                                }
+                            ),
+                            rightSquare: .rightSquareToken()
+                        )
+                    )
+                ]
+            )
+
+            return FunctionDeclSyntax(
+                modifiers: DeclModifierListSyntax([
+                    DeclModifierSyntax(name: .keyword(.static, trailingTrivia: .space))
+                ]),
+                funcKeyword: .keyword(.func, trailingTrivia: .space),
+                name: .identifier(methodName),
+                genericParameterClause: declaration.genericParameterClause,
+                signature: FunctionSignatureSyntax(
+                    parameterClause: FunctionParameterClauseSyntax(
+                        leftParen: .leftParenToken(),
+                        parameters: functionParameters,
+                        rightParen: .rightParenToken()
+                    ),
+                    returnClause: ReturnClauseSyntax(
+                        leadingTrivia: .space,
+                        arrow: .arrowToken(trailingTrivia: .space),
+                        type: IdentifierTypeSyntax(name: .keyword(.Self))
+                    )
+                ),
+                genericWhereClause: GenericWhereClauseSyntax(
+                    leadingTrivia: .newline + .spaces(4),
+                    whereKeyword: .keyword(.where, trailingTrivia: .space),
+                    requirements: GenericRequirementListSyntax([
+                        GenericRequirementSyntax(
+                            requirement: .sameTypeRequirement(SameTypeRequirementSyntax(
+                                leftType: IdentifierTypeSyntax(name: .identifier("Signature")),
+                                equal: .binaryOperator("==", leadingTrivia: .space, trailingTrivia: .space),
+                                rightType: fullSignature
+                            ))
+                        )
+                    ])
+                ),
+                body: CodeBlockSyntax(
+                    leadingTrivia: .space,
+                    leftBrace: .leftBraceToken(),
+                    statements: CodeBlockItemListSyntax([
+                        CodeBlockItemSyntax(
+                            leadingTrivia: .newline + .spaces(8),
+                            item: .expr(ExprSyntax(FunctionCallExprSyntax(
+                                calledExpression: MemberAccessExprSyntax(
+                                    period: .periodToken(),
+                                    name: .identifier("init")
+                                ),
+                                leftParen: .leftParenToken(),
+                                arguments: argumentList,
+                                rightParen: .rightParenToken(leadingTrivia: .newline + .spaces(8))
+                            ))),
+                            trailingTrivia: .newline + .spaces(4)
+                        )
+                    ]),
+                    rightBrace: .rightBraceToken()
+                )
+            )
+        }
+
         var variableDeclaration: VariableDeclSyntax {
             let identifier = stubIdentifier
             let callDescription = callDescription

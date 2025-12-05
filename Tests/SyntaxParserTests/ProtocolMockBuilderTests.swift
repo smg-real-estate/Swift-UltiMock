@@ -94,6 +94,52 @@ struct ProtocolMockBuilderTests {
         }
         """)
     }
+
+    @Test func `methodExpectation contains expectations for all methods`() {
+        let source = Parser.parse(source: """
+        protocol Foo {
+            func doSomething() -> Int
+        }
+
+        protocol Bar: Foo {
+            func doSomethingElse<T>(with: T) async throws -> String where T: Equatable
+        }
+        """)
+
+        let types = source.statements.map { $0.item.cast(ProtocolDeclSyntax.self) }
+
+        let sut = MockedProtocol(declaration: types[1], inherited: [types[0]]).mockBuilder
+
+        #expect(sut.methodExpectations.description == """
+
+        struct MethodExpectation<Signature> {
+            let expectation: Recorder.Expectation
+
+            init(method: MockMethod, parameters: [AnyParameter]) {
+                self.expectation = .init(
+                    method: method,
+                    parameters: parameters
+                )
+            }
+
+            static func doSomething() -> Self
+            where Signature == () -> Void {
+                .init(
+                    method: Methods.doSomething_ret_Int,
+                    parameters: []
+                )
+            }
+
+            static func doSomethingElse<T>(with: Parameter<T>) -> Self
+            where Signature == (_ with: T) -> Void {
+                .init(
+                    method: Methods.doSomethingElse_async_with_T_async_throws_ret_String_where_T_con_Equatable,
+                    parameters: [with.anyParameter]
+                )
+            }
+        }
+        """)
+    }
 }
 
 extension ClassDeclSyntax {
