@@ -146,6 +146,10 @@ final class ProtocolMockBuilder: SyntaxBuilder {
         allMethods.map(\.implementation)
     }
 
+    var expectationSetters: [FunctionDeclSyntax] {
+        allMethods.map(\.expect)
+    }
+
     var recordMethod: FunctionDeclSyntax {
         FunctionDeclSyntax(
             modifiers: DeclModifierListSyntax([DeclModifierSyntax(name: .keyword(.private, trailingTrivia: .space))]),

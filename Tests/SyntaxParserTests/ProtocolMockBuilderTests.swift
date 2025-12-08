@@ -304,6 +304,63 @@ struct ProtocolMockBuilderTests {
             """#
         )
     }
+
+    @Test func `expectationSetters contains expect method declarations`() throws {
+        let source = Parser.parse(source: """
+        protocol Foo {
+            func doSomething() -> Int
+            func doSomethingElse(with: String) async throws -> Bool
+        }
+        """)
+
+        let types = source.statements.map { $0.item.cast(ProtocolDeclSyntax.self) }
+
+        let sut = MockedProtocol(declaration: types[0], inherited: []).mockBuilder
+
+        #expect(sut.expectationSetters.count == 2)
+
+        let firstExpect = try #require(sut.expectationSetters.first)
+        #expect(firstExpect.trimmedDescription == """
+        public func expect(
+            _ expectation: MethodExpectation<() -> Int>,
+            fileID: String = #fileID,
+            filePath: StaticString = #filePath,
+            line: UInt = #line,
+            column: Int = #column,
+            perform: @escaping () -> Int
+        ) {
+            _record(
+                expectation.expectation,
+                fileID,
+                filePath,
+                line,
+                column,
+                perform
+            )
+        }
+        """)
+
+        let secondExpect = try #require(sut.expectationSetters.last)
+        #expect(secondExpect.trimmedDescription == """
+        public func expect(
+            _ expectation: MethodExpectation<(_ with: String) async throws -> Bool>,
+            fileID: String = #fileID,
+            filePath: StaticString = #filePath,
+            line: UInt = #line,
+            column: Int = #column,
+            perform: @escaping (_ with: String) async throws -> Bool
+        ) {
+            _record(
+                expectation.expectation,
+                fileID,
+                filePath,
+                line,
+                column,
+                perform
+            )
+        }
+        """)
+    }
 }
 
 extension ClassDeclSyntax {
