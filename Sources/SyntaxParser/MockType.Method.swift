@@ -426,6 +426,165 @@ extension MockType {
                 ])
             )
         }
+
+        var expect: FunctionDeclSyntax {
+            let parameters = declaration.signature.parameterClause.parameters.map(\.self)
+            let effectSpecifiers = closureEffectSpecifiers()
+
+            let signatureType = FunctionTypeSyntax(
+                leftParen: .leftParenToken(),
+                parameters: closureParameterElements(for: parameters),
+                rightParen: .rightParenToken(),
+                effectSpecifiers: effectSpecifiers,
+                returnClause: ReturnClauseSyntax(
+                    leadingTrivia: effectSpecifiers == nil ? .space : [],
+                    arrow: .arrowToken(trailingTrivia: .space),
+                    type: closureReturnType
+                )
+            )
+
+            var performParametersElements: [TupleTypeElementSyntax] = []
+            for param in closureParameterElements(for: parameters) {
+                performParametersElements.append(param)
+            }
+
+            let performType = FunctionTypeSyntax(
+                leftParen: .leftParenToken(),
+                parameters: TupleTypeElementListSyntax(performParametersElements),
+                rightParen: .rightParenToken(),
+                effectSpecifiers: effectSpecifiers,
+                returnClause: ReturnClauseSyntax(
+                    leadingTrivia: effectSpecifiers == nil ? .space : [],
+                    arrow: .arrowToken(trailingTrivia: .space),
+                    type: closureReturnType
+                )
+            )
+
+            return FunctionDeclSyntax(
+                modifiers: DeclModifierListSyntax([DeclModifierSyntax(name: .keyword(.public, trailingTrivia: .space))]),
+                funcKeyword: .keyword(.func, trailingTrivia: .space),
+                name: .identifier("expect"),
+                signature: FunctionSignatureSyntax(
+                    parameterClause: FunctionParameterClauseSyntax(
+                        leftParen: .leftParenToken(),
+                        parameters: FunctionParameterListSyntax([
+                            FunctionParameterSyntax(
+                                leadingTrivia: .newline + .spaces(4),
+                                firstName: .identifier("_"),
+                                secondName: .identifier("expectation", leadingTrivia: .space),
+                                colon: .colonToken(trailingTrivia: .space),
+                                type: IdentifierTypeSyntax(
+                                    name: .identifier("MethodExpectation"),
+                                    genericArgumentClause: GenericArgumentClauseSyntax(
+                                        arguments: GenericArgumentListSyntax([
+                                            GenericArgumentSyntax(argument: TypeSyntax(signatureType))
+                                        ])
+                                    )
+                                ),
+                                trailingComma: .commaToken(trailingTrivia: .newline + .spaces(4))
+                            ),
+                            FunctionParameterSyntax(
+                                firstName: .identifier("fileID"),
+                                colon: .colonToken(trailingTrivia: .space),
+                                type: IdentifierTypeSyntax(name: .identifier("String")),
+                                defaultValue: InitializerClauseSyntax(
+                                    equal: .equalToken(leadingTrivia: .space, trailingTrivia: .space),
+                                    value: MacroExpansionExprSyntax(macroName: .identifier("fileID"), arguments: [])
+                                ),
+                                trailingComma: .commaToken(trailingTrivia: .newline + .spaces(4))
+                            ),
+                            FunctionParameterSyntax(
+                                firstName: .identifier("filePath"),
+                                colon: .colonToken(trailingTrivia: .space),
+                                type: IdentifierTypeSyntax(name: .identifier("StaticString")),
+                                defaultValue: InitializerClauseSyntax(
+                                    equal: .equalToken(leadingTrivia: .space, trailingTrivia: .space),
+                                    value: MacroExpansionExprSyntax(macroName: .identifier("filePath"), arguments: [])
+                                ),
+                                trailingComma: .commaToken(trailingTrivia: .newline + .spaces(4))
+                            ),
+                            FunctionParameterSyntax(
+                                firstName: .identifier("line"),
+                                colon: .colonToken(trailingTrivia: .space),
+                                type: IdentifierTypeSyntax(name: .identifier("UInt")),
+                                defaultValue: InitializerClauseSyntax(
+                                    equal: .equalToken(leadingTrivia: .space, trailingTrivia: .space),
+                                    value: MacroExpansionExprSyntax(macroName: .identifier("line"), arguments: [])
+                                ),
+                                trailingComma: .commaToken(trailingTrivia: .newline + .spaces(4))
+                            ),
+                            FunctionParameterSyntax(
+                                firstName: .identifier("column"),
+                                colon: .colonToken(trailingTrivia: .space),
+                                type: IdentifierTypeSyntax(name: .identifier("Int")),
+                                defaultValue: InitializerClauseSyntax(
+                                    equal: .equalToken(leadingTrivia: .space, trailingTrivia: .space),
+                                    value: MacroExpansionExprSyntax(macroName: .identifier("column"), arguments: [])
+                                ),
+                                trailingComma: .commaToken(trailingTrivia: .newline + .spaces(4))
+                            ),
+                            FunctionParameterSyntax(
+                                firstName: .identifier("perform"),
+                                colon: .colonToken(trailingTrivia: .space),
+                                type: AttributedTypeSyntax(
+                                    attributes: AttributeListSyntax([
+                                        .attribute(AttributeSyntax(
+                                            atSign: .atSignToken(),
+                                            attributeName: IdentifierTypeSyntax(name: .identifier("escaping", trailingTrivia: .space))
+                                        ))
+                                    ]),
+                                    baseType: TypeSyntax(performType)
+                                )
+                            )
+                        ]),
+                        rightParen: .rightParenToken(leadingTrivia: .newline)
+                    )
+                ),
+                body: CodeBlockSyntax(
+                    leftBrace: .leftBraceToken(leadingTrivia: .space),
+                    statements: CodeBlockItemListSyntax([
+                        CodeBlockItemSyntax(
+                            leadingTrivia: .newline + .spaces(4),
+                            item: .expr(ExprSyntax(FunctionCallExprSyntax(
+                                calledExpression: DeclReferenceExprSyntax(baseName: .identifier("_record")),
+                                leftParen: .leftParenToken(),
+                                arguments: LabeledExprListSyntax([
+                                    LabeledExprSyntax(
+                                        expression: MemberAccessExprSyntax(
+                                            base: DeclReferenceExprSyntax(baseName: .identifier("expectation", leadingTrivia: .newline + .spaces(8))),
+                                            period: .periodToken(),
+                                            name: .identifier("expectation")
+                                        ),
+                                        trailingComma: .commaToken(trailingTrivia: .newline + .spaces(8))
+                                    ),
+                                    LabeledExprSyntax(
+                                        expression: DeclReferenceExprSyntax(baseName: .identifier("fileID")),
+                                        trailingComma: .commaToken(trailingTrivia: .newline + .spaces(8))
+                                    ),
+                                    LabeledExprSyntax(
+                                        expression: DeclReferenceExprSyntax(baseName: .identifier("filePath")),
+                                        trailingComma: .commaToken(trailingTrivia: .newline + .spaces(8))
+                                    ),
+                                    LabeledExprSyntax(
+                                        expression: DeclReferenceExprSyntax(baseName: .identifier("line")),
+                                        trailingComma: .commaToken(trailingTrivia: .newline + .spaces(8))
+                                    ),
+                                    LabeledExprSyntax(
+                                        expression: DeclReferenceExprSyntax(baseName: .identifier("column")),
+                                        trailingComma: .commaToken(trailingTrivia: .newline + .spaces(8))
+                                    ),
+                                    LabeledExprSyntax(
+                                        expression: DeclReferenceExprSyntax(baseName: .identifier("perform"))
+                                    )
+                                ]),
+                                rightParen: .rightParenToken(leadingTrivia: .newline + .spaces(4))
+                            )))
+                        )
+                    ]),
+                    rightBrace: .rightBraceToken(leadingTrivia: .newline)
+                )
+            )
+        }
     }
 }
 
@@ -437,7 +596,7 @@ private extension MockType.Method {
                     firstName: .identifier("_"),
                     secondName: parameter.parameterIdentifier.with(\.leadingTrivia, .space),
                     colon: .colonToken(trailingTrivia: .space),
-                    type: parameter.type,
+                    type: parameter.type.trimmed,
                     trailingComma: index < parameters.count - 1 ? .commaToken(trailingTrivia: .space) : nil
                 )
             }
@@ -461,7 +620,7 @@ private extension MockType.Method {
 
     var closureReturnType: TypeSyntax {
         if let type = declaration.signature.returnClause?.type {
-            return type.with(\.leadingTrivia, []).with(\.trailingTrivia, [])
+            return type.trimmed
         }
         return TypeSyntax(IdentifierTypeSyntax(name: .identifier("Void")))
     }

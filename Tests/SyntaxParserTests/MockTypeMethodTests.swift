@@ -121,6 +121,25 @@ struct MockTypeMethodTests {
         """#)
     }
 
+    @Test func `implementation emits correct body for generics with equality constraint`() throws {
+        let syntax = Parser.parse(source: #"""
+        func withGenericConstraints<A>(a: A, b: B) where A: Codable, B == Int
+        """#).statements.first?.item
+        let declaration = try #require(FunctionDeclSyntax(syntax))
+
+        let sut = MockType.Method(declaration: declaration)
+
+        #expect(sut.implementation.description == #"""
+        func withGenericConstraints<A>(a: A, b: B) where A: Codable, B == Int {
+            let perform = _perform(
+                    Methods.\#(sut.stubIdentifier),
+                    [a, b]
+                ) as! (_ a: A, _ b: B) -> Void
+            return perform(a, b)
+        }
+        """#)
+    }
+
     @Test func `implementation emits correct body for annotated closure`() throws {
         let syntax = Parser.parse(source: #"""
         func withAnnotatedClosure(
@@ -179,5 +198,86 @@ struct MockTypeMethodTests {
             return perform()
         }
         """#)
+    }
+
+    @Test func `expect emits correct method for simple function`() throws {
+        let syntax = Parser.parse(source: "func foo()").statements.first?.item
+        let declaration = try #require(FunctionDeclSyntax(syntax))
+
+        let sut = MockType.Method(declaration: declaration)
+
+        #expect(sut.expect.description == """
+        public func expect(
+            _ expectation: MethodExpectation<() -> Void>,
+            fileID: String = #fileID,
+            filePath: StaticString = #filePath,
+            line: UInt = #line,
+            column: Int = #column,
+            perform: @escaping () -> Void
+        ) {
+            _record(
+                expectation.expectation,
+                fileID,
+                filePath,
+                line,
+                column,
+                perform
+            )
+        }
+        """)
+    }
+
+    @Test func `expect emits correct method for function with parameters and return`() throws {
+        let syntax = Parser.parse(source: "func foo(bar: Int) -> String").statements.first?.item
+        let declaration = try #require(FunctionDeclSyntax(syntax))
+
+        let sut = MockType.Method(declaration: declaration)
+
+        #expect(sut.expect.description == """
+        public func expect(
+            _ expectation: MethodExpectation<(_ bar: Int) -> String>,
+            fileID: String = #fileID,
+            filePath: StaticString = #filePath,
+            line: UInt = #line,
+            column: Int = #column,
+            perform: @escaping (_ bar: Int) -> String
+        ) {
+            _record(
+                expectation.expectation,
+                fileID,
+                filePath,
+                line,
+                column,
+                perform
+            )
+        }
+        """)
+    }
+
+    @Test func `expect emits correct method for async throws function`() throws {
+        let syntax = Parser.parse(source: "func foo() async throws").statements.first?.item
+        let declaration = try #require(FunctionDeclSyntax(syntax))
+
+        let sut = MockType.Method(declaration: declaration)
+
+        #expect(sut.expect.description == """
+        public func expect(
+            _ expectation: MethodExpectation<() async throws -> Void>,
+            fileID: String = #fileID,
+            filePath: StaticString = #filePath,
+            line: UInt = #line,
+            column: Int = #column,
+            perform: @escaping () async throws -> Void
+        ) {
+            _record(
+                expectation.expectation,
+                fileID,
+                filePath,
+                line,
+                column,
+                perform
+            )
+        }
+        """)
     }
 }
