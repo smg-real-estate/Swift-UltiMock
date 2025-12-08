@@ -26,3 +26,21 @@ extension FunctionParameterSyntax {
         }
     }
 }
+
+protocol CommaJoinableSyntax: SyntaxProtocol {
+    var trailingComma: TokenSyntax? { get set }
+}
+
+extension ArrayElementSyntax: CommaJoinableSyntax {}
+extension FunctionParameterSyntax: CommaJoinableSyntax {}
+extension TupleTypeElementSyntax: CommaJoinableSyntax {}
+extension LabeledExprSyntax: CommaJoinableSyntax {}
+extension GenericParameterSyntax: CommaJoinableSyntax {}
+
+extension Collection where Element: CommaJoinableSyntax {
+    func commaSeparated() -> [Element] {
+        enumerated().map { index, element in
+            element.with(\.trailingComma, index < count - 1 ? .commaToken(trailingTrivia: .space) : nil)
+        }
+    }
+}

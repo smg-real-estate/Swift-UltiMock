@@ -40,7 +40,7 @@ final class ProtocolMockBuilder: SyntaxBuilder {
         guard !allAssociatedTypes.isEmpty else {
             return nil
         }
-        let parameters = allAssociatedTypes.enumerated().map { index, associatedType -> GenericParameterSyntax in
+        let parameters = allAssociatedTypes.enumerated().map { _, associatedType -> GenericParameterSyntax in
             let inheritedTypes = associatedType.inheritanceClause?.inheritedTypes.map(\.type) ?? []
 
             let inheritedType: TypeSyntax?
@@ -61,10 +61,10 @@ final class ProtocolMockBuilder: SyntaxBuilder {
             return GenericParameterSyntax(
                 name: associatedType.name,
                 colon: inheritedType != nil ? .colonToken(trailingTrivia: .space) : nil,
-                inheritedType: inheritedType,
-                trailingComma: index < allAssociatedTypes.count - 1 ? .commaToken(trailingTrivia: .space) : nil
+                inheritedType: inheritedType
             )
         }
+        .commaSeparated()
 
         return GenericParameterClauseSyntax(
             parameters: GenericParameterListSyntax(parameters)

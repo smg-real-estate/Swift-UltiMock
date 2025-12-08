@@ -164,12 +164,12 @@ extension MockType {
             )
 
             let invocationArguments = LabeledExprListSyntax(
-                parameters.enumerated().map { index, parameter in
+                parameters.map { parameter in
                     LabeledExprSyntax(
-                        expression: parameter.invocationExpression,
-                        trailingComma: index < parameters.count - 1 ? .commaToken(trailingTrivia: .space) : nil
+                        expression: parameter.invocationExpression
                     )
                 }
+                .commaSeparated()
             )
 
             let performInvocation = FunctionCallExprSyntax(
@@ -228,7 +228,7 @@ extension MockType {
 
             // Build function parameters with Parameter<T> type
             let functionParameters = FunctionParameterListSyntax(
-                parameters.enumerated().map { index, param -> FunctionParameterSyntax in
+                parameters.map { param -> FunctionParameterSyntax in
                     let label = param.firstName.text
                     let paramName = label == "_" ? (param.secondName?.text ?? "") : label
 
@@ -246,15 +246,15 @@ extension MockType {
                     return FunctionParameterSyntax(
                         firstName: .identifier(paramName),
                         colon: .colonToken(trailingTrivia: .space),
-                        type: parameterType,
-                        trailingComma: index < parameters.count - 1 ? .commaToken(trailingTrivia: .space) : nil
+                        type: parameterType
                     )
                 }
+                .commaSeparated()
             )
 
             // Build tuple elements for where clause signature
             let whereSignatureElements = TupleTypeElementListSyntax(
-                parameters.enumerated().map { index, param -> TupleTypeElementSyntax in
+                parameters.map { param -> TupleTypeElementSyntax in
                     let label = param.firstName.text
                     let paramName = label == "_" ? (param.secondName?.text ?? "") : label
 
@@ -262,10 +262,10 @@ extension MockType {
                         firstName: .identifier("_"),
                         secondName: .identifier(paramName, leadingTrivia: .space),
                         colon: .colonToken(trailingTrivia: .space),
-                        type: param.type,
-                        trailingComma: index < parameters.count - 1 ? .commaToken(trailingTrivia: .space) : nil
+                        type: param.type
                     )
                 }
+                .commaSeparated()
             )
 
             let fullSignature = FunctionTypeSyntax(
@@ -298,7 +298,7 @@ extension MockType {
                         expression: ArrayExprSyntax(
                             leftSquare: .leftSquareToken(),
                             elements: ArrayElementListSyntax(
-                                parameters.enumerated().map { index, param -> ArrayElementSyntax in
+                                parameters.map { param -> ArrayElementSyntax in
                                     let label = param.firstName.text
                                     let paramName = label == "_" ? (param.secondName?.text ?? "") : label
 
@@ -307,10 +307,10 @@ extension MockType {
                                             base: DeclReferenceExprSyntax(baseName: .identifier(paramName)),
                                             period: .periodToken(),
                                             name: .identifier("anyParameter")
-                                        ),
-                                        trailingComma: index < parameters.count - 1 ? .commaToken(trailingTrivia: .space) : nil
+                                        )
                                     )
                                 }
+                                .commaSeparated()
                             ),
                             rightSquare: .rightSquareToken()
                         )
@@ -591,15 +591,15 @@ extension MockType {
 private extension MockType.Method {
     func closureParameterElements(for parameters: [FunctionParameterSyntax]) -> TupleTypeElementListSyntax {
         TupleTypeElementListSyntax(
-            parameters.enumerated().map { index, parameter in
+            parameters.map { parameter in
                 TupleTypeElementSyntax(
                     firstName: .identifier("_"),
                     secondName: parameter.parameterIdentifier.with(\.leadingTrivia, .space),
                     colon: .colonToken(trailingTrivia: .space),
-                    type: parameter.type.trimmed,
-                    trailingComma: index < parameters.count - 1 ? .commaToken(trailingTrivia: .space) : nil
+                    type: parameter.type.trimmed
                 )
             }
+            .commaSeparated()
         )
     }
 
@@ -607,12 +607,12 @@ private extension MockType.Method {
         ArrayExprSyntax(
             leftSquare: .leftSquareToken(),
             elements: ArrayElementListSyntax(
-                parameters.enumerated().map { index, parameter in
+                parameters.map { parameter in
                     ArrayElementSyntax(
-                        expression: ExprSyntax(parameter.reference),
-                        trailingComma: index < parameters.count - 1 ? .commaToken(trailingTrivia: .space) : nil
+                        expression: ExprSyntax(parameter.reference)
                     )
                 }
+                .commaSeparated()
             ),
             rightSquare: .rightSquareToken()
         )
