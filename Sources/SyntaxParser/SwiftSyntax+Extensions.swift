@@ -38,9 +38,9 @@ extension LabeledExprSyntax: CommaJoinableSyntax {}
 extension GenericParameterSyntax: CommaJoinableSyntax {}
 
 extension Collection where Element: CommaJoinableSyntax {
-    func commaSeparated() -> [Element] {
+    func commaSeparated(trailingTrivia: Trivia = .space) -> [Element] {
         enumerated().map { index, element in
-            element.with(\.trailingComma, index < count - 1 ? .commaToken(trailingTrivia: .space) : nil)
+            element.with(\.trailingComma, index < count - 1 ? .commaToken(trailingTrivia: trailingTrivia) : nil)
         }
     }
 }

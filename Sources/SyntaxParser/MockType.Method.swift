@@ -2,7 +2,7 @@ import SwiftParser
 import SwiftSyntax
 
 extension MockType {
-    struct Method {
+    struct Method: SyntaxBuilder {
         let declaration: FunctionDeclSyntax
 
         static func collectMethods(from protocols: [ProtocolDeclSyntax]) -> [MockType.Method] {
@@ -99,40 +99,35 @@ extension MockType {
 
         var implementation: FunctionDeclSyntax {
             let parameters = Array(declaration.signature.parameterClause.parameters)
-            let methodReference = MemberAccessExprSyntax(
+            let methodReference = memberAccess(
                 base: DeclReferenceExprSyntax(baseName: .identifier("Methods")),
-                period: .periodToken(),
-                name: .identifier(stubIdentifier)
+                name: stubIdentifier
             )
 
-            var performArguments: [LabeledExprSyntax] = [
-                LabeledExprSyntax(
-                    expression: ExprSyntax(methodReference),
-                    trailingComma: parameters.isEmpty ? nil : .commaToken(trailingTrivia: .newline + .spaces(12))
-                )
+            var performArguments = [
+                labeledExpr(expression: methodReference)
             ]
 
             if !parameters.isEmpty {
                 performArguments.append(
-                    LabeledExprSyntax(
-                        expression: ExprSyntax(parameterArrayExpression(for: parameters))
-                    )
+                    labeledExpr(expression: parameterArrayExpression(for: parameters))
                 )
             }
 
-            let performCall = FunctionCallExprSyntax(
+            let performCall = functionCall(
                 calledExpression: DeclReferenceExprSyntax(baseName: .identifier("_perform")),
-                leftParen: .leftParenToken(trailingTrivia: .newline + .spaces(12)),
-                arguments: LabeledExprListSyntax(performArguments),
-                rightParen: .rightParenToken(leadingTrivia: .newline + .spaces(8))
+                arguments: performArguments.commaSeparated(trailingTrivia: .newline + .spaces(12))
             )
 
-            let typeEffectSpecifiers = closureEffectSpecifiers()
+            let effectSpecifiers = typeEffectSpecifiers(
+                asyncSpecifier: declaration.signature.effectSpecifiers?.asyncSpecifier,
+                throwsSpecifier: declaration.signature.effectSpecifiers?.throwsSpecifier
+            )
             let closureType = TypeSyntax(FunctionTypeSyntax(
                 parameters: closureParameterElements(for: parameters),
-                effectSpecifiers: typeEffectSpecifiers,
+                effectSpecifiers: effectSpecifiers,
                 returnClause: ReturnClauseSyntax(
-                    leadingTrivia: typeEffectSpecifiers == nil ? .space : [],
+                    leadingTrivia: effectSpecifiers == nil ? .space : [],
                     arrow: .arrowToken(trailingTrivia: .space),
                     type: closureReturnType
                 )
@@ -234,13 +229,7 @@ extension MockType {
 
                     let parameterType = IdentifierTypeSyntax(
                         name: .identifier("Parameter"),
-                        genericArgumentClause: GenericArgumentClauseSyntax(
-                            leftAngle: .leftAngleToken(),
-                            arguments: GenericArgumentListSyntax([
-                                GenericArgumentSyntax(argument: param.type)
-                            ]),
-                            rightAngle: .rightAngleToken()
-                        )
+                        genericArgumentClause: genericArgumentClause(arguments: [param.type])
                     )
 
                     return FunctionParameterSyntax(
@@ -254,14 +243,11 @@ extension MockType {
 
             // Build tuple elements for where clause signature
             let whereSignatureElements = TupleTypeElementListSyntax(
-                parameters.map { param -> TupleTypeElementSyntax in
+                parameters.map { param in
                     let label = param.firstName.text
                     let paramName = label == "_" ? (param.secondName?.text ?? "") : label
-
-                    return TupleTypeElementSyntax(
-                        firstName: .identifier("_"),
-                        secondName: .identifier(paramName, leadingTrivia: .space),
-                        colon: .colonToken(trailingTrivia: .space),
+                    return tupleTypeElement(
+                        secondName: paramName,
                         type: param.type
                     )
                 }
@@ -280,42 +266,30 @@ extension MockType {
             // Build argument list for .init call
             let argumentList = LabeledExprListSyntax(
                 [
-                    LabeledExprSyntax(
+                    labeledExpr(
                         leadingTrivia: .newline + .spaces(12),
-                        label: .identifier("method"),
-                        colon: .colonToken(trailingTrivia: .space),
-                        expression: MemberAccessExprSyntax(
+                        label: "method",
+                        expression: memberAccess(
                             base: DeclReferenceExprSyntax(baseName: .identifier("Methods")),
-                            period: .periodToken(),
-                            name: .identifier(stubIdentifier)
-                        ),
-                        trailingComma: .commaToken()
+                            name: stubIdentifier
+                        )
                     ),
-                    LabeledExprSyntax(
+                    labeledExpr(
                         leadingTrivia: .newline + .spaces(12),
-                        label: .identifier("parameters"),
-                        colon: .colonToken(trailingTrivia: .space),
-                        expression: ArrayExprSyntax(
-                            leftSquare: .leftSquareToken(),
-                            elements: ArrayElementListSyntax(
-                                parameters.map { param -> ArrayElementSyntax in
-                                    let label = param.firstName.text
-                                    let paramName = label == "_" ? (param.secondName?.text ?? "") : label
-
-                                    return ArrayElementSyntax(
-                                        expression: MemberAccessExprSyntax(
-                                            base: DeclReferenceExprSyntax(baseName: .identifier(paramName)),
-                                            period: .periodToken(),
-                                            name: .identifier("anyParameter")
-                                        )
-                                    )
-                                }
-                                .commaSeparated()
-                            ),
-                            rightSquare: .rightSquareToken()
+                        label: "parameters",
+                        expression: arrayExpression(
+                            elements: parameters.map { param in
+                                let label = param.firstName.text
+                                let paramName = label == "_" ? (param.secondName?.text ?? "") : label
+                                return memberAccess(
+                                    base: DeclReferenceExprSyntax(baseName: .identifier(paramName)),
+                                    name: "anyParameter"
+                                )
+                            }
                         )
                     )
                 ]
+                    .commaSeparated(trailingTrivia: [])
             )
 
             return FunctionDeclSyntax(
@@ -429,7 +403,10 @@ extension MockType {
 
         var expect: FunctionDeclSyntax {
             let parameters = declaration.signature.parameterClause.parameters.map(\.self)
-            let effectSpecifiers = closureEffectSpecifiers()
+            let effectSpecifiers = typeEffectSpecifiers(
+                asyncSpecifier: declaration.signature.effectSpecifiers?.asyncSpecifier,
+                throwsSpecifier: declaration.signature.effectSpecifiers?.throwsSpecifier
+            )
 
             let signatureType = FunctionTypeSyntax(
                 leftParen: .leftParenToken(),
@@ -475,11 +452,7 @@ extension MockType {
                                 colon: .colonToken(trailingTrivia: .space),
                                 type: IdentifierTypeSyntax(
                                     name: .identifier("MethodExpectation"),
-                                    genericArgumentClause: GenericArgumentClauseSyntax(
-                                        arguments: GenericArgumentListSyntax([
-                                            GenericArgumentSyntax(argument: TypeSyntax(signatureType))
-                                        ])
-                                    )
+                                    genericArgumentClause: genericArgumentClause(arguments: [signatureType])
                                 ),
                                 trailingComma: .commaToken(trailingTrivia: .newline + .spaces(4))
                             ),
@@ -549,34 +522,30 @@ extension MockType {
                                 calledExpression: DeclReferenceExprSyntax(baseName: .identifier("_record")),
                                 leftParen: .leftParenToken(),
                                 arguments: LabeledExprListSyntax([
-                                    LabeledExprSyntax(
-                                        expression: MemberAccessExprSyntax(
-                                            base: DeclReferenceExprSyntax(baseName: .identifier("expectation", leadingTrivia: .newline + .spaces(8))),
-                                            period: .periodToken(),
-                                            name: .identifier("expectation")
-                                        ),
-                                        trailingComma: .commaToken(trailingTrivia: .newline + .spaces(8))
+                                    labeledExpr(
+                                        leadingTrivia: .newline + .spaces(8),
+                                        expression: memberAccess(
+                                            base: DeclReferenceExprSyntax(baseName: .identifier("expectation")),
+                                            name: "expectation"
+                                        )
                                     ),
-                                    LabeledExprSyntax(
-                                        expression: DeclReferenceExprSyntax(baseName: .identifier("fileID")),
-                                        trailingComma: .commaToken(trailingTrivia: .newline + .spaces(8))
+                                    labeledExpr(
+                                        expression: DeclReferenceExprSyntax(baseName: .identifier("fileID"))
                                     ),
-                                    LabeledExprSyntax(
-                                        expression: DeclReferenceExprSyntax(baseName: .identifier("filePath")),
-                                        trailingComma: .commaToken(trailingTrivia: .newline + .spaces(8))
+                                    labeledExpr(
+                                        expression: DeclReferenceExprSyntax(baseName: .identifier("filePath"))
                                     ),
-                                    LabeledExprSyntax(
-                                        expression: DeclReferenceExprSyntax(baseName: .identifier("line")),
-                                        trailingComma: .commaToken(trailingTrivia: .newline + .spaces(8))
+                                    labeledExpr(
+                                        expression: DeclReferenceExprSyntax(baseName: .identifier("line"))
                                     ),
-                                    LabeledExprSyntax(
-                                        expression: DeclReferenceExprSyntax(baseName: .identifier("column")),
-                                        trailingComma: .commaToken(trailingTrivia: .newline + .spaces(8))
+                                    labeledExpr(
+                                        expression: DeclReferenceExprSyntax(baseName: .identifier("column"))
                                     ),
-                                    LabeledExprSyntax(
+                                    labeledExpr(
                                         expression: DeclReferenceExprSyntax(baseName: .identifier("perform"))
                                     )
-                                ]),
+                                ]
+                                    .commaSeparated(trailingTrivia: .newline + .spaces(8))),
                                 rightParen: .rightParenToken(leadingTrivia: .newline + .spaces(4))
                             )))
                         )
@@ -592,10 +561,8 @@ private extension MockType.Method {
     func closureParameterElements(for parameters: [FunctionParameterSyntax]) -> TupleTypeElementListSyntax {
         TupleTypeElementListSyntax(
             parameters.map { parameter in
-                TupleTypeElementSyntax(
-                    firstName: .identifier("_"),
-                    secondName: parameter.parameterIdentifier.with(\.leadingTrivia, .space),
-                    colon: .colonToken(trailingTrivia: .space),
+                tupleTypeElement(
+                    secondName: parameter.parameterIdentifier.text,
                     type: parameter.type.trimmed
                 )
             }
@@ -604,18 +571,7 @@ private extension MockType.Method {
     }
 
     func parameterArrayExpression(for parameters: [FunctionParameterSyntax]) -> ArrayExprSyntax {
-        ArrayExprSyntax(
-            leftSquare: .leftSquareToken(),
-            elements: ArrayElementListSyntax(
-                parameters.map { parameter in
-                    ArrayElementSyntax(
-                        expression: ExprSyntax(parameter.reference)
-                    )
-                }
-                .commaSeparated()
-            ),
-            rightSquare: .rightSquareToken()
-        )
+        arrayExpression(elements: parameters.map(\.reference))
     }
 
     var closureReturnType: TypeSyntax {
@@ -623,25 +579,5 @@ private extension MockType.Method {
             return type.trimmed
         }
         return TypeSyntax(IdentifierTypeSyntax(name: .identifier("Void")))
-    }
-
-    func closureEffectSpecifiers() -> TypeEffectSpecifiersSyntax? {
-        guard let specifiers = declaration.signature.effectSpecifiers else {
-            return nil
-        }
-
-        let asyncToken = specifiers.asyncSpecifier?
-            .with(\.leadingTrivia, .space)
-            .with(\.trailingTrivia, .space)
-
-        let throwsLeading: Trivia = specifiers.asyncSpecifier == nil ? .space : []
-        let throwsToken = specifiers.throwsSpecifier?
-            .with(\.leadingTrivia, throwsLeading)
-            .with(\.trailingTrivia, .space)
-
-        return TypeEffectSpecifiersSyntax(
-            asyncSpecifier: asyncToken,
-            throwsSpecifier: throwsToken
-        )
     }
 }

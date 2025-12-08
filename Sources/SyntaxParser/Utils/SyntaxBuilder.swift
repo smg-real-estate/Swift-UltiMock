@@ -70,9 +70,7 @@ extension SyntaxBuilder {
         firstName: TokenSyntax = .wildcardToken(trailingTrivia: .space),
         secondName: TokenSyntax? = nil,
         type: TypeSyntax,
-        defaultValue: ExprSyntax? = nil,
-        trailingTrivia: Trivia = .newline + .spaces(4),
-        isLast: Bool = false
+        defaultValue: ExprSyntax? = nil
     ) -> FunctionParameterSyntax {
         FunctionParameterSyntax(
             firstName: firstName,
@@ -84,8 +82,7 @@ extension SyntaxBuilder {
                     equal: .equalToken(leadingTrivia: .space, trailingTrivia: .space),
                     value: $0
                 )
-            },
-            trailingComma: isLast ? nil : .commaToken(trailingTrivia: trailingTrivia)
+            }
         )
     }
 
@@ -93,17 +90,13 @@ extension SyntaxBuilder {
         firstName: String? = nil,
         secondName: String? = nil,
         type: TypeSyntax,
-        defaultValue: ExprSyntax? = nil,
-        trailingTrivia: Trivia = .newline + .spaces(4),
-        isLast: Bool = false
+        defaultValue: ExprSyntax? = nil
     ) -> FunctionParameterSyntax {
         functionParameter(
             firstName: firstName.map { .identifier($0) } ?? .wildcardToken(trailingTrivia: .space),
             secondName: secondName.map { .identifier($0) },
             type: type,
-            defaultValue: defaultValue,
-            trailingTrivia: trailingTrivia,
-            isLast: isLast
+            defaultValue: defaultValue
         )
     }
 
@@ -111,17 +104,13 @@ extension SyntaxBuilder {
         firstName: String? = nil,
         secondName: String? = nil,
         type: String,
-        defaultValue: String? = nil,
-        trailingTrivia: Trivia = .newline + .spaces(4),
-        isLast: Bool = false
+        defaultValue: String? = nil
     ) -> FunctionParameterSyntax {
         functionParameter(
             firstName: firstName.map { .identifier($0) } ?? .wildcardToken(trailingTrivia: .space),
             secondName: secondName.map { .identifier($0) },
             type: TypeSyntax(IdentifierTypeSyntax(name: .identifier(type))),
-            defaultValue: defaultValue.map { ExprSyntax(DeclReferenceExprSyntax(baseName: .identifier($0))) },
-            trailingTrivia: trailingTrivia,
-            isLast: isLast
+            defaultValue: defaultValue.map { ExprSyntax(DeclReferenceExprSyntax(baseName: .identifier($0))) }
         )
     }
 
@@ -142,16 +131,87 @@ extension SyntaxBuilder {
     func labeledExpr(
         leadingTrivia: Trivia = [],
         label: String? = nil,
-        expression: some ExprSyntaxProtocol,
-        trailingTrivia: Trivia = .newline + .spaces(12),
-        isLast: Bool = false
+        expression: some ExprSyntaxProtocol
     ) -> LabeledExprSyntax {
         LabeledExprSyntax(
             leadingTrivia: leadingTrivia,
             label: label.map { .identifier($0) },
             colon: label != nil ? .colonToken(trailingTrivia: .space) : nil,
-            expression: ExprSyntax(expression),
-            trailingComma: isLast ? nil : .commaToken(trailingTrivia: trailingTrivia)
+            expression: ExprSyntax(expression)
+        )
+    }
+
+    func tupleTypeElement(
+        firstName: String = "_",
+        secondName: String,
+        type: TypeSyntax
+    ) -> TupleTypeElementSyntax {
+        TupleTypeElementSyntax(
+            firstName: .identifier(firstName),
+            secondName: .identifier(secondName, leadingTrivia: .space),
+            colon: .colonToken(trailingTrivia: .space),
+            type: type
+        )
+    }
+
+    func arrayExpression(
+        elements: [some ExprSyntaxProtocol]
+    ) -> ArrayExprSyntax {
+        ArrayExprSyntax(
+            leftSquare: .leftSquareToken(),
+            elements: ArrayElementListSyntax(
+                elements.map { element in
+                    ArrayElementSyntax(expression: ExprSyntax(element))
+                }
+                .commaSeparated()
+            ),
+            rightSquare: .rightSquareToken()
+        )
+    }
+
+    func memberAccess(
+        base: (some ExprSyntaxProtocol)? = nil,
+        name: String
+    ) -> MemberAccessExprSyntax {
+        MemberAccessExprSyntax(
+            base: base.map { ExprSyntax($0) },
+            period: .periodToken(),
+            name: .identifier(name)
+        )
+    }
+
+    func typeEffectSpecifiers(
+        asyncSpecifier: TokenSyntax?,
+        throwsSpecifier: TokenSyntax?
+    ) -> TypeEffectSpecifiersSyntax? {
+        guard asyncSpecifier != nil || throwsSpecifier != nil else {
+            return nil
+        }
+
+        let asyncToken = asyncSpecifier?
+            .with(\.leadingTrivia, .space)
+            .with(\.trailingTrivia, .space)
+
+        let throwsLeading: Trivia = asyncSpecifier == nil ? .space : []
+        let throwsToken = throwsSpecifier?
+            .with(\.leadingTrivia, throwsLeading)
+            .with(\.trailingTrivia, .space)
+
+        return TypeEffectSpecifiersSyntax(
+            asyncSpecifier: asyncToken,
+            throwsSpecifier: throwsToken
+        )
+    }
+
+    func genericArgumentClause(
+        arguments: [some TypeSyntaxProtocol]
+    ) -> GenericArgumentClauseSyntax {
+        GenericArgumentClauseSyntax(
+            leftAngle: .leftAngleToken(),
+            arguments: GenericArgumentListSyntax(
+                arguments.map { GenericArgumentSyntax(argument: TypeSyntax($0)) }
+            ),
+            rightAngle: .rightAngleToken()
         )
     }
 }

@@ -74,8 +74,7 @@ struct MethodExpectationBuilder: SyntaxBuilder {
                     parameters: FunctionParameterListSyntax([
                         functionParameter(
                             firstName: "method",
-                            type: "MockMethod",
-                            trailingTrivia: .space
+                            type: "MockMethod"
                         ),
                         functionParameter(
                             firstName: "parameters",
@@ -83,11 +82,10 @@ struct MethodExpectationBuilder: SyntaxBuilder {
                                 leftSquare: .leftSquareToken(),
                                 element: IdentifierTypeSyntax(name: .identifier("AnyParameter")),
                                 rightSquare: .rightSquareToken()
-                            )),
-                            trailingTrivia: .space,
-                            isLast: true
+                            ))
                         )
-                    ]),
+                    ]
+                        .commaSeparated(trailingTrivia: .space)),
                     rightParen: .rightParenToken(trailingTrivia: .space)
                 )
             ),
@@ -113,16 +111,15 @@ struct MethodExpectationBuilder: SyntaxBuilder {
                                         labeledExpr(
                                             leadingTrivia: .newline + .spaces(12),
                                             label: "method",
-                                            expression: DeclReferenceExprSyntax(baseName: .identifier("method")),
-                                            trailingTrivia: []
+                                            expression: DeclReferenceExprSyntax(baseName: .identifier("method"))
                                         ),
                                         labeledExpr(
                                             leadingTrivia: .newline + .spaces(12),
                                             label: "parameters",
-                                            expression: DeclReferenceExprSyntax(baseName: .identifier("parameters")),
-                                            isLast: true
+                                            expression: DeclReferenceExprSyntax(baseName: .identifier("parameters"))
                                         )
-                                    ],
+                                    ]
+                                        .commaSeparated(trailingTrivia: []),
                                     leftParenTrivia: [],
                                     rightParenTrivia: .newline + .spaces(8)
                                 ))
