@@ -56,4 +56,128 @@ struct MockTypeMethodTests {
         }
         """#)
     }
+
+    @Test func `implementation emits correct body for complex parameters`() throws {
+        let syntax = Parser.parse(source: #"""
+        func withParamsVoid(
+            int: Swift.Int,
+            label labelString: String,
+            _ string: String,
+            _ optional: Int?,
+            _ implicitOptional: Int!,
+            _ `inout`: inout Int,
+            _ array: [Int],
+            _ dictionary: [String: Int],
+            _ escapingClosure: @escaping (Int) -> Void
+        )
+        """#).statements.first?.item
+        let declaration = try #require(FunctionDeclSyntax(syntax))
+
+        let sut = MockType.Method(declaration: declaration)
+
+        #expect(sut.implementation.description == #"""
+        func withParamsVoid(
+            int: Swift.Int,
+            label labelString: String,
+            _ string: String,
+            _ optional: Int?,
+            _ implicitOptional: Int!,
+            _ `inout`: inout Int,
+            _ array: [Int],
+            _ dictionary: [String: Int],
+            _ escapingClosure: @escaping (Int) -> Void
+        ) {
+            let perform = _perform(
+                    Methods.\#(sut.stubIdentifier),
+                    [int, labelString, string, optional, implicitOptional, `inout`, array, dictionary, escapingClosure]
+                ) as! (_ int: Swift.Int, _ labelString: String, _ string: String, _ optional: Int?, _ implicitOptional: Int!, _ `inout`: inout Int, _ array: [Int], _ dictionary: [String: Int], _ escapingClosure: @escaping (Int) -> Void) -> Void
+            return perform(int, labelString, string, optional, implicitOptional, &`inout`, array, dictionary, escapingClosure)
+        }
+        """#)
+    }
+
+    @Test func `implementation emits correct body for generics`() throws {
+        let syntax = Parser.parse(source: #"""
+        func generic<P1: Equatable, P2>(
+            parameter1: P1,
+            _ parameter2: P2
+        ) -> Int where P2: Hashable
+        """#).statements.first?.item
+        let declaration = try #require(FunctionDeclSyntax(syntax))
+
+        let sut = MockType.Method(declaration: declaration)
+
+        #expect(sut.implementation.description == #"""
+        func generic<P1: Equatable, P2>(
+            parameter1: P1,
+            _ parameter2: P2
+        ) -> Int where P2: Hashable {
+            let perform = _perform(
+                    Methods.\#(sut.stubIdentifier),
+                    [parameter1, parameter2]
+                ) as! (_ parameter1: P1, _ parameter2: P2) -> Int
+            return perform(parameter1, parameter2)
+        }
+        """#)
+    }
+
+    @Test func `implementation emits correct body for annotated closure`() throws {
+        let syntax = Parser.parse(source: #"""
+        func withAnnotatedClosure(
+            _ closure: (@MainActor @Sendable (Int) -> Void)?
+        )
+        """#).statements.first?.item
+        let declaration = try #require(FunctionDeclSyntax(syntax))
+
+        let sut = MockType.Method(declaration: declaration)
+
+        #expect(sut.implementation.description == #"""
+        func withAnnotatedClosure(
+            _ closure: (@MainActor @Sendable (Int) -> Void)?
+        ) {
+            let perform = _perform(
+                    Methods.\#(sut.stubIdentifier),
+                    [closure]
+                ) as! (_ closure: (@MainActor @Sendable (Int) -> Void)?) -> Void
+            return perform(closure)
+        }
+        """#)
+    }
+
+    @Test func `implementation emits correct body for self parameter`() throws {
+        let syntax = Parser.parse(source: "func withSelf(_ `self`: TestMockableMock) -> TestMockableMock").statements.first?.item
+        let declaration = try #require(FunctionDeclSyntax(syntax))
+
+        let sut = MockType.Method(declaration: declaration)
+
+        #expect(sut.implementation.description == #"""
+        func withSelf(_ `self`: TestMockableMock) -> TestMockableMock {
+            let perform = _perform(
+                    Methods.\#(sut.stubIdentifier),
+                    [`self`]
+                ) as! (_ `self`: TestMockableMock) -> TestMockableMock
+            return perform(`self`)
+        }
+        """#)
+    }
+
+    @Test func `implementation emits correct body for discardable result`() throws {
+        let syntax = Parser.parse(source: #"""
+        @discardableResult
+        func discardableResult() -> String
+        """#).statements.first?.item
+        let declaration = try #require(FunctionDeclSyntax(syntax))
+
+        let sut = MockType.Method(declaration: declaration)
+
+        #expect(sut.implementation.description == #"""
+        @discardableResult
+        func discardableResult() -> String {
+            let perform = _perform(
+                    Methods.\#(sut.stubIdentifier)
+                ) as! () -> String
+            return perform()
+        }
+        """#)
+    }
 }

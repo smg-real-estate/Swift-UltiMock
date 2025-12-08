@@ -489,8 +489,10 @@ private extension MockType.Method {
     }
 
     var closureReturnType: TypeSyntax {
-        declaration.signature.returnClause?.type
-            ?? TypeSyntax(IdentifierTypeSyntax(name: .identifier("Void")))
+        if let type = declaration.signature.returnClause?.type {
+            return type.with(\.leadingTrivia, []).with(\.trailingTrivia, [])
+        }
+        return TypeSyntax(IdentifierTypeSyntax(name: .identifier("Void")))
     }
 
     func closureEffectSpecifiers() -> TypeEffectSpecifiersSyntax? {
