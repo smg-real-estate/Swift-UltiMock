@@ -175,7 +175,7 @@ extension MockType {
             let invocationArguments = LabeledExprListSyntax(
                 parameters.enumerated().map { index, parameter in
                     LabeledExprSyntax(
-                        expression: parameterInvocationExpression(for: parameter),
+                        expression: parameter.invocationExpression,
                         trailingComma: index < parameters.count - 1 ? .commaToken(trailingTrivia: .space) : nil
                     )
                 }
@@ -444,7 +444,7 @@ private extension MockType.Method {
             parameters.enumerated().map { index, parameter in
                 TupleTypeElementSyntax(
                     firstName: .identifier("_"),
-                    secondName: parameterIdentifier(for: parameter).with(\.leadingTrivia, .space),
+                    secondName: parameter.parameterIdentifier.with(\.leadingTrivia, .space),
                     colon: .colonToken(trailingTrivia: .space),
                     type: parameter.type,
                     trailingComma: index < parameters.count - 1 ? .commaToken(trailingTrivia: .space) : nil
@@ -459,33 +459,13 @@ private extension MockType.Method {
             elements: ArrayElementListSyntax(
                 parameters.enumerated().map { index, parameter in
                     ArrayElementSyntax(
-                        expression: ExprSyntax(parameterReference(for: parameter)),
+                        expression: ExprSyntax(parameter.reference),
                         trailingComma: index < parameters.count - 1 ? .commaToken(trailingTrivia: .space) : nil
                     )
                 }
             ),
             rightSquare: .rightSquareToken()
         )
-    }
-
-    func parameterInvocationExpression(for parameter: FunctionParameterSyntax) -> ExprSyntax {
-        if isInOutParameter(parameter) {
-            return ExprSyntax(InOutExprSyntax(
-                ampersand: .prefixAmpersandToken(),
-                expression: parameterReference(for: parameter)
-            ))
-        }
-
-        return ExprSyntax(parameterReference(for: parameter))
-    }
-
-    func parameterReference(for parameter: FunctionParameterSyntax) -> DeclReferenceExprSyntax {
-        DeclReferenceExprSyntax(baseName: parameterIdentifier(for: parameter))
-    }
-
-    func parameterIdentifier(for parameter: FunctionParameterSyntax) -> TokenSyntax {
-        let baseName = parameter.secondName ?? parameter.firstName
-        return baseName.with(\.leadingTrivia, []).with(\.trailingTrivia, [])
     }
 
     var closureReturnType: TypeSyntax {
@@ -513,15 +493,5 @@ private extension MockType.Method {
             asyncSpecifier: asyncToken,
             throwsSpecifier: throwsToken
         )
-    }
-
-    func isInOutParameter(_ parameter: FunctionParameterSyntax) -> Bool {
-        if let attributed = parameter.type.as(AttributedTypeSyntax.self),
-           attributed.specifier?.tokenKind == .keyword(.inout) {
-            return true
-        }
-
-        let trimmed = parameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.hasPrefix("inout ")
     }
 }
