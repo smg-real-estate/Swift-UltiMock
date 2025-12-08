@@ -133,6 +133,16 @@ final class ProtocolMockBuilder: SyntaxBuilder {
         MemberBlockItemSyntax(decl: methodExpectations)
         MemberBlockItemSyntax(decl: recordMethod)
         MemberBlockItemSyntax(decl: performMethod)
+        implementationMethods.map { method in
+            MemberBlockItemSyntax(
+                leadingTrivia: .newline,
+                decl: method
+            )
+        }
+    }
+
+    var implementationMethods: [FunctionDeclSyntax] {
+        allMethods.map(\.implementation)
     }
 
     var recordMethod: FunctionDeclSyntax {

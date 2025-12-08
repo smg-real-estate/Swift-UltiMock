@@ -278,6 +278,32 @@ struct ProtocolMockBuilderTests {
         }
         """)
     }
+
+    @Test func `implementationMethods contains method implementations`() throws {
+        let source = Parser.parse(source: """
+        protocol Foo {
+            func make(value: Int) -> String
+        }
+        """)
+
+        let types = source.statements.map { $0.item.cast(ProtocolDeclSyntax.self) }
+
+        let sut = MockedProtocol(declaration: types[0], inherited: []).mockBuilder
+
+        let generatedMethod = try #require(sut.implementationMethods.first)
+
+        #expect(
+            generatedMethod.trimmedDescription == #"""
+            func make(value: Int) -> String {
+                let perform = _perform(
+                        Methods.make_value_Int_ret_String,
+                        [value]
+                    ) as! (_ value: Int) -> String
+                return perform(value)
+            }
+            """#
+        )
+    }
 }
 
 extension ClassDeclSyntax {

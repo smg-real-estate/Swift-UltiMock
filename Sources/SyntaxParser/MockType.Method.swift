@@ -106,6 +106,131 @@ extension MockType {
             return description
         }
 
+        var implementation: FunctionDeclSyntax {
+            let parameters = Array(declaration.signature.parameterClause.parameters)
+            let methodReference = MemberAccessExprSyntax(
+                base: DeclReferenceExprSyntax(baseName: .identifier("Methods")),
+                period: .periodToken(),
+                name: .identifier(stubIdentifier)
+            )
+
+            var performArguments: [LabeledExprSyntax] = [
+                LabeledExprSyntax(
+                    expression: ExprSyntax(methodReference),
+                    trailingComma: parameters.isEmpty ? nil : .commaToken(trailingTrivia: .newline + .spaces(12))
+                )
+            ]
+
+            if !parameters.isEmpty {
+                performArguments.append(
+                    LabeledExprSyntax(
+                        expression: ExprSyntax(parameterArrayExpression(for: parameters))
+                    )
+                )
+            }
+
+            let performCall = FunctionCallExprSyntax(
+                calledExpression: DeclReferenceExprSyntax(baseName: .identifier("_perform")),
+                leftParen: .leftParenToken(trailingTrivia: .newline + .spaces(12)),
+                arguments: LabeledExprListSyntax(performArguments),
+                rightParen: .rightParenToken(leadingTrivia: .newline + .spaces(8))
+            )
+
+            let typeEffectSpecifiers = closureEffectSpecifiers()
+            let closureType = TypeSyntax(FunctionTypeSyntax(
+                parameters: closureParameterElements(for: parameters),
+                effectSpecifiers: typeEffectSpecifiers,
+                returnClause: ReturnClauseSyntax(
+                    leadingTrivia: typeEffectSpecifiers == nil ? .space : [],
+                    arrow: .arrowToken(trailingTrivia: .space),
+                    type: closureReturnType
+                )
+            ))
+
+            let castExpression = ExprSyntax(SequenceExprSyntax(
+                elements: ExprListSyntax([
+                    ExprSyntax(performCall),
+                    ExprSyntax(BinaryOperatorExprSyntax(
+                        leadingTrivia: [],
+                        operator: .binaryOperator("as!", leadingTrivia: .space, trailingTrivia: .space),
+                        trailingTrivia: []
+                    )),
+                    ExprSyntax(TypeExprSyntax(type: closureType))
+                ])
+            ))
+
+            let letPerform = VariableDeclSyntax(
+                bindingSpecifier: .keyword(.let, trailingTrivia: .space),
+                bindings: PatternBindingListSyntax([
+                    PatternBindingSyntax(
+                        pattern: IdentifierPatternSyntax(identifier: .identifier("perform")),
+                        initializer: InitializerClauseSyntax(
+                            equal: .equalToken(leadingTrivia: .space, trailingTrivia: .space),
+                            value: castExpression
+                        )
+                    )
+                ])
+            )
+
+            let invocationArguments = LabeledExprListSyntax(
+                parameters.enumerated().map { index, parameter in
+                    LabeledExprSyntax(
+                        expression: parameterInvocationExpression(for: parameter),
+                        trailingComma: index < parameters.count - 1 ? .commaToken(trailingTrivia: .space) : nil
+                    )
+                }
+            )
+
+            let performInvocation = FunctionCallExprSyntax(
+                calledExpression: DeclReferenceExprSyntax(baseName: .identifier("perform")),
+                leftParen: .leftParenToken(),
+                arguments: invocationArguments,
+                rightParen: .rightParenToken()
+            )
+
+            var returnExpression = ExprSyntax(performInvocation)
+
+            if declaration.signature.effectSpecifiers?.asyncSpecifier != nil {
+                returnExpression = ExprSyntax(AwaitExprSyntax(
+                    awaitKeyword: .keyword(.await, trailingTrivia: .space),
+                    expression: returnExpression
+                ))
+            }
+
+            if declaration.signature.effectSpecifiers?.throwsSpecifier != nil {
+                returnExpression = ExprSyntax(TryExprSyntax(
+                    tryKeyword: .keyword(.try, trailingTrivia: .space),
+                    questionOrExclamationMark: nil,
+                    expression: returnExpression
+                ))
+            }
+
+            let returnStatement = ReturnStmtSyntax(
+                returnKeyword: .keyword(.return, trailingTrivia: .space),
+                expression: returnExpression
+            )
+
+            return declaration.with(
+                \.body,
+                CodeBlockSyntax(
+                    leftBrace: .leftBraceToken(leadingTrivia: .space, trailingTrivia: .newline),
+                    statements: CodeBlockItemListSyntax([
+                        CodeBlockItemSyntax(
+                            leadingTrivia: .spaces(4),
+                            item: .decl(DeclSyntax(letPerform)),
+                            trailingTrivia: .newline
+                        ),
+                        CodeBlockItemSyntax(
+                            leadingTrivia: .spaces(4),
+                            item: .stmt(StmtSyntax(returnStatement)),
+                            trailingTrivia: []
+                        )
+                    ]),
+                    rightBrace: .rightBraceToken(leadingTrivia: .newline)
+                )
+            )
+        }
+
         var expectationMethodDeclaration: FunctionDeclSyntax {
             let parameters = declaration.signature.parameterClause.parameters
             let methodName = declaration.name.text
@@ -151,12 +276,6 @@ extension MockType {
                     )
                 }
             )
-
-            let whereSignature = TypeSyntax(TupleTypeSyntax(
-                leftParen: .leftParenToken(),
-                elements: whereSignatureElements,
-                rightParen: .rightParenToken()
-            ))
 
             let fullSignature = FunctionTypeSyntax(
                 parameters: whereSignatureElements,
@@ -316,5 +435,91 @@ extension MockType {
                 ])
             )
         }
+    }
+}
+
+private extension MockType.Method {
+    func closureParameterElements(for parameters: [FunctionParameterSyntax]) -> TupleTypeElementListSyntax {
+        TupleTypeElementListSyntax(
+            parameters.enumerated().map { index, parameter in
+                TupleTypeElementSyntax(
+                    firstName: .identifier("_"),
+                    secondName: parameterIdentifier(for: parameter).with(\.leadingTrivia, .space),
+                    colon: .colonToken(trailingTrivia: .space),
+                    type: parameter.type,
+                    trailingComma: index < parameters.count - 1 ? .commaToken(trailingTrivia: .space) : nil
+                )
+            }
+        )
+    }
+
+    func parameterArrayExpression(for parameters: [FunctionParameterSyntax]) -> ArrayExprSyntax {
+        ArrayExprSyntax(
+            leftSquare: .leftSquareToken(),
+            elements: ArrayElementListSyntax(
+                parameters.enumerated().map { index, parameter in
+                    ArrayElementSyntax(
+                        expression: ExprSyntax(parameterReference(for: parameter)),
+                        trailingComma: index < parameters.count - 1 ? .commaToken(trailingTrivia: .space) : nil
+                    )
+                }
+            ),
+            rightSquare: .rightSquareToken()
+        )
+    }
+
+    func parameterInvocationExpression(for parameter: FunctionParameterSyntax) -> ExprSyntax {
+        if isInOutParameter(parameter) {
+            return ExprSyntax(InOutExprSyntax(
+                ampersand: .prefixAmpersandToken(),
+                expression: parameterReference(for: parameter)
+            ))
+        }
+
+        return ExprSyntax(parameterReference(for: parameter))
+    }
+
+    func parameterReference(for parameter: FunctionParameterSyntax) -> DeclReferenceExprSyntax {
+        DeclReferenceExprSyntax(baseName: parameterIdentifier(for: parameter))
+    }
+
+    func parameterIdentifier(for parameter: FunctionParameterSyntax) -> TokenSyntax {
+        let baseName = parameter.secondName ?? parameter.firstName
+        return baseName.with(\.leadingTrivia, []).with(\.trailingTrivia, [])
+    }
+
+    var closureReturnType: TypeSyntax {
+        declaration.signature.returnClause?.type
+            ?? TypeSyntax(IdentifierTypeSyntax(name: .identifier("Void")))
+    }
+
+    func closureEffectSpecifiers() -> TypeEffectSpecifiersSyntax? {
+        guard let specifiers = declaration.signature.effectSpecifiers else {
+            return nil
+        }
+
+        let asyncToken = specifiers.asyncSpecifier?
+            .with(\.leadingTrivia, .space)
+            .with(\.trailingTrivia, .space)
+
+        let throwsLeading: Trivia = specifiers.asyncSpecifier == nil ? .space : []
+        let throwsToken = specifiers.throwsSpecifier?
+            .with(\.leadingTrivia, throwsLeading)
+            .with(\.trailingTrivia, .space)
+
+        return TypeEffectSpecifiersSyntax(
+            asyncSpecifier: asyncToken,
+            throwsSpecifier: throwsToken
+        )
+    }
+
+    func isInOutParameter(_ parameter: FunctionParameterSyntax) -> Bool {
+        if let attributed = parameter.type.as(AttributedTypeSyntax.self),
+           attributed.specifier?.tokenKind == .keyword(.inout) {
+            return true
+        }
+
+        let trimmed = parameter.type.description.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.hasPrefix("inout ")
     }
 }
