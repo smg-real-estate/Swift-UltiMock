@@ -6,12 +6,12 @@ import Testing
 struct MockTypeMethodTests {
     @Test(arguments: [
         ("func noParamsVoid()", "noParamsVoid_sync_ret_Void"),
-        ("func withParams(label name: Int, nameAsLabel: Double, _ anonymous: String)", "withParams_label_Int_nameAsLabel_Double__String_sync_ret_Void"),
+        ("func withParams(label name: Int, nameAsLabel: Double, _ anonymous: String)", "withParams_label_Int_nameAsLabel_Double___String_sync_ret_Void"),
         ("func returnsValue() -> Bool", "returnsValue_ret_Bool"),
         ("func throwsError() throws", "throwsError_sync_throws_ret_Void"),
         ("func asyncFunction() async", "asyncFunction_async_ret_Void"),
         ("func `switch`()", "switch_sync_ret_Void"),
-        ("func complex(_ value: Int) async throws -> String", "complex_async__value_Int_async_throws_ret_String"),
+        ("func complex(_ value: Int) async throws -> String", "complex_async___Int_async_throws_ret_String"),
         ("func withGenericConstraints<A>(a: A, b: B) where A: Codable, B == Int", "withGenericConstraints_a_A_b_B_sync_ret_Void_where_A_con_Codable_B_eq_Int"),
     ])
     func `stubIdentifier maps non-textual information`(source: String, expectedIdentifier: String) throws {

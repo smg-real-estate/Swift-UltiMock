@@ -29,16 +29,7 @@ extension MockType {
                 let label = param.firstName.text
                 let typeName = param.type.description.trimmingCharacters(in: .whitespaces)
 
-                if label == "_" {
-                    let paramName = param.secondName?.text ?? ""
-                    if paramName == "anonymous" {
-                        parts.append("_\(typeName)")
-                    } else {
-                        parts.append("_\(paramName)_\(typeName)")
-                    }
-                } else {
-                    parts.append("\(label)_\(typeName)")
-                }
+                parts.append("\(label)_\(typeName)")
             }
 
             let returnTypeString = declaration.signature.returnClause?.type.description.trimmingCharacters(in: .whitespaces) ?? "Void"
