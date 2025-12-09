@@ -11,13 +11,13 @@ struct TypesCollector {
     }
 
     func collect(from source: SourceFileSyntax) -> [Syntax.TypeInfo] {
-        let visitor = Visitor()
+        let visitor = TypesVisitor()
         visitor.walk(source.strippingImplementation())
         return visitor.types
     }
 }
 
-private final class Visitor: SyntaxVisitor {
+final class TypesVisitor: SyntaxVisitor {
     private(set) var types: [Syntax.TypeInfo] = []
     private var typesStack: [Syntax.TypeInfo] = []
 

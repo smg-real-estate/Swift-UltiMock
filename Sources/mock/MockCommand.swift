@@ -35,7 +35,7 @@ struct MockCommand: ParsableCommand {
         let types = try context.parse()
 
         let mockSource = MockTemplate(
-            types: types,
+            mockedTypes: types,
             imports: imports.isEmpty ? context.configuration.imports ?? [] : imports,
             testableImports: testableImports
         )

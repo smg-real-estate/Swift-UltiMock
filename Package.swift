@@ -8,18 +8,18 @@ let package = Package(
     name: "UltiMock",
     platforms: [.iOS(.v15), .macOS(.v13)],
     products: [
-        //        .library(
-//            name: "UltiMock",
-//            targets: ["UltiMock"]
-//        ),
-//        .executable(
-//            name: "mock",
-//            targets: ["mock"]
-//        ),
-//        .plugin(
-//            name: "MockGenerationPlugin",
-//            targets: ["MockGenerationPlugin"]
-//        )
+        .library(
+            name: "UltiMock",
+            targets: ["UltiMock"]
+        ),
+        .executable(
+            name: "mock",
+            targets: ["mock"]
+        ),
+        .plugin(
+            name: "MockGenerationPlugin",
+            targets: ["MockGenerationPlugin"]
+        )
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.2.1"),
@@ -42,22 +42,21 @@ let package = Package(
                 .product(name: "SwiftParser", package: "swift-syntax"),
             ]
         ),
-//        .target(name: "MockGenerator"),
-//        .executableTarget(
-//            name: "mock",
-//            dependencies: [
-//                .product(name: "ArgumentParser", package: "swift-argument-parser"),
-//                .product(name: "SourceKittenFramework", package: "SourceKitten"),
-//                .product(name: "PathKit", package: "PathKit"),
-//                "SyntaxParser"
-//            ],
-//            swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]
-//        ),
-//        .plugin(
-//            name: "MockGenerationPlugin",
-//            capability: .buildTool(),
-//            dependencies: ["mock"]
-//        ),
+        .executableTarget(
+            name: "mock",
+            dependencies: [
+                .product(name: "ArgumentParser", package: "swift-argument-parser"),
+                .product(name: "SourceKittenFramework", package: "SourceKitten"),
+                .product(name: "PathKit", package: "PathKit"),
+                "SyntaxParser"
+            ],
+            swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]
+        ),
+        .plugin(
+            name: "MockGenerationPlugin",
+            capability: .buildTool(),
+            dependencies: ["mock"]
+        ),
         .testTarget(
             name: "SyntaxParserTests",
             dependencies: [
@@ -65,11 +64,11 @@ let package = Package(
                 .product(name: "SwiftParser", package: "swift-syntax")
             ]
         ),
-//        .testTarget(
-//            name: "MockGeneratorTests",
-//            dependencies: [
-//                "mock"
-//            ]
-//        )
+        .testTarget(
+            name: "MockGeneratorTests",
+            dependencies: [
+                "mock"
+            ]
+        )
     ]
 )

@@ -27,19 +27,19 @@ struct CommandContext {
         self.outputPath = outputPath.isDirectory ? outputPath + mockFilename : outputPath
     }
 
-    func parse() throws -> [Syntax.TypeInfo] {
+    func parse() throws -> [MockedType] {
         let sources = try [
             parseSources(),
             parseSDKModules()
         ]
             .flatMap(\.self)
 
-        return try TypeInfoResolver().resolve(from: sources)
+        return try MockedTypesResolver.resolve(from: sources)
     }
 }
 
 private extension CommandContext {
-    func parseSources() throws -> [() throws -> String?] {
+    func parseSources() throws -> [() throws -> String] {
         let sourceFiles = try sources
             .flatMap { path in
                 path.isDirectory ? try path.recursiveChildren() : [path]
@@ -57,7 +57,7 @@ private extension CommandContext {
             }
     }
 
-    func parseSDKModules() throws -> [() throws -> String?] {
+    func parseSDKModules() throws -> [() throws -> String] {
         // Required for running in sandbox environment
         setenv("IN_PROCESS_SOURCEKIT", "YES", 1)
         //        setenv("SOURCEKIT_LOGGING", "3", 1)
@@ -93,14 +93,7 @@ private extension CommandContext {
                 ])
 
                 return {
-                    let response: [String: any SourceKitRepresentable]
-
-                    do {
-                        response = try request.send()
-                    } catch {
-                        print("Failed to parse SDK module '\(module)': \(error)")
-                        return nil
-                    }
+                    let response = try request.send()
 
                     return try cast(response["key.sourcetext"])
                 }

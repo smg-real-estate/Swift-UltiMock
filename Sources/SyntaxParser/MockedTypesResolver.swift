@@ -1,10 +1,37 @@
 import SwiftSyntax
+import SwiftParser
 
-protocol MockedType {}
+public protocol MockedType {
+    var mockSyntax: CodeBlockItemListSyntax { get }
+}
 
-struct MockedTypesResolver {
+public struct MockedTypesResolver {
     let typeAliases: [String: [String: TypeAliasDeclSyntax]]
-    var annotationKeys: [String] = ["sourcery", "UltiMock"]
+    var annotationKeys: [String]
+
+    public init(
+        typeAliases: [String : [String : TypeAliasDeclSyntax]],
+        annotationKeys: [String] = ["sourcery", "UltiMock"]
+    ) {
+        self.typeAliases = typeAliases
+        self.annotationKeys = annotationKeys
+    }
+
+    static public func resolve(from contentSequence: some Sequence<() throws -> String>) throws -> [MockedType] {
+        let typesCollector = TypesVisitor()
+        let aliasCollector = AliasTableBuilder()
+
+        for content in contentSequence {
+            do {
+                let source = Parser.parse(source: try content())
+                typesCollector.walk(source)
+                aliasCollector.walk(source)
+            }
+        }
+
+        let resolver = MockedTypesResolver(typeAliases: aliasCollector.aliasesByScope)
+        return resolver.resolve(typesCollector.types)
+    }
 
     func resolve(_ types: [Syntax.TypeInfo]) -> [MockedType] {
         let typeMap = buildTypeMap(from: types)
