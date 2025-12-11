@@ -44,3 +44,15 @@ extension Collection where Element: CommaJoinableSyntax {
         }
     }
 }
+
+extension TypeSyntax {
+    var stubIdentifierSlug: String {
+        if let type = `as`(ImplicitlyUnwrappedOptionalTypeSyntax.self) {
+            type.wrappedType.description + "_impopt"
+        } else if let type = `as`(OptionalTypeSyntax.self) {
+            type.wrappedType.description + "_opt"
+        } else {
+            description
+        }
+    }
+}

@@ -11,6 +11,10 @@ struct MockTypeMethodTests {
         ("func throwsError() throws", "throwsError_sync_throws_ret_Void"),
         ("func asyncFunction() async", "asyncFunction_async_ret_Void"),
         ("func `switch`()", "switch_sync_ret_Void"),
+        ("func optionalResult() -> String?)", "optionalResult_ret_String_opt"),
+        ("func forceUnwrappedResult() -> String!)", "forceUnwrappedResult_ret_String_impopt"),
+        ("func withOptionalParameter(_ string: String?)", "withOptionalParameter___String_opt_sync_ret_Void"),
+        ("func withForceUnwrappedParameter(_ string: String!)", "withForceUnwrappedParameter___String_impopt_sync_ret_Void"),
         ("func complex(_ value: Int) async throws -> String", "complex_async___Int_async_throws_ret_String"),
         ("func withGenericConstraints<A>(a: A, b: B) where A: Codable, B == Int", "withGenericConstraints_a_A_b_B_sync_ret_Void_where_A_con_Codable_B_eq_Int"),
     ])

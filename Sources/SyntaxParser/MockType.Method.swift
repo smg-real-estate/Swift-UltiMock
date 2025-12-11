@@ -27,12 +27,12 @@ extension MockType {
 
             for param in parameters {
                 let label = param.firstName.text
-                let typeName = param.type.description.trimmingCharacters(in: .whitespaces)
+                let typeName = param.type.stubIdentifierSlug
 
                 parts.append("\(label)_\(typeName)")
             }
 
-            let returnTypeString = declaration.signature.returnClause?.type.description.trimmingCharacters(in: .whitespaces) ?? "Void"
+            let returnTypeString = declaration.signature.returnClause?.type.stubIdentifierSlug ?? "Void"
 
             if isAsync {
                 parts.append("async")
