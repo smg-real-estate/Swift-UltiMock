@@ -63,6 +63,10 @@ extension TypeSyntax {
             element.type.stubIdentifierSlug
         } else if let type = `as`(FunctionTypeSyntax.self) {
             type.stubIdentifierSlug
+        } else if let type = `as`(IdentifierTypeSyntax.self) {
+            type.stubIdentifierSlug
+        } else if let type = `as`(SomeOrAnyTypeSyntax.self) {
+            type.someOrAnySpecifier.text + "_" + type.constraint.stubIdentifierSlug
         } else {
             with(\.trailingTrivia, []).description
         }
@@ -88,5 +92,17 @@ extension FunctionTypeSyntax {
         parts.append(returnClause.type.stubIdentifierSlug)
 
         return parts.joined(separator: "_")
+    }
+}
+
+extension IdentifierTypeSyntax {
+    var stubIdentifierSlug: String {
+        var slug = name.text
+        if let genericArgumentClause = genericArgumentClause {
+            slug += "_lab_"
+            slug += genericArgumentClause.arguments.map { $0.argument.stubIdentifierSlug }.joined(separator: "_")
+            slug += "_rab"
+        }
+        return slug
     }
 }

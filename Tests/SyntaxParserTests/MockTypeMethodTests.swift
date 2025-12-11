@@ -30,6 +30,7 @@ struct MockTypeMethodTests {
         ("func withMultipleClosures(_ a: (Int) -> String, _ b: @escaping (Bool) -> Void)", "withMultipleClosures___lpar_Int_rpar_arr_String___lpar_Bool_rpar_arr_Void_sync_ret_Void"),
         ("func withOptionalClosure(_ closure: ((String) -> Int)?)", "withOptionalClosure___lpar_String_rpar_arr_Int_opt_sync_ret_Void"),
         ("func returningClosure() -> (Int) -> String", "returningClosure_ret_lpar_Int_rpar_arr_String"),
+        ("func generic(some: some TestGenericProtocol<Int>, any: any TestGenericProtocol<String>) -> Int", "generic_some_some_TestGenericProtocol_lab_Int_rab_any_any_TestGenericProtocol_lab_String_rab_ret_Int"),
     ])
     func `stubIdentifier maps non-textual information`(source: String, expectedIdentifier: String) throws {
         let syntax = Parser.parse(source: source).statements.first?.item
