@@ -6,6 +6,7 @@ import Testing
 struct MockTypeMethodTests {
     @Test(arguments: [
         ("func noParamsVoid()", "noParamsVoid_sync_ret_Void"),
+        ("// Leading trivia\nfunc withTrivia() -> Void // Trailing trivia", "withTrivia_sync_ret_Void"),
         ("func withParams(label name: Int, nameAsLabel: Double, _ anonymous: String)", "withParams_label_Int_nameAsLabel_Double___String_sync_ret_Void"),
         ("func returnsValue() -> Bool", "returnsValue_ret_Bool"),
         ("func throwsError() throws", "throwsError_sync_throws_ret_Void"),
