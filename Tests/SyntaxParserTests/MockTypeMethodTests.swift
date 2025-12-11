@@ -15,6 +15,9 @@ struct MockTypeMethodTests {
         ("func forceUnwrappedResult() -> String!)", "forceUnwrappedResult_ret_String_impopt"),
         ("func withOptionalParameter(_ string: String?)", "withOptionalParameter___String_opt_sync_ret_Void"),
         ("func withForceUnwrappedParameter(_ string: String!)", "withForceUnwrappedParameter___String_impopt_sync_ret_Void"),
+        ("func withNamespaced(_ a: Foo.A) -> Bar.B", "withNamespaced___Foo_dot_A_ret_Bar_dot_B"),
+        ("func withArrayLiterals(_ a: [Foo.A]) -> [Bar.B]", "withArrayLiterals___lsb_Foo_dot_A_rsb_ret_lsb_Bar_dot_B_rsb"),
+        ("func withDictionaryLiterals(_ a: [String : Foo.A]) -> [Foo.A:Bar.B]", "withDictionaryLiterals___lsb_String_col_Foo_dot_A_rsb_ret_lsb_Foo_dot_A_col_Bar_dot_B_rsb"),
         ("func complex(_ value: Int) async throws -> String", "complex_async___Int_async_throws_ret_String"),
         ("func withGenericConstraints<A>(a: A, b: B) where A: Codable, B == Int", "withGenericConstraints_a_A_b_B_sync_ret_Void_where_A_con_Codable_B_eq_Int"),
     ])
