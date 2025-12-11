@@ -20,6 +20,15 @@ struct MockTypeMethodTests {
         ("func withDictionaryLiterals(_ a: [String : Foo.A]) -> [Foo.A:Bar.B]", "withDictionaryLiterals___lsb_String_col_Foo_dot_A_rsb_ret_lsb_Foo_dot_A_col_Bar_dot_B_rsb"),
         ("func complex(_ value: Int) async throws -> String", "complex_async___Int_async_throws_ret_String"),
         ("func withGenericConstraints<A>(a: A, b: B) where A: Codable, B == Int", "withGenericConstraints_a_A_b_B_sync_ret_Void_where_A_con_Codable_B_eq_Int"),
+        ("func withClosure(_ closure: (Int) -> Void)", "withClosure___lpar_Int_rpar_arr_Void_sync_ret_Void"),
+        ("func withThrowingClosure(_ closure: (String) throws -> Bool)", "withThrowingClosure___lpar_String_rpar_throws_arr_Bool_sync_ret_Void"),
+        ("func withAsyncClosure(_ closure: (Int) async -> String)", "withAsyncClosure___lpar_Int_rpar_async_arr_String_sync_ret_Void"),
+        ("func withEscapingClosure(_ closure: @escaping () -> Void)", "withEscapingClosure___lpar_rpar_arr_Void_sync_ret_Void"),
+        ("func withAutoclosure(_ closure: @autoclosure () -> String)", "withAutoclosure___lpar_rpar_arr_String_sync_ret_Void"),
+        ("func withEscapingAutoclosure(_ closure: @escaping @autoclosure () -> Int)", "withEscapingAutoclosure___lpar_rpar_arr_Int_sync_ret_Void"),
+        ("func withMultipleClosures(_ a: (Int) -> String, _ b: @escaping (Bool) -> Void)", "withMultipleClosures___lpar_Int_rpar_arr_String___lpar_Bool_rpar_arr_Void_sync_ret_Void"),
+        ("func withOptionalClosure(_ closure: ((String) -> Int)?)", "withOptionalClosure___lpar_String_rpar_arr_Int_opt_sync_ret_Void"),
+        ("func returningClosure() -> (Int) -> String", "returningClosure_ret_lpar_Int_rpar_arr_String"),
     ])
     func `stubIdentifier maps non-textual information`(source: String, expectedIdentifier: String) throws {
         let syntax = Parser.parse(source: source).statements.first?.item

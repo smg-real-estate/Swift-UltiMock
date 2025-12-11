@@ -48,17 +48,39 @@ extension Collection where Element: CommaJoinableSyntax {
 extension TypeSyntax {
     var stubIdentifierSlug: String {
         if let type = `as`(ImplicitlyUnwrappedOptionalTypeSyntax.self) {
-            type.wrappedType.description + "_impopt"
+            return type.wrappedType.stubIdentifierSlug + "_impopt"
         } else if let type = `as`(OptionalTypeSyntax.self) {
-            type.wrappedType.description + "_opt"
+            return type.wrappedType.stubIdentifierSlug + "_opt"
         } else if let type = `as`(MemberTypeSyntax.self) {
-            type.baseType.stubIdentifierSlug + "_dot_" + type.name.trimmedDescription
+            return type.baseType.stubIdentifierSlug + "_dot_" + type.name.trimmedDescription
         } else if let type = `as`(ArrayTypeSyntax.self) {
-            "lsb_" + type.element.stubIdentifierSlug + "_rsb"
+            return "lsb_" + type.element.stubIdentifierSlug + "_rsb"
         } else if let type = `as`(DictionaryTypeSyntax.self) {
-            "lsb_" + type.key.stubIdentifierSlug + "_col_" + type.value.stubIdentifierSlug + "_rsb"
+            return "lsb_" + type.key.stubIdentifierSlug + "_col_" + type.value.stubIdentifierSlug + "_rsb"
+        } else if let type = `as`(AttributedTypeSyntax.self) {
+            return type.baseType.stubIdentifierSlug
+        } else if let type = `as`(TupleTypeSyntax.self), type.elements.count == 1, let element = type.elements.first {
+            return element.type.stubIdentifierSlug
+        } else if let type = `as`(FunctionTypeSyntax.self) {
+            var parts: [String] = []
+            
+            parts.append("lpar")
+            parts.append(contentsOf: type.parameters.map { $0.type.stubIdentifierSlug })
+            parts.append("rpar")
+            
+            if type.effectSpecifiers?.asyncSpecifier != nil {
+                parts.append("async")
+            }
+            if type.effectSpecifiers?.throwsSpecifier != nil {
+                parts.append("throws")
+            }
+            
+            parts.append("arr")
+            parts.append(type.returnClause.type.stubIdentifierSlug)
+            
+            return parts.joined(separator: "_")
         } else {
-            description
+            return description.trimmingCharacters(in: .whitespaces)
         }
     }
 }
