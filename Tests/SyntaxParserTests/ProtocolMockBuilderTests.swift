@@ -82,7 +82,7 @@ struct ProtocolMockBuilderTests {
 
         enum Methods {
             static var doSomething_ret_Int: MockMethod {
-                .init {
+                .init { _ in
                     "doSomething()"
                 }
             }

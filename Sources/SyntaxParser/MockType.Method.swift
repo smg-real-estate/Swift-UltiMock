@@ -360,6 +360,16 @@ extension MockType {
                 fatalError("Failed to parse string literal")
             }
 
+            let hasParameters = !declaration.signature.parameterClause.parameters.isEmpty
+            let closureSignature: ClosureSignatureSyntax? = hasParameters ? nil : ClosureSignatureSyntax(
+                parameterClause: .simpleInput(
+                    ClosureShorthandParameterListSyntax([
+                        ClosureShorthandParameterSyntax(name: .wildcardToken(leadingTrivia: .space, trailingTrivia: .space))
+                    ])
+                ),
+                inKeyword: .keyword(.in, trailingTrivia: .newline + .spaces(12))
+            )
+
             return VariableDeclSyntax(
                 leadingTrivia: .newline + .spaces(4),
                 modifiers: DeclModifierListSyntax([
@@ -386,9 +396,10 @@ extension MockType {
                                         arguments: [],
                                         trailingClosure: ClosureExprSyntax(
                                             leftBrace: .leftBraceToken(leadingTrivia: .space),
+                                            signature: closureSignature,
                                             statements: CodeBlockItemListSyntax([
                                                 CodeBlockItemSyntax(
-                                                    leadingTrivia: .newline + .spaces(12),
+                                                    leadingTrivia: hasParameters ? .newline + .spaces(12) : [],
                                                     item: .expr(expr)
                                                 )
                                             ]),
