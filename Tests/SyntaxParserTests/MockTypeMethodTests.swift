@@ -41,8 +41,8 @@ struct MockTypeMethodTests {
         #expect(sut.stubIdentifier == expectedIdentifier)
     }
 
-    @Test func `implementation emits simple body`() throws {
-        let syntax = Parser.parse(source: "func make(value: Int) -> String").statements.first?.item
+    @Test func `implementation emits simple body without trailing trivia`() throws {
+        let syntax = Parser.parse(source: "func make(value: Int) -> String // Trailing trivia").statements.first?.item
         let declaration = try #require(FunctionDeclSyntax(syntax))
 
         let sut = MockType.Method(declaration: declaration)

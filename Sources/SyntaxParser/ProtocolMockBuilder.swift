@@ -136,7 +136,6 @@ final class ProtocolMockBuilder: SyntaxBuilder {
         MemberBlockItemSyntax(decl: performMethod)
         implementationMethods.map { method in
             MemberBlockItemSyntax(
-                leadingTrivia: .newline,
                 decl: method
             )
         }

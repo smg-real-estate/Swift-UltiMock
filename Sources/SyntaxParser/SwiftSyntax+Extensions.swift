@@ -106,3 +106,14 @@ extension IdentifierTypeSyntax {
         return slug
     }
 }
+
+extension TriviaPiece {
+    var isComment: Bool {
+        switch self {
+        case .lineComment, .blockComment, .docLineComment, .docBlockComment:
+            return true
+        default:
+            return false
+        }
+    }
+}

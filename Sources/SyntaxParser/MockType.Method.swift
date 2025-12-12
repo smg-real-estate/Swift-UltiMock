@@ -196,10 +196,13 @@ extension MockType {
                 expression: returnExpression
             )
 
-            return declaration.with(
+            return declaration
+                .with(\.signature, declaration.signature.with(\.trailingTrivia, .space))
+                .with(\.genericWhereClause, declaration.genericWhereClause?.with(\.trailingTrivia, .space))
+                .with(
                 \.body,
                 CodeBlockSyntax(
-                    leftBrace: .leftBraceToken(leadingTrivia: .space, trailingTrivia: .newline),
+                    leftBrace: .leftBraceToken(trailingTrivia: .newline),
                     statements: CodeBlockItemListSyntax([
                         CodeBlockItemSyntax(
                             leadingTrivia: .spaces(4),
