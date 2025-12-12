@@ -53,15 +53,15 @@ extension MockType {
                 for requirement in whereClause.requirements {
                     switch requirement.requirement {
                     case let .conformanceRequirement(conformance):
-                        let left = conformance.leftType.description.trimmingCharacters(in: .whitespaces)
-                        let right = conformance.rightType.description.trimmingCharacters(in: .whitespaces)
+                        let left = conformance.leftType.stubIdentifierSlug
+                        let right = conformance.rightType.stubIdentifierSlug
                         parts.append("\(left)_con_\(right)")
                     case let .sameTypeRequirement(sameType):
-                        let left = sameType.leftType.description.trimmingCharacters(in: .whitespaces)
-                        let right = sameType.rightType.description.trimmingCharacters(in: .whitespaces)
+                        let left = sameType.leftType.stubIdentifierSlug
+                        let right = sameType.rightType.stubIdentifierSlug
                         parts.append("\(left)_eq_\(right)")
                     case let .layoutRequirement(layout):
-                        let left = layout.type.description.trimmingCharacters(in: .whitespaces)
+                        let left = layout.type.stubIdentifierSlug
                         let right = layout.layoutSpecifier.description.trimmingCharacters(in: .whitespaces)
                         parts.append("\(left)_con_\(right)")
                     }

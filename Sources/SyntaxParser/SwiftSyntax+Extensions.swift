@@ -88,7 +88,7 @@ extension FunctionTypeSyntax {
             parts.append("throws")
         }
 
-        parts.append("arr")
+        parts.append("ret")
         parts.append(returnClause.type.stubIdentifierSlug)
 
         return parts.joined(separator: "_")
