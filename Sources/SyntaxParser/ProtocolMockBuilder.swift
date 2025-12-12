@@ -17,9 +17,7 @@ final class ProtocolMockBuilder: SyntaxBuilder {
         self.allMethods = MockType.Method.collectMethods(from: mockedProtocol.allProtocols)
     }
 
-    var mockClassName: String {
-        mockedProtocol.declaration.name.text + "Mock"
-    }
+    lazy var mockClassName = mockedProtocol.declaration.name.text + "Mock"
 
     var methodsEnum: EnumDeclSyntax {
         EnumDeclSyntax(
@@ -72,7 +70,10 @@ final class ProtocolMockBuilder: SyntaxBuilder {
     }
 
     var methodExpectations: StructDeclSyntax {
-        MethodExpectationBuilder(allMethods: allMethods).declaration
+        MethodExpectationBuilder(
+            mockName: mockClassName,
+            allMethods: allMethods
+        ).declaration
     }
 
     @ArrayBuilder<MemberBlockItemSyntax>

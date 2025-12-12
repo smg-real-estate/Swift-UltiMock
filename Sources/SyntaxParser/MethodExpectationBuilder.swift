@@ -1,6 +1,7 @@
 import SwiftSyntax
 
 struct MethodExpectationBuilder: SyntaxBuilder {
+    let mockName: String
     let allMethods: [MockType.Method]
 
     var declaration: StructDeclSyntax {
@@ -40,7 +41,7 @@ struct MethodExpectationBuilder: SyntaxBuilder {
         for method in allMethods {
             MemberBlockItemSyntax(
                 leadingTrivia: .newline + .spaces(4),
-                decl: method.expectationMethodDeclaration,
+                decl: method.expectationMethodDeclaration(mockName: mockName),
                 trailingTrivia: .newline
             )
         }

@@ -220,38 +220,61 @@ extension MockType {
             )
         }
 
-        var expectationMethodDeclaration: FunctionDeclSyntax {
+        func expectationMethodDeclaration(mockName: String) -> FunctionDeclSyntax {
             let parameters = declaration.signature.parameterClause.parameters
             let methodName = declaration.name.text
 
             // Build function parameters with Parameter<T> type
             let functionParameters = FunctionParameterListSyntax(
                 parameters.map { param -> FunctionParameterSyntax in
-                    let label = param.firstName.text
-                    let paramName = label == "_" ? (param.secondName?.text ?? "") : label
+                    let firstName = param.firstName.text
+                    let secondName = param.secondName?.text
+                    
+                    // For Parameter<T>, we need to normalize (remove inout, escaping, etc.)
+                    let normalizedType = normalizeTypeForParameter(param.type, replaceSelfWith: mockName)
 
                     let parameterType = IdentifierTypeSyntax(
                         name: .identifier("Parameter"),
-                        genericArgumentClause: genericArgumentClause(arguments: [param.type])
+                        genericArgumentClause: genericArgumentClause(arguments: [normalizedType])
                     )
 
-                    return FunctionParameterSyntax(
-                        firstName: .identifier(paramName),
-                        colon: .colonToken(trailingTrivia: .space),
-                        type: parameterType
-                    )
+                    if firstName == "_", let secondName {
+                        return FunctionParameterSyntax(
+                            firstName: .identifier("_"),
+                            secondName: .identifier(secondName, leadingTrivia: .space),
+                            colon: .colonToken(trailingTrivia: .space),
+                            type: parameterType
+                        )
+                    } else {
+                        return FunctionParameterSyntax(
+                            firstName: secondName != nil ? .identifier(firstName) : .identifier(firstName),
+                            secondName: secondName.map { .identifier($0, leadingTrivia: .space) },
+                            colon: .colonToken(trailingTrivia: .space),
+                            type: parameterType
+                        )
+                    }
                 }
                 .commaSeparated()
             )
 
             // Build tuple elements for where clause signature
             let whereSignatureElements = TupleTypeElementListSyntax(
-                parameters.map { param in
-                    let label = param.firstName.text
-                    let paramName = label == "_" ? (param.secondName?.text ?? "") : label
+                parameters.compactMap { param in
+                    let firstName = param.firstName.text
+                    let secondName = param.secondName?.text
+                    let paramName = secondName ?? firstName
+                    
+                    // Skip parameters named "self" in the where clause
+                    if paramName == "self" || paramName == "`self`" {
+                        return nil
+                    }
+                    
+                    // For where clause, we preserve inout but still normalize Self and implicit optionals
+                    let normalizedType = normalizeTypeForSignature(param.type, replaceSelfWith: mockName)
+                    
                     return tupleTypeElement(
                         secondName: paramName,
-                        type: param.type
+                        type: normalizedType
                     )
                 }
                 .commaSeparated()
@@ -281,9 +304,16 @@ extension MockType {
                         leadingTrivia: .newline + .spaces(12),
                         label: "parameters",
                         expression: arrayExpression(
-                            elements: parameters.map { param in
-                                let label = param.firstName.text
-                                let paramName = label == "_" ? (param.secondName?.text ?? "") : label
+                            elements: parameters.compactMap { param -> MemberAccessExprSyntax? in
+                                let firstName = param.firstName.text
+                                let secondName = param.secondName?.text
+                                let paramName = secondName ?? firstName
+                                
+                                // Skip parameters named "self" in the parameters array
+                                if paramName == "self" || paramName == "`self`" {
+                                    return nil
+                                }
+                                
                                 return memberAccess(
                                     base: DeclReferenceExprSyntax(baseName: .identifier(paramName)),
                                     name: "anyParameter"
@@ -593,5 +623,157 @@ private extension MockType.Method {
             return type.trimmed
         }
         return TypeSyntax(IdentifierTypeSyntax(name: .identifier("Void")))
+    }
+    
+    // Normalize type for Parameter<T> - removes inout, attributes, converts implicit optional
+    func normalizeTypeForParameter(_ type: TypeSyntax, replaceSelfWith mockName: String) -> TypeSyntax {
+        normalizeTypeInternal(type, replaceSelfWith: mockName, preserveInout: false)
+    }
+    
+    // Normalize type for where clause signature - keeps inout, but removes attributes and converts implicit optional
+    func normalizeTypeForSignature(_ type: TypeSyntax, replaceSelfWith mockName: String) -> TypeSyntax {
+        normalizeTypeInternal(type, replaceSelfWith: mockName, preserveInout: true)
+    }
+    
+    func normalizeTypeInternal(_ type: TypeSyntax, replaceSelfWith mockName: String, preserveInout: Bool) -> TypeSyntax {
+        // Handle inout specifier
+        if let attributedType = type.as(AttributedTypeSyntax.self),
+           attributedType.specifier?.tokenKind == .keyword(.inout) {
+            if preserveInout {
+                // Keep inout but normalize the base type
+                let normalizedBase = normalizeTypeInternal(attributedType.baseType, replaceSelfWith: mockName, preserveInout: preserveInout)
+                return TypeSyntax(AttributedTypeSyntax(
+                    specifier: attributedType.specifier,
+                    baseType: normalizedBase
+                ))
+            } else {
+                // Remove inout and normalize the base type
+                return normalizeTypeInternal(attributedType.baseType, replaceSelfWith: mockName, preserveInout: preserveInout)
+            }
+        }
+        
+        // Remove attributes like @escaping, @Sendable, @MainActor etc.
+        if let attributedType = type.as(AttributedTypeSyntax.self),
+           !attributedType.attributes.isEmpty {
+            return normalizeTypeInternal(attributedType.baseType, replaceSelfWith: mockName, preserveInout: preserveInout)
+        }
+        
+        // Convert implicit optional (!) to optional (?)
+        if let implicitOptional = type.as(ImplicitlyUnwrappedOptionalTypeSyntax.self) {
+            let wrappedType = normalizeTypeInternal(implicitOptional.wrappedType, replaceSelfWith: mockName, preserveInout: preserveInout)
+            return TypeSyntax(OptionalTypeSyntax(
+                wrappedType: wrappedType,
+                questionMark: .postfixQuestionMarkToken()
+            ))
+        }
+        
+        // Replace Self with mock name
+        if let identifierType = type.as(IdentifierTypeSyntax.self),
+           identifierType.name.text == "Self" {
+            return TypeSyntax(IdentifierTypeSyntax(
+                name: .identifier(mockName),
+                genericArgumentClause: identifierType.genericArgumentClause
+            ))
+        }
+        
+        // Recursively normalize optional types
+        if let optionalType = type.as(OptionalTypeSyntax.self) {
+            let wrappedType = normalizeTypeInternal(optionalType.wrappedType, replaceSelfWith: mockName, preserveInout: preserveInout)
+            return TypeSyntax(OptionalTypeSyntax(
+                wrappedType: wrappedType,
+                questionMark: optionalType.questionMark
+            ))
+        }
+        
+        // Recursively normalize array types
+        if let arrayType = type.as(ArrayTypeSyntax.self) {
+            let elementType = normalizeTypeInternal(arrayType.element, replaceSelfWith: mockName, preserveInout: preserveInout)
+            return TypeSyntax(ArrayTypeSyntax(
+                leftSquare: arrayType.leftSquare,
+                element: elementType,
+                rightSquare: arrayType.rightSquare
+            ))
+        }
+        
+        // Recursively normalize dictionary types
+        if let dictType = type.as(DictionaryTypeSyntax.self) {
+            let keyType = normalizeTypeInternal(dictType.key, replaceSelfWith: mockName, preserveInout: preserveInout)
+            let valueType = normalizeTypeInternal(dictType.value, replaceSelfWith: mockName, preserveInout: preserveInout)
+            return TypeSyntax(DictionaryTypeSyntax(
+                leftSquare: dictType.leftSquare,
+                key: keyType,
+                colon: dictType.colon,
+                value: valueType,
+                rightSquare: dictType.rightSquare
+            ))
+        }
+        
+        // Recursively normalize tuple types
+        if let tupleType = type.as(TupleTypeSyntax.self) {
+            let normalizedElements = tupleType.elements.map { element in
+                TupleTypeElementSyntax(
+                    firstName: element.firstName,
+                    secondName: element.secondName,
+                    colon: element.colon,
+                    type: normalizeTypeInternal(element.type, replaceSelfWith: mockName, preserveInout: preserveInout),
+                    ellipsis: element.ellipsis,
+                    trailingComma: element.trailingComma
+                )
+            }
+            return TypeSyntax(TupleTypeSyntax(
+                leftParen: tupleType.leftParen,
+                elements: TupleTypeElementListSyntax(normalizedElements),
+                rightParen: tupleType.rightParen
+            ))
+        }
+        
+        // Recursively normalize function types (closures)
+        if let functionType = type.as(FunctionTypeSyntax.self) {
+            let normalizedParameters = functionType.parameters.map { param in
+                TupleTypeElementSyntax(
+                    firstName: param.firstName,
+                    secondName: param.secondName,
+                    colon: param.colon,
+                    type: normalizeTypeInternal(param.type, replaceSelfWith: mockName, preserveInout: preserveInout),
+                    ellipsis: param.ellipsis,
+                    trailingComma: param.trailingComma
+                )
+            }
+            let normalizedReturnType = normalizeTypeInternal(functionType.returnClause.type, replaceSelfWith: mockName, preserveInout: preserveInout)
+            return TypeSyntax(FunctionTypeSyntax(
+                leftParen: functionType.leftParen,
+                parameters: TupleTypeElementListSyntax(normalizedParameters),
+                rightParen: functionType.rightParen,
+                effectSpecifiers: functionType.effectSpecifiers,
+                returnClause: ReturnClauseSyntax(
+                    leadingTrivia: functionType.returnClause.leadingTrivia,
+                    arrow: functionType.returnClause.arrow,
+                    type: normalizedReturnType,
+                    trailingTrivia: functionType.returnClause.trailingTrivia
+                )
+            ))
+        }
+        
+        // Recursively normalize generic types
+        if let identifierType = type.as(IdentifierTypeSyntax.self),
+           let genericArgs = identifierType.genericArgumentClause {
+            let normalizedArgs = genericArgs.arguments.map { arg in
+                GenericArgumentSyntax(
+                    argument: normalizeTypeInternal(arg.argument, replaceSelfWith: mockName, preserveInout: preserveInout),
+                    trailingComma: arg.trailingComma
+                )
+            }
+            return TypeSyntax(IdentifierTypeSyntax(
+                name: identifierType.name,
+                genericArgumentClause: GenericArgumentClauseSyntax(
+                    leftAngle: genericArgs.leftAngle,
+                    arguments: GenericArgumentListSyntax(normalizedArgs),
+                    rightAngle: genericArgs.rightAngle
+                )
+            ))
+        }
+        
+        // Return the type as-is if no normalization is needed
+        return type
     }
 }

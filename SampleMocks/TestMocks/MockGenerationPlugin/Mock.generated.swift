@@ -3495,11 +3495,40 @@ open class TestMockableMock: TestMockable, @unchecked Sendable, Mock {
             )
         }
 
-        public static func withParamsVoid(int: Parameter<Swift.Int>, label labelString: Parameter<String>, _ string: Parameter<String>, _ optional: Parameter<Int?>, _ implicitOptional: Parameter<Int?>, _ `inout`: Parameter<Int>, _ array: Parameter<[Int]>, _ dictionary: Parameter<[String: Int]>, _ escapingClosure: Parameter<(Int) -> Void>) -> Self
-        where Signature == (_ int: Swift.Int, _ labelString: String, _ string: String, _ optional: Int?, _ implicitOptional: Int?, _ `inout`: inout Int, _ array: [Int], _ dictionary: [String: Int], _ escapingClosure: (Int) -> Void) -> Void {
+        public static func withParamsVoid(
+            int: Parameter<Swift.Int>,
+            label labelString: Parameter<String>,
+            _ string: Parameter<String>,
+            _ optional: Parameter<Int?>,
+            _ implicitOptional: Parameter<Int?>,
+            _ `inout`: Parameter<Int>,
+            _ array: Parameter<[Int]>,
+            _ dictionary: Parameter<[String: Int]>,
+            _ escapingClosure: Parameter<(Int) -> Void>
+        ) -> Self where Signature == (
+            _ int: Swift.Int,
+            _ labelString: String,
+            _ string: String,
+            _ optional: Int?,
+            _ implicitOptional: Int?,
+            _ `inout`: inout Int,
+            _ array: [Int],
+            _ dictionary: [String: Int],
+            _ escapingClosure: (Int) -> Void
+        ) -> Void {
             .init(
                 method: Methods.withParamsVoid_syncint_int_Swift_Int_label_labelString_String__string_String__optional_Int_opt___implicitOptional_Int_impopt___inout_inoutInt__array__lsb_Int_rsb___dictionary__lsb_String_col_Int_rsb___escapingClosure__lp_Int_rp__ret_Void_ret_Void,
-                parameters: [int.anyParameter, labelString.anyParameter, string.anyParameter, optional.anyParameter, implicitOptional.anyParameter, `inout`.anyParameter, array.anyParameter, dictionary.anyParameter, escapingClosure.anyParameter]
+                parameters: [
+                    int.anyParameter,
+                    labelString.anyParameter,
+                    string.anyParameter,
+                    optional.anyParameter,
+                    implicitOptional.anyParameter,
+                    `inout`.anyParameter,
+                    array.anyParameter,
+                    dictionary.anyParameter,
+                    escapingClosure.anyParameter
+                ]
             )
         }
 
@@ -3837,11 +3866,31 @@ open class TestMockableMock: TestMockable, @unchecked Sendable, Mock {
         return perform(closure)
     }
 
-    public func withParamsVoid(int: Swift.Int, label labelString: String, _ string: String, _ optional: Int?, _ implicitOptional: Int!, _ `inout`: inout Int, _ array: [Int], _ dictionary: [String: Int], _ escapingClosure: @escaping (Int) -> Void) {
+    public func withParamsVoid(
+        int: Swift.Int,
+        label labelString: String,
+        _ string: String,
+        _ optional: Int?,
+        _ implicitOptional: Int!,
+        _ `inout`: inout Int,
+        _ array: [Int],
+        _ dictionary: [String: Int],
+        _ escapingClosure: @escaping (Int) -> Void
+    ) {
         let perform = _perform(
             Methods.withParamsVoid_syncint_int_Swift_Int_label_labelString_String__string_String__optional_Int_opt___implicitOptional_Int_impopt___inout_inoutInt__array__lsb_Int_rsb___dictionary__lsb_String_col_Int_rsb___escapingClosure__lp_Int_rp__ret_Void_ret_Void,
             [int, labelString, string, optional, implicitOptional, `inout`, array, dictionary, escapingClosure]
-        ) as! (_ int: Swift.Int, _ labelString: String, _ string: String, _ optional: Int?, _ implicitOptional: Int?, _ `inout`: inout Int, _ array: [Int], _ dictionary: [String: Int], _ escapingClosure: (Int) -> Void) -> Void
+        ) as! (
+            _ int: Swift.Int,
+            _ labelString: String,
+            _ string: String,
+            _ optional: Int?,
+            _ implicitOptional: Int?,
+            _ `inout`: inout Int,
+            _ array: [Int],
+            _ dictionary: [String: Int],
+            _ escapingClosure: (Int) -> Void
+        ) -> Void
         return perform(int, labelString, string, optional, implicitOptional, &`inout`, array, dictionary, escapingClosure)
     }
 

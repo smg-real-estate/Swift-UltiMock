@@ -299,4 +299,67 @@ struct MockTypeMethodTests {
         }
         """)
     }
+
+    @Test func `expectationMethodDeclaration emits correct method`() throws {
+        let syntax = Parser.parse(source: """
+        func withParamsVoid(
+            int: Swift.Int,
+            label labelString: String,
+            _ self: Self,
+            _ string: String,
+            _ optional: Int?,
+            _ implicitOptional: Int!,
+            _ `inout`: inout Int,
+            _ array: [Int],
+            _ dictionary: [String: Int],
+            _ escapingClosure: @escaping (Int) -> Void
+        )
+        """).statements.first?.item
+
+        let declaration = try #require(FunctionDeclSyntax(syntax))
+
+        let sut = MockType.Method(declaration: declaration)
+
+        let mockClassName = "MockableMock"
+
+        #expect(sut.expectationMethodDeclaration(mockName: mockClassName).description == """
+        static func withParamsVoid(
+            int: Parameter<Swift.Int>,
+            label labelString: Parameter<String>,
+            _ self: Parameter<MockableMock>,
+            _ string: Parameter<String>,
+            _ optional: Parameter<Int?>,
+            _ implicitOptional: Parameter<Int?>,
+            _ `inout`: Parameter<Int>,
+            _ array: Parameter<[Int]>,
+            _ dictionary: Parameter<[String: Int]>,
+            _ escapingClosure: Parameter<(Int) -> Void>
+        ) -> Self where Signature == (
+            _ int: Swift.Int,
+            _ labelString: String,
+            _ string: String,
+            _ optional: Int?,
+            _ implicitOptional: Int?,
+            _ `inout`: inout Int,
+            _ array: [Int],
+            _ dictionary: [String: Int],
+            _ escapingClosure: (Int) -> Void
+        ) -> Void {
+            .init(
+                method: Methods.withParamsVoid_int_Swift_dot_Int_label_String___Self___String___Int_opt___Int_impopt___Int___lsb_Int_rsb___lsb_String_col_Int_rsb___lpar_Int_rpar_ret_Void_sync_ret_Void,
+                parameters: [
+                    int.anyParameter,
+                    labelString.anyParameter,
+                    string.anyParameter,
+                    optional.anyParameter,
+                    implicitOptional.anyParameter,
+                    `inout`.anyParameter,
+                    array.anyParameter,
+                    dictionary.anyParameter,
+                    escapingClosure.anyParameter
+                ]
+            )
+        }
+        """)
+    }
 }
