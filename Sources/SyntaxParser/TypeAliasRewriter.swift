@@ -11,25 +11,11 @@ final class TypeAliasRewriter: SyntaxRewriter {
     }
 
     override func visit(_ node: IdentifierTypeSyntax) -> TypeSyntax {
-        let typeName = node.name.text
-        let resolvedTypeName = resolver.resolveTypeAlias(typeName, in: scope)
-
-        if resolvedTypeName != typeName {
-            var newIdentifier = TokenSyntax.identifier(resolvedTypeName)
-            newIdentifier.leadingTrivia = node.name.leadingTrivia
-            newIdentifier.trailingTrivia = node.name.trailingTrivia
-
-            var newType = IdentifierTypeSyntax(
-                name: newIdentifier,
-                genericArgumentClause: node.genericArgumentClause
-            )
-            newType.leadingTrivia = node.leadingTrivia
-            newType.trailingTrivia = node.trailingTrivia
-
-            return TypeSyntax(newType)
+        guard let resolvedType = resolver.resolveTypeAlias(node, in: scope) else {
+            return super.visit(node)
         }
 
-        return super.visit(node)
+        return TypeSyntax(resolvedType)
     }
 
     override func visit(_ node: AccessorBlockSyntax) -> AccessorBlockSyntax {
@@ -44,27 +30,15 @@ final class TypeAliasRewriter: SyntaxRewriter {
     }
 
     override func visit(_ node: InheritedTypeSyntax) -> InheritedTypeSyntax {
-        if let identifierType = node.type.as(IdentifierTypeSyntax.self) {
-            let typeName = identifierType.name.text
-            let resolvedTypeName = resolver.resolveTypeAlias(typeName, in: scope)
-
-            if resolvedTypeName != typeName {
-                var newIdentifier = TokenSyntax.identifier(resolvedTypeName)
-                newIdentifier.leadingTrivia = identifierType.name.leadingTrivia
-                newIdentifier.trailingTrivia = identifierType.name.trailingTrivia
-
-                var newType = IdentifierTypeSyntax(
-                    name: newIdentifier,
-                    genericArgumentClause: identifierType.genericArgumentClause
-                )
-                newType.leadingTrivia = identifierType.leadingTrivia
-                newType.trailingTrivia = identifierType.trailingTrivia
-
-                return node.with(\.type, TypeSyntax(newType))
-            }
+        guard let resolvedType = resolver.resolveTypeAlias(node.type, in: scope) else {
+            return super.visit(node)
         }
 
-        return super.visit(node)
+        return node.with(
+            \.type,
+             TypeSyntax(resolvedType)
+                .with(\.trailingTrivia, node.type.trailingTrivia)
+        )
     }
 
     override func visit(_ node: MemberBlockItemListSyntax) -> MemberBlockItemListSyntax {

@@ -302,13 +302,37 @@ final class MockedTypesResolverTests {
         #expect(resolved.superclasses == [
             types[0].declaration.cast(ClassDeclSyntax.self)
         ])
-        #expect(resolved.declaration.trimmedDescription == """
-        class Child: Parent {
+        #expect(resolved.declaration.description == """
+
+
+            // UltiMock:AutoMockable
+            class Child: Parent {
                 func doMore(count: Int) {}
                 var count: Int { get set }
                 var amount: Double { get set }
             }
         """)
+    }
+
+    @Test func `resolves aliased closures as functions`() throws {
+        let source = Parser.parse(source: """
+            // UltiMock:AutoMockable
+            protocol A {
+                func closureAliasResult(_ closure: @escaping ClosureAlias<Int>) -> ClosureAlias<Int>
+            }
+
+            typealias ClosureAlias<T> = (T) -> Void
+        """)
+
+        typeAliases = TypeAliasCollector().collect(from: source)
+
+        let types = TypesCollector().collect(from: source)
+
+        let resolved = try #require(sut.resolve(types).first as? MockedProtocol)
+
+        let method = try #require(resolved.declaration.memberBlock.members.first?.decl.as(FunctionDeclSyntax.self))
+        let closureParameter = try #require(method.signature.parameterClause.parameters.first?.type.as(AttributedTypeSyntax.self))
+        #expect(closureParameter.baseType.kind == .functionType)
     }
 }
 

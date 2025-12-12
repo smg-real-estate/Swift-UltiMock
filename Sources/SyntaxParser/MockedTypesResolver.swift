@@ -51,14 +51,18 @@ public struct MockedTypesResolver {
         }
     }
 
-    func resolveTypeAlias(_ typeName: String, in scope: String) -> String {
+    func resolveTypeAlias(_ original: some TypeSyntaxProtocol, in scope: String) -> TypeSyntaxProtocol? {
+        guard let type = original.as(IdentifierTypeSyntax.self) else {
+            return nil
+        }
+        let typeName = type.name.text
         let scopes = generateScopeChain(scope)
         for scopeKey in scopes {
             if let alias = typeAliases[scopeKey]?[typeName] {
-                return alias.initializer.value.trimmedDescription
+                return alias.initializer.value
             }
         }
-        return typeName
+        return nil
     }
 
     private func generateScopeChain(_ scope: String) -> [String] {
@@ -210,8 +214,8 @@ private extension MockedTypesResolver {
         for inheritedType in inherited {
             var typeName = inheritedType.type.trimmedDescription
 
-            if typeMap[typeName] == nil {
-                typeName = resolveTypeAlias(typeName, in: "")
+            if typeMap[typeName] == nil, let aliasedType = resolveTypeAlias(inheritedType.type, in: "") {
+                typeName = aliasedType.trimmedDescription
             }
 
             guard let decl = typeMap[typeName],
