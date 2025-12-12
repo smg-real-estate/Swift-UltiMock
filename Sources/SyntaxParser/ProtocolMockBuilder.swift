@@ -534,7 +534,7 @@ final class ProtocolMockBuilder: SyntaxBuilder {
             inheritanceClause: inheritanceClause,
             memberBlock: MemberBlockSyntax(
                 leftBrace: .leftBraceToken(leadingTrivia: .space, trailingTrivia: .newline),
-                members: MemberBlockItemListSyntax(members),
+                members: MemberBlockItemListSyntax(members.map { $0.with(\.leadingTrivia, .newline) }),
                 rightBrace: .rightBraceToken()
             )
         )
