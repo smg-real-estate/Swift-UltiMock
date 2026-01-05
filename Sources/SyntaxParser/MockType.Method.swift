@@ -278,13 +278,21 @@ extension MockType {
             )
                 .with(\.leadingTrivia, .newline)
 
+            // Get the actual return type from the declaration, or use Void if not present
+            let returnType: TypeSyntax
+            if let returnClause = declaration.signature.returnClause {
+                returnType = normalizeTypeForSignature(returnClause.type, replaceSelfWith: mockName)
+            } else {
+                returnType = TypeSyntax(IdentifierTypeSyntax(name: .identifier("Void")))
+            }
+
             let fullSignature = FunctionTypeSyntax(
                 parameters: whereSignatureElements,
                 rightParen: .rightParenToken(leadingTrivia: whereSignatureElements.isEmpty ? [] : .newline),
                 returnClause: ReturnClauseSyntax(
                     leadingTrivia: .space,
                     arrow: .arrowToken(trailingTrivia: .space),
-                    type: IdentifierTypeSyntax(name: .identifier("Void"))
+                    type: returnType
                 )
             )
 
@@ -311,7 +319,6 @@ extension MockType {
                     ])
                 ))
                 .with(\.body, CodeBlockSyntax(
-                    leadingTrivia: .space,
                     leftBrace: .leftBraceToken(),
                     statements: CodeBlockItemListSyntax([
                         CodeBlockItemSyntax(

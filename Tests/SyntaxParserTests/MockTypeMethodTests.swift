@@ -362,4 +362,29 @@ struct MockTypeMethodTests {
         }
         """)
     }
+
+    @Test func `expectationMethodDeclaration strips generic return type`() throws {
+        let syntax = Parser.parse(source: """
+        func withGenerics<A, B>(_ a: A) -> B
+        """).statements.first?.item
+
+        let declaration = try #require(FunctionDeclSyntax(syntax))
+
+        let sut = MockType.Method(declaration: declaration)
+
+        let mockClassName = "MockableMock"
+
+        #expect(sut.expectationMethodDeclaration(mockName: mockClassName).formatted().description == """
+        static func withGenerics<A, B>(_ a: Parameter<A>) -> Self where Signature == (
+            _ a: A
+        ) -> B {
+            .init(
+                method: Methods.withGenerics___A_ret_B,
+                parameters: [
+                    a.anyParameter
+                ]
+            )
+        }
+        """)
+    }
 }

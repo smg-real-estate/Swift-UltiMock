@@ -122,7 +122,7 @@ struct ProtocolMockBuilderTests {
                 )
             }
 
-            static func doSomething() -> Self where Signature == () -> Void {
+            static func doSomething() -> Self where Signature == () -> Int {
                 .init(
                     method: Methods.doSomething_ret_Int,
                     parameters: []
@@ -131,7 +131,7 @@ struct ProtocolMockBuilderTests {
 
             static func doSomethingElse<T>(with: Parameter<T>) async throws -> Self where Signature == (
                 _ with: T
-            ) -> Void {
+            ) -> String {
                 .init(
                     method: Methods.doSomethingElse_async_with_T_async_throws_ret_String_where_T_con_Equatable,
                     parameters: [
