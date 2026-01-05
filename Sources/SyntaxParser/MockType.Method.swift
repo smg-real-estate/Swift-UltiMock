@@ -71,6 +71,7 @@ extension MockType {
             return parts.joined(separator: "_")
         }
 
+        // TODO: Rewrite with SwiftSyntax
         var callDescription: String {
             var description = declaration.name.text
 
@@ -116,7 +117,8 @@ extension MockType {
 
             let performCall = functionCall(
                 calledExpression: DeclReferenceExprSyntax(baseName: .identifier("_perform")),
-                arguments: performArguments.commaSeparated(trailingTrivia: .newline + .spaces(12))
+                arguments: performArguments.commaSeparated(leadingTrivia: .newline),
+                rightParenTrivia: .newline
             )
 
             let effectSpecifiers = typeEffectSpecifiers(
@@ -199,101 +201,26 @@ extension MockType {
             return declaration
                 .with(\.signature, declaration.signature.with(\.trailingTrivia, .space))
                 .with(\.genericWhereClause, declaration.genericWhereClause?.with(\.trailingTrivia, .space))
-                .with(
-                \.body,
-                CodeBlockSyntax(
-                    leftBrace: .leftBraceToken(trailingTrivia: .newline),
+                .with(\.body, CodeBlockSyntax(
                     statements: CodeBlockItemListSyntax([
                         CodeBlockItemSyntax(
-                            leadingTrivia: .spaces(4),
-                            item: .decl(DeclSyntax(letPerform)),
-                            trailingTrivia: .newline
+                            leadingTrivia: .newline,
+                            item: .decl(DeclSyntax(letPerform))
                         ),
                         CodeBlockItemSyntax(
-                            leadingTrivia: .spaces(4),
                             item: .stmt(StmtSyntax(returnStatement)),
                             trailingTrivia: []
                         )
                     ]),
                     rightBrace: .rightBraceToken(leadingTrivia: .newline)
-                )
-            )
+                ))
         }
 
         func expectationMethodDeclaration(mockName: String) -> FunctionDeclSyntax {
             let parameters = declaration.signature.parameterClause.parameters
-            let methodName = declaration.name.text
-
-            // Build function parameters with Parameter<T> type
-            let functionParameters = FunctionParameterListSyntax(
-                parameters.map { param -> FunctionParameterSyntax in
-                    let firstName = param.firstName.text
-                    let secondName = param.secondName?.text
-                    
-                    // For Parameter<T>, we need to normalize (remove inout, escaping, etc.)
-                    let normalizedType = normalizeTypeForParameter(param.type, replaceSelfWith: mockName)
-
-                    let parameterType = IdentifierTypeSyntax(
-                        name: .identifier("Parameter"),
-                        genericArgumentClause: genericArgumentClause(arguments: [normalizedType])
-                    )
-
-                    if firstName == "_", let secondName {
-                        return FunctionParameterSyntax(
-                            firstName: .identifier("_"),
-                            secondName: .identifier(secondName, leadingTrivia: .space),
-                            colon: .colonToken(trailingTrivia: .space),
-                            type: parameterType
-                        )
-                    } else {
-                        return FunctionParameterSyntax(
-                            firstName: secondName != nil ? .identifier(firstName) : .identifier(firstName),
-                            secondName: secondName.map { .identifier($0, leadingTrivia: .space) },
-                            colon: .colonToken(trailingTrivia: .space),
-                            type: parameterType
-                        )
-                    }
-                }
-                .commaSeparated()
-            )
-
-            // Build tuple elements for where clause signature
-            let whereSignatureElements = TupleTypeElementListSyntax(
-                parameters.compactMap { param in
-                    let firstName = param.firstName.text
-                    let secondName = param.secondName?.text
-                    let paramName = secondName ?? firstName
-                    
-                    // Skip parameters named "self" in the where clause
-                    if paramName == "self" || paramName == "`self`" {
-                        return nil
-                    }
-                    
-                    // For where clause, we preserve inout but still normalize Self and implicit optionals
-                    let normalizedType = normalizeTypeForSignature(param.type, replaceSelfWith: mockName)
-                    
-                    return tupleTypeElement(
-                        secondName: paramName,
-                        type: normalizedType
-                    )
-                }
-                .commaSeparated()
-            )
-
-            let fullSignature = FunctionTypeSyntax(
-                parameters: whereSignatureElements,
-                returnClause: ReturnClauseSyntax(
-                    leadingTrivia: .space,
-                    arrow: .arrowToken(trailingTrivia: .space),
-                    type: IdentifierTypeSyntax(name: .identifier("Void"))
-                )
-            )
-
-            // Build argument list for .init call
             let argumentList = LabeledExprListSyntax(
                 [
                     labeledExpr(
-                        leadingTrivia: .newline + .spaces(12),
                         label: "method",
                         expression: memberAccess(
                             base: DeclReferenceExprSyntax(baseName: .identifier("Methods")),
@@ -301,78 +228,103 @@ extension MockType {
                         )
                     ),
                     labeledExpr(
-                        leadingTrivia: .newline + .spaces(12),
                         label: "parameters",
                         expression: arrayExpression(
                             elements: parameters.compactMap { param -> MemberAccessExprSyntax? in
                                 let firstName = param.firstName.text
                                 let secondName = param.secondName?.text
                                 let paramName = secondName ?? firstName
-                                
+
                                 // Skip parameters named "self" in the parameters array
                                 if paramName == "self" || paramName == "`self`" {
                                     return nil
                                 }
-                                
+
                                 return memberAccess(
                                     base: DeclReferenceExprSyntax(baseName: .identifier(paramName)),
                                     name: "anyParameter"
                                 )
-                            }
+                            },
+                            wrapped: true
                         )
                     )
                 ]
-                    .commaSeparated(trailingTrivia: [])
+                    .commaSeparated(trailingTrivia: .newline)
+            )
+                .with(\.leadingTrivia, .newline)
+
+            // Build tuple elements for where clause signature
+            let whereSignatureElements = TupleTypeElementListSyntax(
+                parameters.compactMap { param in
+                    let firstName = param.firstName.text
+                    let secondName = param.secondName?.text
+                    let paramName = secondName ?? firstName
+
+                    // Skip parameters named "self" in the where clause
+                    if paramName == "self" || paramName == "`self`" {
+                        return nil
+                    }
+
+                    // For where clause, we preserve inout but still normalize Self and implicit optionals
+                    let normalizedType = normalizeTypeForSignature(param.type, replaceSelfWith: mockName)
+
+                    return tupleTypeElement(
+                        secondName: paramName,
+                        type: normalizedType
+                    )
+                    .with(\.leadingTrivia, .newline)
+                }
+                    .commaSeparated(leadingTrivia: .newline)
+            )
+                .with(\.leadingTrivia, .newline)
+
+            let fullSignature = FunctionTypeSyntax(
+                parameters: whereSignatureElements,
+                rightParen: .rightParenToken(leadingTrivia: whereSignatureElements.isEmpty ? [] : .newline),
+                returnClause: ReturnClauseSyntax(
+                    leadingTrivia: .space,
+                    arrow: .arrowToken(trailingTrivia: .space),
+                    type: IdentifierTypeSyntax(name: .identifier("Void"))
+                )
             )
 
-            return FunctionDeclSyntax(
-                modifiers: DeclModifierListSyntax([
+            return declaration.with(\.leadingTrivia, [])
+                .withExpectationParameters(mockName: mockName)
+                .with(\.modifiers, DeclModifierListSyntax([
                     DeclModifierSyntax(name: .keyword(.static, trailingTrivia: .space))
-                ]),
-                funcKeyword: .keyword(.func, trailingTrivia: .space),
-                name: .identifier(methodName),
-                genericParameterClause: declaration.genericParameterClause,
-                signature: FunctionSignatureSyntax(
-                    parameterClause: FunctionParameterClauseSyntax(
-                        leftParen: .leftParenToken(),
-                        parameters: functionParameters,
-                        rightParen: .rightParenToken()
-                    ),
-                    returnClause: ReturnClauseSyntax(
-                        leadingTrivia: .space,
-                        arrow: .arrowToken(trailingTrivia: .space),
-                        type: IdentifierTypeSyntax(name: .keyword(.Self))
-                    )
-                ),
-                genericWhereClause: GenericWhereClauseSyntax(
-                    leadingTrivia: .newline + .spaces(4),
+                ]))
+                .with(\.signature.returnClause, ReturnClauseSyntax(
+                    arrow: .arrowToken(trailingTrivia: .space),
+                    type: IdentifierTypeSyntax(name: .keyword(.Self)),
+                ))
+                .with(\.genericWhereClause, GenericWhereClauseSyntax(
+                    leadingTrivia: .space,
                     whereKeyword: .keyword(.where, trailingTrivia: .space),
                     requirements: GenericRequirementListSyntax([
                         GenericRequirementSyntax(
                             requirement: .sameTypeRequirement(SameTypeRequirementSyntax(
-                                leftType: IdentifierTypeSyntax(name: .identifier("Signature")),
-                                equal: .binaryOperator("==", leadingTrivia: .space, trailingTrivia: .space),
+                                leftType: IdentifierTypeSyntax(name: .identifier("Signature"), trailingTrivia: .space),
+                                equal: .binaryOperator("==", trailingTrivia: .space),
                                 rightType: fullSignature
                             ))
                         )
                     ])
-                ),
-                body: CodeBlockSyntax(
+                ))
+                .with(\.body, CodeBlockSyntax(
                     leadingTrivia: .space,
                     leftBrace: .leftBraceToken(),
                     statements: CodeBlockItemListSyntax([
                         CodeBlockItemSyntax(
-                            leadingTrivia: .newline + .spaces(8),
                             item: .expr(ExprSyntax(FunctionCallExprSyntax(
+                                leadingTrivia: .newline,
                                 calledExpression: MemberAccessExprSyntax(
                                     period: .periodToken(),
                                     name: .identifier("init")
                                 ),
                                 leftParen: .leftParenToken(),
                                 arguments: argumentList,
-                                rightParen: .rightParenToken(leadingTrivia: .newline + .spaces(8))
-                            ))),
-                            trailingTrivia: .newline + .spaces(4)
+                                rightParen: .rightParenToken(leadingTrivia: .newline)
+                            )))
                         )
                     ]),
                     rightBrace: .rightBraceToken()
@@ -397,11 +349,11 @@ extension MockType {
                         ClosureShorthandParameterSyntax(name: .wildcardToken(leadingTrivia: .space, trailingTrivia: .space))
                     ])
                 ),
-                inKeyword: .keyword(.in, trailingTrivia: .newline + .spaces(12))
+                inKeyword: .keyword(.in)
             )
 
             return VariableDeclSyntax(
-                leadingTrivia: .newline + .spaces(4),
+                leadingTrivia: .newline,
                 modifiers: DeclModifierListSyntax([
                     DeclModifierSyntax(name: .keyword(.static, trailingTrivia: .space))
                 ]),
@@ -418,7 +370,7 @@ extension MockType {
                             accessors: .getter(CodeBlockItemListSyntax([
                                 CodeBlockItemSyntax(
                                     item: .expr(ExprSyntax(FunctionCallExprSyntax(
-                                        leadingTrivia: .newline + .spaces(8),
+                                        leadingTrivia: .newline,
                                         calledExpression: MemberAccessExprSyntax(
                                             period: .periodToken(),
                                             name: .identifier("init")
@@ -429,16 +381,16 @@ extension MockType {
                                             signature: closureSignature,
                                             statements: CodeBlockItemListSyntax([
                                                 CodeBlockItemSyntax(
-                                                    leadingTrivia: hasParameters ? .newline + .spaces(12) : [],
+                                                    leadingTrivia: hasParameters ? .newline : [],
                                                     item: .expr(expr)
                                                 )
                                             ]),
-                                            rightBrace: .rightBraceToken(leadingTrivia: .newline + .spaces(8))
+                                            rightBrace: .rightBraceToken(leadingTrivia: .newline)
                                         )
                                     )))
                                 )
                             ])),
-                            rightBrace: .rightBraceToken(leadingTrivia: .newline + .spaces(4))
+                            rightBrace: .rightBraceToken(leadingTrivia: .newline)
                         )
                     )
                 ])
@@ -490,15 +442,15 @@ extension MockType {
                         leftParen: .leftParenToken(),
                         parameters: FunctionParameterListSyntax([
                             FunctionParameterSyntax(
-                                leadingTrivia: .newline + .spaces(4),
-                                firstName: .identifier("_"),
+                                leadingTrivia: .newline,
+                                firstName: .wildcardToken(),
                                 secondName: .identifier("expectation", leadingTrivia: .space),
                                 colon: .colonToken(trailingTrivia: .space),
                                 type: IdentifierTypeSyntax(
                                     name: .identifier("MethodExpectation"),
                                     genericArgumentClause: genericArgumentClause(arguments: [signatureType])
                                 ),
-                                trailingComma: .commaToken(trailingTrivia: .newline + .spaces(4))
+                                trailingComma: .commaToken(trailingTrivia: .newline)
                             ),
                             FunctionParameterSyntax(
                                 firstName: .identifier("fileID"),
@@ -508,7 +460,7 @@ extension MockType {
                                     equal: .equalToken(leadingTrivia: .space, trailingTrivia: .space),
                                     value: MacroExpansionExprSyntax(macroName: .identifier("fileID"), arguments: [])
                                 ),
-                                trailingComma: .commaToken(trailingTrivia: .newline + .spaces(4))
+                                trailingComma: .commaToken(trailingTrivia: .newline)
                             ),
                             FunctionParameterSyntax(
                                 firstName: .identifier("filePath"),
@@ -518,7 +470,7 @@ extension MockType {
                                     equal: .equalToken(leadingTrivia: .space, trailingTrivia: .space),
                                     value: MacroExpansionExprSyntax(macroName: .identifier("filePath"), arguments: [])
                                 ),
-                                trailingComma: .commaToken(trailingTrivia: .newline + .spaces(4))
+                                trailingComma: .commaToken(trailingTrivia: .newline)
                             ),
                             FunctionParameterSyntax(
                                 firstName: .identifier("line"),
@@ -528,7 +480,7 @@ extension MockType {
                                     equal: .equalToken(leadingTrivia: .space, trailingTrivia: .space),
                                     value: MacroExpansionExprSyntax(macroName: .identifier("line"), arguments: [])
                                 ),
-                                trailingComma: .commaToken(trailingTrivia: .newline + .spaces(4))
+                                trailingComma: .commaToken(trailingTrivia: .newline)
                             ),
                             FunctionParameterSyntax(
                                 firstName: .identifier("column"),
@@ -538,7 +490,7 @@ extension MockType {
                                     equal: .equalToken(leadingTrivia: .space, trailingTrivia: .space),
                                     value: MacroExpansionExprSyntax(macroName: .identifier("column"), arguments: [])
                                 ),
-                                trailingComma: .commaToken(trailingTrivia: .newline + .spaces(4))
+                                trailingComma: .commaToken(trailingTrivia: .newline)
                             ),
                             FunctionParameterSyntax(
                                 firstName: .identifier("perform"),
@@ -561,13 +513,13 @@ extension MockType {
                     leftBrace: .leftBraceToken(leadingTrivia: .space),
                     statements: CodeBlockItemListSyntax([
                         CodeBlockItemSyntax(
-                            leadingTrivia: .newline + .spaces(4),
+                            leadingTrivia: .newline,
                             item: .expr(ExprSyntax(FunctionCallExprSyntax(
                                 calledExpression: DeclReferenceExprSyntax(baseName: .identifier("_record")),
                                 leftParen: .leftParenToken(),
                                 arguments: LabeledExprListSyntax([
                                     labeledExpr(
-                                        leadingTrivia: .newline + .spaces(8),
+                                        leadingTrivia: .newline,
                                         expression: memberAccess(
                                             base: DeclReferenceExprSyntax(baseName: .identifier("expectation")),
                                             name: "expectation"
@@ -589,8 +541,8 @@ extension MockType {
                                         expression: DeclReferenceExprSyntax(baseName: .identifier("perform"))
                                     )
                                 ]
-                                    .commaSeparated(trailingTrivia: .newline + .spaces(8))),
-                                rightParen: .rightParenToken(leadingTrivia: .newline + .spaces(4))
+                                    .commaSeparated(leadingTrivia: .newline)),
+                                rightParen: .rightParenToken(leadingTrivia: .newline)
                             )))
                         )
                     ]),

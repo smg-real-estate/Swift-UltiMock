@@ -117,8 +117,8 @@ extension SyntaxBuilder {
     func functionCall(
         calledExpression: some ExprSyntaxProtocol,
         arguments: [LabeledExprSyntax],
-        leftParenTrivia: Trivia = .newline + .spaces(12),
-        rightParenTrivia: Trivia = .newline + .spaces(8)
+        leftParenTrivia: Trivia = [],
+        rightParenTrivia: Trivia = []
     ) -> FunctionCallExprSyntax {
         FunctionCallExprSyntax(
             calledExpression: ExprSyntax(calledExpression),
@@ -142,31 +142,37 @@ extension SyntaxBuilder {
     }
 
     func tupleTypeElement(
-        firstName: String = "_",
+        firstName: TokenSyntax = .wildcardToken(),
         secondName: String,
         type: TypeSyntax
     ) -> TupleTypeElementSyntax {
         TupleTypeElementSyntax(
-            firstName: .identifier(firstName),
-            secondName: .identifier(secondName, leadingTrivia: .space),
+            firstName: firstName.with(\.trailingTrivia, .space),
+            secondName: .identifier(secondName),
             colon: .colonToken(trailingTrivia: .space),
             type: type
         )
     }
 
     func arrayExpression(
-        elements: [some ExprSyntaxProtocol]
+        elements: [some ExprSyntaxProtocol],
+        wrapped: Bool = false
     ) -> ArrayExprSyntax {
-        ArrayExprSyntax(
-            leftSquare: .leftSquareToken(),
-            elements: ArrayElementListSyntax(
-                elements.map { element in
-                    ArrayElementSyntax(expression: ExprSyntax(element))
-                }
-                .commaSeparated()
-            ),
-            rightSquare: .rightSquareToken()
-        )
+        if elements.isEmpty {
+            ArrayExprSyntax(elements: [])
+        } else {
+            ArrayExprSyntax(
+                leftSquare: .leftSquareToken(),
+                elements: ArrayElementListSyntax(
+                    elements.map { element in
+                        ArrayElementSyntax(expression: ExprSyntax(element))
+                    }
+                        .commaSeparated(leadingTrivia: wrapped ? .newline : [])
+                )
+                .with(\.leadingTrivia, wrapped ? .newline : []),
+                rightSquare: .rightSquareToken(leadingTrivia: wrapped ? .newline : [])
+            )
+        }
     }
 
     func memberAccess(
@@ -212,6 +218,35 @@ extension SyntaxBuilder {
                 arguments.map { GenericArgumentSyntax(argument: TypeSyntax($0)) }
             ),
             rightAngle: .rightAngleToken()
+        )
+    }
+
+    func handleFatalFailure(message: StringLiteralExprSyntax, contextName: String? = nil) -> FunctionCallExprSyntax {
+        let expression: (String) -> ExprSyntaxProtocol = if let contextName {
+            { parameter in
+                MemberAccessExprSyntax(base: DeclReferenceExprSyntax(baseName: .identifier(contextName)), name: .identifier(parameter))
+            }
+        } else {
+            { parameter in
+                DeclReferenceExprSyntax(baseName: .identifier(parameter))
+            }
+        }
+        return functionCall(
+            calledExpression: DeclReferenceExprSyntax(
+                baseName: .identifier("handleFatalFailure")
+            ),
+            arguments: [
+                labeledExpr(
+                    leadingTrivia: .newline,
+                    expression: message
+                ),
+                labeledExpr(label: "fileID", expression: expression("fileID")),
+                labeledExpr(label: "filePath", expression: expression("filePath")),
+                labeledExpr(label: "line", expression: expression("line")),
+                labeledExpr(label: "column", expression: expression("column"))
+            ]
+                .commaSeparated(leadingTrivia: .newline),
+            rightParenTrivia: .newline
         )
     }
 }

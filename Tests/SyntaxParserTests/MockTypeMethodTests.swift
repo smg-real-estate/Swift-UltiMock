@@ -48,12 +48,12 @@ struct MockTypeMethodTests {
 
         let sut = MockType.Method(declaration: declaration)
 
-        #expect(sut.implementation.description == #"""
+        #expect(sut.implementation.formatted().description == #"""
         func make(value: Int) -> String {
             let perform = _perform(
-                    Methods.\#(sut.stubIdentifier),
-                    [value]
-                ) as! (_ value: Int) -> String
+                Methods.\#(sut.stubIdentifier),
+                [value]
+            ) as! (_ value: Int) -> String
             return perform(value)
         }
         """#)
@@ -65,12 +65,12 @@ struct MockTypeMethodTests {
 
         let sut = MockType.Method(declaration: declaration)
 
-        #expect(sut.implementation.description == #"""
+        #expect(sut.implementation.formatted().description == #"""
         func make(label name: String, _ other: Int) async throws -> Void {
             let perform = _perform(
-                    Methods.\#(sut.stubIdentifier),
-                    [name, other]
-                ) as! (_ name: String, _ other: Int) async throws -> Void
+                Methods.\#(sut.stubIdentifier),
+                [name, other]
+            ) as! (_ name: String, _ other: Int) async throws -> Void
             return try await perform(name, other)
         }
         """#)
@@ -94,7 +94,7 @@ struct MockTypeMethodTests {
 
         let sut = MockType.Method(declaration: declaration)
 
-        #expect(sut.implementation.description == #"""
+        #expect(sut.implementation.formatted().description == #"""
         func withParamsVoid(
             int: Swift.Int,
             label labelString: String,
@@ -107,9 +107,9 @@ struct MockTypeMethodTests {
             _ escapingClosure: @escaping (Int) -> Void
         ) {
             let perform = _perform(
-                    Methods.\#(sut.stubIdentifier),
-                    [int, labelString, string, optional, implicitOptional, `inout`, array, dictionary, escapingClosure]
-                ) as! (_ int: Swift.Int, _ labelString: String, _ string: String, _ optional: Int?, _ implicitOptional: Int!, _ `inout`: inout Int, _ array: [Int], _ dictionary: [String: Int], _ escapingClosure: @escaping (Int) -> Void) -> Void
+                Methods.\#(sut.stubIdentifier),
+                [int, labelString, string, optional, implicitOptional, `inout`, array, dictionary, escapingClosure]
+            ) as! (_ int: Swift.Int, _ labelString: String, _ string: String, _ optional: Int?, _ implicitOptional: Int!, _ `inout`: inout Int, _ array: [Int], _ dictionary: [String: Int], _ escapingClosure: @escaping (Int) -> Void) -> Void
             return perform(int, labelString, string, optional, implicitOptional, &`inout`, array, dictionary, escapingClosure)
         }
         """#)
@@ -126,15 +126,15 @@ struct MockTypeMethodTests {
 
         let sut = MockType.Method(declaration: declaration)
 
-        #expect(sut.implementation.description == #"""
+        #expect(sut.implementation.formatted().description == #"""
         func generic<P1: Equatable, P2>(
             parameter1: P1,
             _ parameter2: P2
         ) -> Int where P2: Hashable {
             let perform = _perform(
-                    Methods.\#(sut.stubIdentifier),
-                    [parameter1, parameter2]
-                ) as! (_ parameter1: P1, _ parameter2: P2) -> Int
+                Methods.\#(sut.stubIdentifier),
+                [parameter1, parameter2]
+            ) as! (_ parameter1: P1, _ parameter2: P2) -> Int
             return perform(parameter1, parameter2)
         }
         """#)
@@ -148,12 +148,12 @@ struct MockTypeMethodTests {
 
         let sut = MockType.Method(declaration: declaration)
 
-        #expect(sut.implementation.description == #"""
+        #expect(sut.implementation.formatted().description == #"""
         func withGenericConstraints<A>(a: A, b: B) where A: Codable, B == Int {
             let perform = _perform(
-                    Methods.\#(sut.stubIdentifier),
-                    [a, b]
-                ) as! (_ a: A, _ b: B) -> Void
+                Methods.\#(sut.stubIdentifier),
+                [a, b]
+            ) as! (_ a: A, _ b: B) -> Void
             return perform(a, b)
         }
         """#)
@@ -169,14 +169,14 @@ struct MockTypeMethodTests {
 
         let sut = MockType.Method(declaration: declaration)
 
-        #expect(sut.implementation.description == #"""
+        #expect(sut.implementation.formatted().description == #"""
         func withAnnotatedClosure(
             _ closure: (@MainActor @Sendable (Int) -> Void)?
         ) {
             let perform = _perform(
-                    Methods.\#(sut.stubIdentifier),
-                    [closure]
-                ) as! (_ closure: (@MainActor @Sendable (Int) -> Void)?) -> Void
+                Methods.\#(sut.stubIdentifier),
+                [closure]
+            ) as! (_ closure: (@MainActor @Sendable (Int) -> Void)?) -> Void
             return perform(closure)
         }
         """#)
@@ -188,12 +188,12 @@ struct MockTypeMethodTests {
 
         let sut = MockType.Method(declaration: declaration)
 
-        #expect(sut.implementation.description == #"""
+        #expect(sut.implementation.formatted().description == #"""
         func withSelf(_ `self`: TestMockableMock) -> TestMockableMock {
             let perform = _perform(
-                    Methods.\#(sut.stubIdentifier),
-                    [`self`]
-                ) as! (_ `self`: TestMockableMock) -> TestMockableMock
+                Methods.\#(sut.stubIdentifier),
+                [`self`]
+            ) as! (_ `self`: TestMockableMock) -> TestMockableMock
             return perform(`self`)
         }
         """#)
@@ -208,12 +208,12 @@ struct MockTypeMethodTests {
 
         let sut = MockType.Method(declaration: declaration)
 
-        #expect(sut.implementation.description == #"""
+        #expect(sut.implementation.formatted().description == #"""
         @discardableResult
         func discardableResult() -> String {
             let perform = _perform(
-                    Methods.\#(sut.stubIdentifier)
-                ) as! () -> String
+                Methods.\#(sut.stubIdentifier)
+            ) as! () -> String
             return perform()
         }
         """#)
@@ -225,7 +225,7 @@ struct MockTypeMethodTests {
 
         let sut = MockType.Method(declaration: declaration)
 
-        #expect(sut.expect.description == """
+        #expect(sut.expect.formatted().description == """
         public func expect(
             _ expectation: MethodExpectation<() -> Void>,
             fileID: String = #fileID,
@@ -252,7 +252,7 @@ struct MockTypeMethodTests {
 
         let sut = MockType.Method(declaration: declaration)
 
-        #expect(sut.expect.description == """
+        #expect(sut.expect.formatted().description == """
         public func expect(
             _ expectation: MethodExpectation<(_ bar: Int) -> String>,
             fileID: String = #fileID,
@@ -279,7 +279,7 @@ struct MockTypeMethodTests {
 
         let sut = MockType.Method(declaration: declaration)
 
-        #expect(sut.expect.description == """
+        #expect(sut.expect.formatted().description == """
         public func expect(
             _ expectation: MethodExpectation<() async throws -> Void>,
             fileID: String = #fileID,
@@ -322,7 +322,7 @@ struct MockTypeMethodTests {
 
         let mockClassName = "MockableMock"
 
-        #expect(sut.expectationMethodDeclaration(mockName: mockClassName).description == """
+        #expect(sut.expectationMethodDeclaration(mockName: mockClassName).formatted().description == """
         static func withParamsVoid(
             int: Parameter<Swift.Int>,
             label labelString: Parameter<String>,

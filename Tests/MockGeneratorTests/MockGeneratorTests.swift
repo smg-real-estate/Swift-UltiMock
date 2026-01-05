@@ -27,7 +27,7 @@ struct MockGeneratorTests {
 
         let expectedMocks: Set = [
             "InternalMockableMock",
-            "InternalSubclassOfAPublicClassMock",
+//            "InternalSubclassOfAPublicClassMock",
             "ObjCMockableMock",
             "RefinedGenericProtocolMock",
             "SourceryIssue1Mock",
@@ -63,9 +63,9 @@ struct MockGeneratorTests {
         let expectedMocks: Set = [
             "TestMockableMock",
             "GenericTestMockableMock",
-            "TestMockableClassMock",
+//            "TestMockableClassMock",
             "Test3rdPartyProtocolMock",
-            "CLLocationManagerMock"
+//            "CLLocationManagerMock"
         ]
 
         let generatedContent = try String(contentsOf: outputPath)

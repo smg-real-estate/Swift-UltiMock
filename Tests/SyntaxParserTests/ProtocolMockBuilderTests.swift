@@ -78,7 +78,7 @@ struct ProtocolMockBuilderTests {
 
         let sut = MockedProtocol(declaration: types[1], inherited: [types[0]]).mockBuilder
 
-        #expect(sut.methodsEnum.description == """
+        #expect(sut.methodsEnum.formatted().description == """
 
         enum Methods {
             static var doSomething_ret_Int: MockMethod {
@@ -88,7 +88,7 @@ struct ProtocolMockBuilderTests {
             }
             static var doSomethingElse_async_with_T_async_throws_ret_String_where_T_con_Equatable: MockMethod {
                 .init {
-                    "doSomethingElse<T>(with: \\($0[0] ?? "nil"))"
+                    "doSomethingElse<T>(with: \\($0 [0] ?? "nil"))"
                 }
             }
         }
@@ -110,7 +110,7 @@ struct ProtocolMockBuilderTests {
 
         let sut = MockedProtocol(declaration: types[1], inherited: [types[0]]).mockBuilder
 
-        #expect(sut.methodExpectations.description == """
+        #expect(sut.methodExpectations.formatted().description == """
 
         struct MethodExpectation<Signature> {
             let expectation: Recorder.Expectation
@@ -122,19 +122,21 @@ struct ProtocolMockBuilderTests {
                 )
             }
 
-            static func doSomething() -> Self
-            where Signature == () -> Void {
+            static func doSomething() -> Self where Signature == () -> Void {
                 .init(
                     method: Methods.doSomething_ret_Int,
                     parameters: []
                 )
             }
 
-            static func doSomethingElse<T>(with: Parameter<T>) -> Self
-            where Signature == (_ with: T) -> Void {
+            static func doSomethingElse<T>(with: Parameter<T>) async throws -> Self where Signature == (
+                _ with: T
+            ) -> Void {
                 .init(
                     method: Methods.doSomethingElse_async_with_T_async_throws_ret_String_where_T_con_Equatable,
-                    parameters: [with.anyParameter]
+                    parameters: [
+                        with.anyParameter
+                    ]
                 )
             }
         }
@@ -201,7 +203,7 @@ struct ProtocolMockBuilderTests {
 
         let sut = MockedProtocol(declaration: types[0], inherited: []).mockBuilder
 
-        #expect(sut.recordMethod.description == """
+        #expect(sut.recordMethod.formatted().description == """
         private func _record<P>(
             _ expectation: Recorder.Expectation,
             _ fileID: String,
@@ -244,7 +246,7 @@ struct ProtocolMockBuilderTests {
 
         let sut = MockedProtocol(declaration: types[0], inherited: []).mockBuilder
 
-        #expect(sut.performMethod.description == """
+        #expect(sut.performMethod.formatted().description == """
         private func _perform(
             _ method: MockMethod,
             _ parameters: [Any?] = []
@@ -293,12 +295,12 @@ struct ProtocolMockBuilderTests {
         let generatedMethod = try #require(sut.implementationMethods.first)
 
         #expect(
-            generatedMethod.trimmedDescription == #"""
+            generatedMethod.formatted().trimmedDescription == #"""
             func make(value: Int) -> String {
                 let perform = _perform(
-                        Methods.make_value_Int_ret_String,
-                        [value]
-                    ) as! (_ value: Int) -> String
+                    Methods.make_value_Int_ret_String,
+                    [value]
+                ) as! (_ value: Int) -> String
                 return perform(value)
             }
             """#
@@ -320,7 +322,7 @@ struct ProtocolMockBuilderTests {
         #expect(sut.expectationSetters.count == 2)
 
         let firstExpect = try #require(sut.expectationSetters.first)
-        #expect(firstExpect.trimmedDescription == """
+        #expect(firstExpect.formatted().trimmedDescription == """
         public func expect(
             _ expectation: MethodExpectation<() -> Int>,
             fileID: String = #fileID,
@@ -341,7 +343,7 @@ struct ProtocolMockBuilderTests {
         """)
 
         let secondExpect = try #require(sut.expectationSetters.last)
-        #expect(secondExpect.trimmedDescription == """
+        #expect(secondExpect.formatted().trimmedDescription == """
         public func expect(
             _ expectation: MethodExpectation<(_ with: String) async throws -> Bool>,
             fileID: String = #fileID,

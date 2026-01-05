@@ -27,22 +27,19 @@ struct MethodExpectationBuilder: SyntaxBuilder {
     @ArrayBuilder<MemberBlockItemSyntax>
     var members: [MemberBlockItemSyntax] {
         MemberBlockItemSyntax(
-            leadingTrivia: .newline + .spaces(4),
-            decl: expectationProperty,
-            trailingTrivia: .newline
+            leadingTrivia: .newline,
+            decl: expectationProperty
         )
 
         MemberBlockItemSyntax(
-            leadingTrivia: .newline + .spaces(4),
+            leadingTrivia: .newlines(2),
             decl: initializer,
-            trailingTrivia: .newline
         )
 
         for method in allMethods {
             MemberBlockItemSyntax(
-                leadingTrivia: .newline + .spaces(4),
+                leadingTrivia: .newlines(2),
                 decl: method.expectationMethodDeclaration(mockName: mockName),
-                trailingTrivia: .newline
             )
         }
     }
@@ -94,7 +91,7 @@ struct MethodExpectationBuilder: SyntaxBuilder {
                 leftBrace: .leftBraceToken(),
                 statements: CodeBlockItemListSyntax([
                     CodeBlockItemSyntax(
-                        leadingTrivia: .newline + .spaces(8),
+                        leadingTrivia: .newline,
                         item: .expr(ExprSyntax(SequenceExprSyntax(
                             elements: ExprListSyntax([
                                 ExprSyntax(MemberAccessExprSyntax(
@@ -110,25 +107,25 @@ struct MethodExpectationBuilder: SyntaxBuilder {
                                     ),
                                     arguments: [
                                         labeledExpr(
-                                            leadingTrivia: .newline + .spaces(12),
+                                            leadingTrivia: .newline,
                                             label: "method",
                                             expression: DeclReferenceExprSyntax(baseName: .identifier("method"))
                                         ),
                                         labeledExpr(
-                                            leadingTrivia: .newline + .spaces(12),
+                                            leadingTrivia: .newline,
                                             label: "parameters",
                                             expression: DeclReferenceExprSyntax(baseName: .identifier("parameters"))
                                         )
                                     ]
-                                        .commaSeparated(trailingTrivia: []),
+                                        .commaSeparated(leadingTrivia: .newline),
                                     leftParenTrivia: [],
-                                    rightParenTrivia: .newline + .spaces(8)
+                                    rightParenTrivia: .newline
                                 ))
                             ])
                         )))
                     )
                 ]),
-                rightBrace: .rightBraceToken(leadingTrivia: .newline + .spaces(4))
+                rightBrace: .rightBraceToken(leadingTrivia: .newline)
             )
         )
     }

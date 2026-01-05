@@ -1,4 +1,5 @@
 import SwiftSyntax
+import SwiftBasicFormat
 
 extension FunctionParameterSyntax {
     var isInOut: Bool {
@@ -38,9 +39,11 @@ extension LabeledExprSyntax: CommaJoinableSyntax {}
 extension GenericParameterSyntax: CommaJoinableSyntax {}
 
 extension Collection where Element: CommaJoinableSyntax {
-    func commaSeparated(trailingTrivia: Trivia = .space) -> [Element] {
+    func commaSeparated(leadingTrivia: Trivia = [], trailingTrivia: Trivia = []) -> [Element] {
         enumerated().map { index, element in
-            element.with(\.trailingComma, index < count - 1 ? .commaToken(trailingTrivia: trailingTrivia) : nil)
+            element
+                .with(\.leadingTrivia, leadingTrivia)
+                .with(\.trailingComma, index < count - 1 ? .commaToken(trailingTrivia: trailingTrivia) : nil)
         }
     }
 }
@@ -115,5 +118,12 @@ extension TriviaPiece {
         default:
             return false
         }
+    }
+}
+
+extension SyntaxProtocol {
+    func format() -> Self {
+        formatted()
+            .cast(Self.self)
     }
 }
