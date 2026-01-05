@@ -333,6 +333,7 @@ final class MockedTypesResolverTests {
         let method = try #require(resolved.declaration.memberBlock.members.first?.decl.as(FunctionDeclSyntax.self))
         let closureParameter = try #require(method.signature.parameterClause.parameters.first?.type.as(AttributedTypeSyntax.self))
         #expect(closureParameter.baseType.kind == .functionType)
+        #expect(closureParameter.description == "@escaping (Int) -> Void")
     }
 }
 
