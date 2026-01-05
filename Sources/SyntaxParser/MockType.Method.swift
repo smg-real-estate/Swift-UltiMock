@@ -562,9 +562,19 @@ private extension MockType.Method {
     func closureParameterElements(for parameters: [FunctionParameterSyntax]) -> TupleTypeElementListSyntax {
         TupleTypeElementListSyntax(
             parameters.map { parameter in
-                tupleTypeElement(
+                let type: TypeSyntax
+                if let implicitOptional = parameter.type.as(ImplicitlyUnwrappedOptionalTypeSyntax.self) {
+                    type = TypeSyntax(OptionalTypeSyntax(
+                        wrappedType: implicitOptional.wrappedType.trimmed,
+                        questionMark: .postfixQuestionMarkToken()
+                    ))
+                } else {
+                    type = parameter.type.trimmed
+                }
+
+                return tupleTypeElement(
                     secondName: parameter.parameterIdentifier.text,
-                    type: parameter.type.trimmed
+                    type: type
                 )
             }
             .commaSeparated()
@@ -577,6 +587,12 @@ private extension MockType.Method {
 
     var closureReturnType: TypeSyntax {
         if let type = declaration.signature.returnClause?.type {
+            if let implicitOptional = type.as(ImplicitlyUnwrappedOptionalTypeSyntax.self) {
+                return TypeSyntax(OptionalTypeSyntax(
+                    wrappedType: implicitOptional.wrappedType.trimmed,
+                    questionMark: .postfixQuestionMarkToken()
+                ))
+            }
             return type.trimmed
         }
         return TypeSyntax(IdentifierTypeSyntax(name: .identifier("Void")))

@@ -109,7 +109,7 @@ struct MockTypeMethodTests {
             let perform = _perform(
                 Methods.\#(sut.stubIdentifier),
                 [int, labelString, string, optional, implicitOptional, `inout`, array, dictionary, escapingClosure]
-            ) as! (_ int: Swift.Int, _ labelString: String, _ string: String, _ optional: Int?, _ implicitOptional: Int!, _ `inout`: inout Int, _ array: [Int], _ dictionary: [String: Int], _ escapingClosure: @escaping (Int) -> Void) -> Void
+            ) as! (_ int: Swift.Int, _ labelString: String, _ string: String, _ optional: Int?, _ implicitOptional: Int?, _ `inout`: inout Int, _ array: [Int], _ dictionary: [String: Int], _ escapingClosure: @escaping (Int) -> Void) -> Void
             return perform(int, labelString, string, optional, implicitOptional, &`inout`, array, dictionary, escapingClosure)
         }
         """#)
@@ -215,6 +215,25 @@ struct MockTypeMethodTests {
                 Methods.\#(sut.stubIdentifier)
             ) as! () -> String
             return perform()
+        }
+        """#)
+    }
+
+    @Test func `implementation emits correct body for force-unwrapped parameters and result`() throws {
+        let syntax = Parser.parse(source: #"""
+        func forceUnwrappedResult(_ optional: Int!) -> String!
+        """#).statements.first?.item
+        let declaration = try #require(FunctionDeclSyntax(syntax))
+
+        let sut = MockType.Method(declaration: declaration)
+
+        #expect(sut.implementation.formatted().description == #"""
+        func forceUnwrappedResult(_ optional: Int!) -> String! {
+            let perform = _perform(
+                Methods.\#(sut.stubIdentifier),
+                [optional]
+            ) as! (_ optional: Int?) -> String?
+            return perform(optional)
         }
         """#)
     }
