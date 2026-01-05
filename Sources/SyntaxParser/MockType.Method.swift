@@ -278,12 +278,10 @@ extension MockType {
             )
                 .with(\.leadingTrivia, .newline)
 
-            // Get the actual return type from the declaration, or use Void if not present
-            let returnType: TypeSyntax
-            if let returnClause = declaration.signature.returnClause {
-                returnType = normalizeTypeForSignature(returnClause.type, replaceSelfWith: mockName)
+            let returnType: TypeSyntax = if let returnClause = declaration.signature.returnClause {
+                normalizeTypeForSignature(returnClause.type, replaceSelfWith: mockName)
             } else {
-                returnType = TypeSyntax(IdentifierTypeSyntax(name: .identifier("Void")))
+                TypeSyntax(IdentifierTypeSyntax(name: .identifier("Void")))
             }
 
             let fullSignature = FunctionTypeSyntax(
@@ -592,6 +590,7 @@ private extension MockType.Method {
     // Normalize type for where clause signature - keeps inout, but removes attributes and converts implicit optional
     func normalizeTypeForSignature(_ type: TypeSyntax, replaceSelfWith mockName: String) -> TypeSyntax {
         normalizeTypeInternal(type, replaceSelfWith: mockName, preserveInout: true)
+            .withoutTrivia(\.isComment)
     }
     
     func normalizeTypeInternal(_ type: TypeSyntax, replaceSelfWith mockName: String, preserveInout: Bool) -> TypeSyntax {

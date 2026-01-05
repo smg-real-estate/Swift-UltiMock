@@ -98,7 +98,7 @@ struct ProtocolMockBuilderTests {
     @Test func `methodExpectation contains expectations for all methods`() {
         let source = Parser.parse(source: """
         protocol Foo {
-            func doSomething() -> Int
+            func doSomething() -> Int // Some comment 
         }
 
         protocol Bar: Foo {

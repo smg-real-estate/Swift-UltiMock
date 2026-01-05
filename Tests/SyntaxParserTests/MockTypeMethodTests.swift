@@ -363,7 +363,7 @@ struct MockTypeMethodTests {
         """)
     }
 
-    @Test func `expectationMethodDeclaration strips generic return type`() throws {
+    @Test func `expectationMethodDeclaration contains generic return type`() throws {
         let syntax = Parser.parse(source: """
         func withGenerics<A, B>(_ a: A) -> B
         """).statements.first?.item

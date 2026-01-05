@@ -126,4 +126,9 @@ extension SyntaxProtocol {
         formatted()
             .cast(Self.self)
     }
+
+    func withoutTrivia(_ predicate: (TriviaPiece) -> Bool) -> Self {
+        with(\.leadingTrivia, Trivia(pieces: leadingTrivia.filter { !predicate($0) }))
+            .with(\.trailingTrivia, Trivia(pieces: trailingTrivia.filter { !predicate($0) }))
+    }
 }
