@@ -477,7 +477,16 @@ final class ProtocolMockBuilder: SyntaxBuilder {
     }
 
     var mockClass: ClassDeclSyntax {
-        ClassDeclSyntax(
+        let isPublic = mockedProtocol.declaration.modifiers.contains { modifier in
+            modifier.name.tokenKind == .keyword(.public)
+        }
+        
+        let modifiers: DeclModifierListSyntax = isPublic ? DeclModifierListSyntax([
+            DeclModifierSyntax(name: .keyword(.open, trailingTrivia: .space))
+        ]) : DeclModifierListSyntax([])
+        
+        return ClassDeclSyntax(
+            modifiers: modifiers,
             classKeyword: .keyword(.class, trailingTrivia: .space),
             name: .identifier(mockClassName),
             genericParameterClause: genericParameterClause,

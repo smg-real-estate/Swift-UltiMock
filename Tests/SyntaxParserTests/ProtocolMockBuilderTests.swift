@@ -59,6 +59,18 @@ struct ProtocolMockBuilderTests {
 
         #expect(sut.mockClass.withoutMembers().description == """
         class BarMock<Item: Hashable & Codable, Identifier: Hashable>: Mock, @unchecked Sendable {
+
+    @Test func `mockClass is open for public protocol`() throws {
+        let source = Parser.parse(source: """
+        public protocol PublicProtocol {}
+        """)
+
+        let declaration = try #require(source.statements.first?.item.as(ProtocolDeclSyntax.self))
+
+        let sut = MockedProtocol(declaration: declaration, inherited: []).mockBuilder
+
+        #expect(sut.mockClass.withoutMembers().description == """
+        open class PublicProtocolMock: Mock, PublicProtocol, @unchecked Sendable {
         }
         """)
     }
