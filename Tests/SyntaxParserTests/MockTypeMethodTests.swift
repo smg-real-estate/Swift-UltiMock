@@ -199,6 +199,23 @@ struct MockTypeMethodTests {
         """#)
     }
 
+    @Test func `implementation escapes reserved keyword parameters`() throws {
+        let syntax = Parser.parse(source: "func withKeywords(_ internal: Int, _ `inout`: Int)").statements.first?.item
+        let declaration = try #require(FunctionDeclSyntax(syntax))
+
+        let sut = MockType.Method(declaration: declaration)
+
+        #expect(sut.implementation().formatted().description == #"""
+        func withKeywords(_ `internal`: Int, _ `inout`: Int) {
+            let perform = _perform(
+                Methods.\#(sut.stubIdentifier),
+                [`internal`, `inout`]
+            ) as! (_ `internal`: Int, _ `inout`: Int) -> Void
+            return perform(`internal`, `inout`)
+        }
+        """#)
+    }
+
     @Test func `implementation emits correct body for discardable result`() throws {
         let syntax = Parser.parse(source: #"""
         @discardableResult

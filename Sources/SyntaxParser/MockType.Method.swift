@@ -101,15 +101,21 @@ extension MockType {
         func implementation(in mockType: String? = nil) -> FunctionDeclSyntax {
             var implementationDeclaration = declaration
 
-            if let mockType {
-                let newParameters = declaration.signature.parameterClause.parameters.map { param -> FunctionParameterSyntax in
-                    if param.type.as(IdentifierTypeSyntax.self)?.name.text == "Self" {
-                        return param.with(\.type, TypeSyntax(IdentifierTypeSyntax(name: .identifier(mockType))))
-                    }
-                    return param
+            let rewrittenParameters = declaration.signature.parameterClause.parameters.map { param -> FunctionParameterSyntax in
+                var updatedParam = param
+
+                if let mockType, param.type.as(IdentifierTypeSyntax.self)?.name.text == "Self" {
+                    updatedParam = updatedParam.with(\.type, TypeSyntax(IdentifierTypeSyntax(name: .identifier(mockType))))
                 }
-                implementationDeclaration = implementationDeclaration.with(\.signature.parameterClause.parameters, FunctionParameterListSyntax(newParameters))
+
+                let secondNameText = updatedParam.secondName?.text
+                if let secondNameText, keywordsToEscape.contains(secondNameText), !secondNameText.hasPrefix("`") {
+                    updatedParam = updatedParam.with(\.secondName, .identifier("`\(secondNameText)`"))
+                }
+
+                return updatedParam
             }
+            implementationDeclaration = implementationDeclaration.with(\.signature.parameterClause.parameters, FunctionParameterListSyntax(rewrittenParameters))
 
             let parameters = Array(implementationDeclaration.signature.parameterClause.parameters)
             let methodReference = memberAccess(

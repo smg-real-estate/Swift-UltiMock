@@ -15,15 +15,13 @@ final class ExpectationParametersRewriter: SyntaxRewriter, SyntaxBuilder {
             genericArgumentClause: genericArgumentClause(arguments: [rewrittenType])
         ).cast(TypeSyntax.self))
 
-        let keywordsToBacktick: Set<String> = ["internal", "inout"]
-
         let firstNameText = wrapped.firstName.text
-        if keywordsToBacktick.contains(firstNameText), !firstNameText.hasPrefix("`") {
+        if keywordsToEscape.contains(firstNameText), !firstNameText.hasPrefix("`") {
             return wrapped.with(\.firstName, .identifier("`\(firstNameText)`"))
         }
 
         let secondNameText = wrapped.secondName?.text
-        if let secondNameText, keywordsToBacktick.contains(secondNameText), !secondNameText.hasPrefix("`") {
+        if let secondNameText, keywordsToEscape.contains(secondNameText), !secondNameText.hasPrefix("`") {
             return wrapped.with(\.secondName, .identifier("`\(secondNameText)`"))
         }
 

@@ -1,6 +1,8 @@
 import SwiftSyntax
 import SwiftBasicFormat
 
+let keywordsToEscape: Set<String> = ["internal", "inout", "public", "private", "open", "fileprivate"]
+
 extension FunctionParameterSyntax {
     var isInOut: Bool {
         type.as(AttributedTypeSyntax.self)?
@@ -9,6 +11,12 @@ extension FunctionParameterSyntax {
 
     var parameterIdentifier: TokenSyntax {
         let baseName = secondName ?? firstName
+        let text = baseName.text
+
+        if keywordsToEscape.contains(text), !text.hasPrefix("`") {
+            return .identifier("`\(text)`")
+        }
+
         return baseName.with(\.leadingTrivia, []).with(\.trailingTrivia, [])
     }
 
