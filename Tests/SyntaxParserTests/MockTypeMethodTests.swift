@@ -444,4 +444,56 @@ struct MockTypeMethodTests {
         }
         """)
     }
+
+    @Test func `expectationMethodDeclaration replaces some with any`() throws {
+        let syntax = Parser.parse(source: """
+        func withSome(_ some: some TestGenericProtocol<Int>)
+        """).statements.first?.item
+
+        let declaration = try #require(FunctionDeclSyntax(syntax))
+
+        let sut = MockType.Method(declaration: declaration)
+
+        let mockClassName = "MockableMock"
+
+        #expect(sut.expectationMethodDeclaration(mockName: mockClassName).formatted().description == #"""
+        static func withSome(_ some: Parameter<any TestGenericProtocol<Int>>) -> Self where Signature == (
+            _ some: any TestGenericProtocol<Int>
+        ) -> Void {
+            .init(
+                method: Methods.\#(sut.stubIdentifier),
+                parameters: [
+                    some.anyParameter
+                ]
+            )
+        }
+        """#)
+    }
+
+    @Test func `expectationMethodDeclaration escapes keywords`() throws {
+        let syntax = Parser.parse(source: """
+        func withKeywords(_ internal: Int, _ `inout`: Int)
+        """).statements.first?.item
+
+        let declaration = try #require(FunctionDeclSyntax(syntax))
+
+        let sut = MockType.Method(declaration: declaration)
+
+        let mockClassName = "MockableMock"
+
+        #expect(sut.expectationMethodDeclaration(mockName: mockClassName).formatted().description == #"""
+        static func withKeywords(_ `internal`: Parameter<Int>, _ `inout`: Parameter<Int>) -> Self where Signature == (
+            _ `internal`: Int,
+            _ `inout`: Int
+        ) -> Void {
+            .init(
+                method: Methods.\#(sut.stubIdentifier),
+                parameters: [
+                    `internal`.anyParameter,
+                    `inout`.anyParameter
+                ]
+            )
+        }
+        """#)
+    }
 }

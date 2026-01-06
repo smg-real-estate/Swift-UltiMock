@@ -252,8 +252,16 @@ extension MockType {
                                     return nil
                                 }
 
+                                let paramIdentifier: String = if paramName == "internal" {
+                                    "`internal`"
+                                } else {
+                                    paramName.hasPrefix("`")
+                                        ? paramName
+                                        : paramName.replacingOccurrences(of: "`", with: "")
+                                }
+
                                 return memberAccess(
-                                    base: DeclReferenceExprSyntax(baseName: .identifier(paramName)),
+                                    base: DeclReferenceExprSyntax(baseName: .identifier(paramIdentifier)),
                                     name: "anyParameter"
                                 )
                             },
@@ -266,32 +274,38 @@ extension MockType {
                 .with(\.leadingTrivia, .newline)
 
             // Build tuple elements for where clause signature
-            let whereSignatureElements = TupleTypeElementListSyntax(
-                parameters.compactMap { param in
-                    let firstName = param.firstName.text
-                    let secondName = param.secondName?.text
-                    let paramName = secondName ?? firstName
+            let whereSignatureSyntaxElements: [TupleTypeElementSyntax] = parameters.compactMap { param in
+                let firstName = param.firstName.text
+                let secondName = param.secondName?.text
+                let paramName = secondName ?? firstName
 
-                    // Skip parameters named "self" in the where clause
-                    if paramName == "self" || paramName == "`self`" {
-                        return nil
-                    }
-
-                    // For where clause, we preserve inout but still normalize Self and implicit optionals
-                    let normalizedType = normalizeTypeForSignature(param.type, replaceSelfWith: mockName)
-
-                    return tupleTypeElement(
-                        secondName: paramName,
-                        type: normalizedType
-                    )
-                    .with(\.leadingTrivia, .newline)
+                // Skip parameters named "self" in the where clause
+                if paramName == "self" || paramName == "`self`" {
+                    return nil
                 }
-                    .commaSeparated(leadingTrivia: .newline)
+
+                let signatureParamName = (paramName == "internal") ? "`internal`" : paramName
+
+                // For where clause, we preserve inout but still normalize Self and implicit optionals
+                let normalizedType = normalizeTypeForSignature(param.type, replaceSelfWith: mockName)
+                let existentialNormalizedType = ExistentialAnyRewriter().rewrite(normalizedType).cast(TypeSyntax.self)
+
+                return tupleTypeElement(
+                    secondName: signatureParamName,
+                    type: existentialNormalizedType
+                )
+                .with(\.leadingTrivia, .newline)
+            }
+
+            let whereSignatureElements = TupleTypeElementListSyntax(
+                whereSignatureSyntaxElements.commaSeparated(leadingTrivia: .newline)
             )
                 .with(\.leadingTrivia, .newline)
 
             let returnType: TypeSyntax = if let returnClause = declaration.signature.returnClause {
-                normalizeTypeForSignature(returnClause.type, replaceSelfWith: mockName)
+                ExistentialAnyRewriter()
+                    .rewrite(normalizeTypeForSignature(returnClause.type, replaceSelfWith: mockName))
+                    .cast(TypeSyntax.self)
             } else {
                 TypeSyntax(IdentifierTypeSyntax(name: .identifier("Void")))
             }
@@ -567,6 +581,15 @@ extension MockType {
                 )
             )
         }
+    }
+}
+
+private final class ExistentialAnyRewriter: SyntaxRewriter {
+    override func visit(_ node: SomeOrAnyTypeSyntax) -> TypeSyntax {
+        SomeOrAnyTypeSyntax(
+            someOrAnySpecifier: .keyword(.any, trailingTrivia: .space),
+            constraint: node.constraint
+        ).cast(TypeSyntax.self)
     }
 }
 

@@ -9,12 +9,25 @@ final class ExpectationParametersRewriter: SyntaxRewriter, SyntaxBuilder {
     }
 
     override func visit(_ node: FunctionParameterSyntax) -> FunctionParameterSyntax {
-        super.visit(
-            node.with(\.type, IdentifierTypeSyntax(
-                name: .identifier("Parameter"),
-                genericArgumentClause: genericArgumentClause(arguments: [node.type])
-            ).cast(TypeSyntax.self))
-        )
+        let rewrittenType = super.visit(node.type)
+        let wrapped = node.with(\.type, IdentifierTypeSyntax(
+            name: .identifier("Parameter"),
+            genericArgumentClause: genericArgumentClause(arguments: [rewrittenType])
+        ).cast(TypeSyntax.self))
+
+        let keywordsToBacktick: Set<String> = ["internal", "inout"]
+
+        let firstNameText = wrapped.firstName.text
+        if keywordsToBacktick.contains(firstNameText), !firstNameText.hasPrefix("`") {
+            return wrapped.with(\.firstName, .identifier("`\(firstNameText)`"))
+        }
+
+        let secondNameText = wrapped.secondName?.text
+        if let secondNameText, keywordsToBacktick.contains(secondNameText), !secondNameText.hasPrefix("`") {
+            return wrapped.with(\.secondName, .identifier("`\(secondNameText)`"))
+        }
+
+        return wrapped
     }
 
     override func visit(_ node: AttributedTypeSyntax) -> TypeSyntax {
@@ -33,6 +46,14 @@ final class ExpectationParametersRewriter: SyntaxRewriter, SyntaxBuilder {
         } else {
             super.visit(node)
         }
+    }
+
+    override func visit(_ node: SomeOrAnyTypeSyntax) -> TypeSyntax {
+        let constraint = node.constraint
+        return SomeOrAnyTypeSyntax(
+            someOrAnySpecifier: .keyword(.any, trailingTrivia: .space),
+            constraint: constraint
+        ).cast(TypeSyntax.self)
     }
 }
 
