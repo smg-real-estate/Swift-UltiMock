@@ -69,6 +69,20 @@ final class ProtocolMockBuilder: SyntaxBuilder {
         )
     }
 
+    var typealiasDeclarations: [TypeAliasDeclSyntax] {
+        allAssociatedTypes.map { associatedType in
+            TypeAliasDeclSyntax(
+                typealiasKeyword: .keyword(.typealias, trailingTrivia: .space),
+                name: associatedType.name,
+                initializer: TypeInitializerClauseSyntax(
+                    equal: .equalToken(leadingTrivia: .space, trailingTrivia: .space),
+                    value: IdentifierTypeSyntax(name: associatedType.name),
+                    trailingTrivia: .space
+                )
+            )
+        }
+    }
+
     var methodExpectations: StructDeclSyntax {
         MethodExpectationBuilder(
             mockName: mockClassName,
@@ -129,6 +143,9 @@ final class ProtocolMockBuilder: SyntaxBuilder {
 
     @ArrayBuilder<MemberBlockItemSyntax>
     var members: [MemberBlockItemSyntax] {
+        typealiasDeclarations.map { typealiasDecl in
+            MemberBlockItemSyntax(decl: typealiasDecl)
+        }
         properties
         MemberBlockItemSyntax(decl: initializer)
         MemberBlockItemSyntax(decl: methodsEnum)
@@ -453,6 +470,7 @@ final class ProtocolMockBuilder: SyntaxBuilder {
 
     var inheritanceClause: InheritanceClauseSyntax {
         let mockType = IdentifierTypeSyntax(name: .identifier("Mock"))
+        let protocolType = IdentifierTypeSyntax(name: .identifier(mockedProtocol.declaration.name.text))
 
         let sendableType = IdentifierTypeSyntax(name: .identifier("Sendable"))
         let uncheckedAttribute = AttributeSyntax(
@@ -468,9 +486,11 @@ final class ProtocolMockBuilder: SyntaxBuilder {
             colon: .colonToken(trailingTrivia: .space),
             inheritedTypes: InheritedTypeListSyntax([
                 InheritedTypeSyntax(
-                    type: mockType,
-                    trailingComma: .commaToken(trailingTrivia: .space)
-                ),
+                    type: mockType
+                ).with(\.trailingComma, .commaToken(trailingTrivia: .space)),
+                InheritedTypeSyntax(
+                    type: protocolType
+                ).with(\.trailingComma, .commaToken(trailingTrivia: .space)),
                 InheritedTypeSyntax(type: uncheckedSendableType)
             ])
         )
@@ -492,9 +512,9 @@ final class ProtocolMockBuilder: SyntaxBuilder {
             genericParameterClause: genericParameterClause,
             inheritanceClause: inheritanceClause,
             memberBlock: MemberBlockSyntax(
-                leftBrace: .leftBraceToken(leadingTrivia: .space, trailingTrivia: .newline),
+                leftBrace: .leftBraceToken(leadingTrivia: .space),
                 members: MemberBlockItemListSyntax(members.map { $0.with(\.leadingTrivia, .newline) }),
-                rightBrace: .rightBraceToken()
+                rightBrace: .rightBraceToken(leadingTrivia: .newline)
             )
         )
     }

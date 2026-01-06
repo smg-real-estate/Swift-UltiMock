@@ -16,7 +16,7 @@ struct ProtocolMockBuilderTests {
         let sut = MockedProtocol(declaration: declaration, inherited: []).mockBuilder
 
         #expect(sut.mockClass.withoutMembers().description == """
-        class TestProtocolMock: Mock, @unchecked Sendable {
+        class TestProtocolMock: Mock, TestProtocol, @unchecked Sendable {
         }
         """)
     }
@@ -36,7 +36,9 @@ struct ProtocolMockBuilderTests {
         let sut = MockedProtocol(declaration: declaration, inherited: []).mockBuilder
 
         #expect(sut.mockClass.withoutMembers().description == """
-        class TestProtocolMock<Item, Identifier: Hashable>: Mock, @unchecked Sendable {
+        class TestProtocolMock<Item, Identifier: Hashable>: Mock, TestProtocol, @unchecked Sendable {
+        typealias Item = Item 
+        typealias Identifier = Identifier 
         }
         """)
     }
@@ -58,7 +60,12 @@ struct ProtocolMockBuilderTests {
         let sut = MockedProtocol(declaration: types[1], inherited: [types[0]]).mockBuilder
 
         #expect(sut.mockClass.withoutMembers().description == """
-        class BarMock<Item: Hashable & Codable, Identifier: Hashable>: Mock, @unchecked Sendable {
+        class BarMock<Item: Hashable & Codable, Identifier: Hashable>: Mock, Bar, @unchecked Sendable {
+        typealias Item = Item 
+        typealias Identifier = Identifier 
+        }
+        """)
+    }
 
     @Test func `mockClass is open for public protocol`() throws {
         let source = Parser.parse(source: """
@@ -379,7 +386,7 @@ struct ProtocolMockBuilderTests {
 
 extension ClassDeclSyntax {
     func withoutMembers() -> ClassDeclSyntax {
-        with(\.memberBlock.members, [])
+        with(\.memberBlock.members, memberBlock.members.filter { $0.decl.kind == .typeAliasDecl })
     }
 }
 
