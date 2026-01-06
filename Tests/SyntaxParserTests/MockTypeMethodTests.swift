@@ -48,7 +48,7 @@ struct MockTypeMethodTests {
 
         let sut = MockType.Method(declaration: declaration)
 
-        #expect(sut.implementation.formatted().description == #"""
+        #expect(sut.implementation().formatted().description == #"""
         func make(value: Int) -> String {
             let perform = _perform(
                 Methods.\#(sut.stubIdentifier),
@@ -65,7 +65,7 @@ struct MockTypeMethodTests {
 
         let sut = MockType.Method(declaration: declaration)
 
-        #expect(sut.implementation.formatted().description == #"""
+        #expect(sut.implementation().formatted().description == #"""
         func make(label name: String, _ other: Int) async throws -> Void {
             let perform = _perform(
                 Methods.\#(sut.stubIdentifier),
@@ -94,7 +94,7 @@ struct MockTypeMethodTests {
 
         let sut = MockType.Method(declaration: declaration)
 
-        #expect(sut.implementation.formatted().description == #"""
+        #expect(sut.implementation().formatted().description == #"""
         func withParamsVoid(
             int: Swift.Int,
             label labelString: String,
@@ -126,7 +126,7 @@ struct MockTypeMethodTests {
 
         let sut = MockType.Method(declaration: declaration)
 
-        #expect(sut.implementation.formatted().description == #"""
+        #expect(sut.implementation().formatted().description == #"""
         func generic<P1: Equatable, P2>(
             parameter1: P1,
             _ parameter2: P2
@@ -148,7 +148,7 @@ struct MockTypeMethodTests {
 
         let sut = MockType.Method(declaration: declaration)
 
-        #expect(sut.implementation.formatted().description == #"""
+        #expect(sut.implementation().formatted().description == #"""
         func withGenericConstraints<A>(a: A, b: B) where A: Codable, B == Int {
             let perform = _perform(
                 Methods.\#(sut.stubIdentifier),
@@ -169,7 +169,7 @@ struct MockTypeMethodTests {
 
         let sut = MockType.Method(declaration: declaration)
 
-        #expect(sut.implementation.formatted().description == #"""
+        #expect(sut.implementation().formatted().description == #"""
         func withAnnotatedClosure(
             _ closure: (@MainActor @Sendable (Int) -> Void)?
         ) {
@@ -188,7 +188,7 @@ struct MockTypeMethodTests {
 
         let sut = MockType.Method(declaration: declaration)
 
-        #expect(sut.implementation.formatted().description == #"""
+        #expect(sut.implementation().formatted().description == #"""
         func withSelf(_ `self`: TestMockableMock) -> TestMockableMock {
             let perform = _perform(
                 Methods.\#(sut.stubIdentifier),
@@ -208,7 +208,7 @@ struct MockTypeMethodTests {
 
         let sut = MockType.Method(declaration: declaration)
 
-        #expect(sut.implementation.formatted().description == #"""
+        #expect(sut.implementation().formatted().description == #"""
         @discardableResult
         func discardableResult() -> String {
             let perform = _perform(
@@ -227,13 +227,32 @@ struct MockTypeMethodTests {
 
         let sut = MockType.Method(declaration: declaration)
 
-        #expect(sut.implementation.formatted().description == #"""
+        #expect(sut.implementation().formatted().description == #"""
         func forceUnwrappedResult(_ optional: Int!) -> String! {
             let perform = _perform(
                 Methods.\#(sut.stubIdentifier),
                 [optional]
             ) as! (_ optional: Int?) -> String?
             return perform(optional)
+        }
+        """#)
+    }
+
+    @Test func `implementation replaces Self parameter type with mock name`() throws {
+        let syntax = Parser.parse(source: #"""
+        func withSelf(_ self: Self) -> Self
+        """#).statements.first?.item
+        let declaration = try #require(FunctionDeclSyntax(syntax))
+
+        let sut = MockType.Method(declaration: declaration)
+
+        #expect(sut.implementation(in: "TestMock").formatted().description == #"""
+        func withSelf(_ self: TestMock) -> Self {
+            let perform = _perform(
+                Methods.\#(sut.stubIdentifier),
+                [self]
+            ) as! (_ self: TestMock) -> Self
+            return perform(self)
         }
         """#)
     }

@@ -143,7 +143,7 @@ final class ProtocolMockBuilder: SyntaxBuilder {
     }
 
     var implementationMethods: [FunctionDeclSyntax] {
-        allMethods.map(\.implementation)
+        allMethods.map { $0.implementation(in: mockClassName) }
     }
 
     var expectationSetters: [FunctionDeclSyntax] {

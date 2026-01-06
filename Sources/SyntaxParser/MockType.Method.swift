@@ -98,8 +98,20 @@ extension MockType {
             return description
         }
 
-        var implementation: FunctionDeclSyntax {
-            let parameters = Array(declaration.signature.parameterClause.parameters)
+        func implementation(in mockType: String? = nil) -> FunctionDeclSyntax {
+            var implementationDeclaration = declaration
+
+            if let mockType {
+                let newParameters = declaration.signature.parameterClause.parameters.map { param -> FunctionParameterSyntax in
+                    if param.type.as(IdentifierTypeSyntax.self)?.name.text == "Self" {
+                        return param.with(\.type, TypeSyntax(IdentifierTypeSyntax(name: .identifier(mockType))))
+                    }
+                    return param
+                }
+                implementationDeclaration = implementationDeclaration.with(\.signature.parameterClause.parameters, FunctionParameterListSyntax(newParameters))
+            }
+
+            let parameters = Array(implementationDeclaration.signature.parameterClause.parameters)
             let methodReference = memberAccess(
                 base: DeclReferenceExprSyntax(baseName: .identifier("Methods")),
                 name: stubIdentifier
@@ -198,9 +210,9 @@ extension MockType {
                 expression: returnExpression
             )
 
-            return declaration
-                .with(\.signature, declaration.signature.with(\.trailingTrivia, .space))
-                .with(\.genericWhereClause, declaration.genericWhereClause?.with(\.trailingTrivia, .space))
+            return implementationDeclaration
+                .with(\.signature, implementationDeclaration.signature.with(\.trailingTrivia, .space))
+                .with(\.genericWhereClause, implementationDeclaration.genericWhereClause?.with(\.trailingTrivia, .space))
                 .with(\.body, CodeBlockSyntax(
                     statements: CodeBlockItemListSyntax([
                         CodeBlockItemSyntax(
