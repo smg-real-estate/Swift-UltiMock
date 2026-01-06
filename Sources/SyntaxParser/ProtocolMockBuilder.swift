@@ -160,7 +160,10 @@ final class ProtocolMockBuilder: SyntaxBuilder {
     }
 
     var implementationMethods: [FunctionDeclSyntax] {
-        allMethods.map { $0.implementation(in: mockClassName) }
+        let isPublic = mockedProtocol.declaration.modifiers.contains { modifier in
+            modifier.name.tokenKind == .keyword(.public)
+        }
+        return allMethods.map { $0.implementation(in: mockClassName, isPublic: isPublic) }
     }
 
     var expectationSetters: [FunctionDeclSyntax] {

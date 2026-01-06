@@ -98,7 +98,7 @@ extension MockType {
             return description
         }
 
-        func implementation(in mockType: String? = nil) -> FunctionDeclSyntax {
+        func implementation(in mockType: String? = nil, isPublic: Bool = false) -> FunctionDeclSyntax {
             var implementationDeclaration = declaration
 
             let rewrittenParameters = declaration.signature.parameterClause.parameters.map { param -> FunctionParameterSyntax in
@@ -216,7 +216,26 @@ extension MockType {
                 expression: returnExpression
             )
 
+            let modifiers: DeclModifierListSyntax = isPublic ? DeclModifierListSyntax([
+                DeclModifierSyntax(name: .keyword(.public, trailingTrivia: .space))
+            ]) : DeclModifierListSyntax([])
+
+            // Adjust funcKeyword leading trivia based on whether we have modifiers or attributes
+            let funcKeywordLeadingTrivia: Trivia
+            if !modifiers.isEmpty {
+                // If we have modifiers, no leading trivia on func
+                funcKeywordLeadingTrivia = []
+            } else if !implementationDeclaration.attributes.isEmpty {
+                // If we have attributes but no modifiers, preserve newline
+                funcKeywordLeadingTrivia = .newline
+            } else {
+                // Otherwise, clear leading trivia
+                funcKeywordLeadingTrivia = []
+            }
+
             return implementationDeclaration
+                .with(\.modifiers, modifiers)
+                .with(\.funcKeyword, implementationDeclaration.funcKeyword.with(\.leadingTrivia, funcKeywordLeadingTrivia))
                 .with(\.signature, implementationDeclaration.signature.with(\.trailingTrivia, .space))
                 .with(\.genericWhereClause, implementationDeclaration.genericWhereClause?.with(\.trailingTrivia, .space))
                 .with(\.body, CodeBlockSyntax(

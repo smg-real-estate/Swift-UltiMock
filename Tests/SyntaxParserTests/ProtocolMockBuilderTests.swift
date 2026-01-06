@@ -300,12 +300,15 @@ struct ProtocolMockBuilderTests {
         """)
     }
 
-    @Test func `implementationMethods contains method implementations`() throws {
-        let source = Parser.parse(source: """
-        protocol Foo {
+    @Test(arguments: [
+        "",
+        "public "
+    ]) func `implementationMethods contains method implementations`(accessModifier: String) throws {
+        let source = Parser.parse(source: #"""
+        \#(accessModifier)protocol Foo {
             func make(value: Int) -> String
         }
-        """)
+        """#)
 
         let types = source.statements.map { $0.item.cast(ProtocolDeclSyntax.self) }
 
@@ -315,7 +318,7 @@ struct ProtocolMockBuilderTests {
 
         #expect(
             generatedMethod.formatted().trimmedDescription == #"""
-            func make(value: Int) -> String {
+            \#(accessModifier)func make(value: Int) -> String {
                 let perform = _perform(
                     Methods.make_value_Int_ret_String,
                     [value]
