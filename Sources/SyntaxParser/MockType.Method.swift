@@ -586,11 +586,27 @@ private extension MockType.Method {
 
                 return tupleTypeElement(
                     secondName: parameter.parameterIdentifier.text,
-                    type: type
+                    type: replaceSomeWithAny(in: type)
                 )
             }
             .commaSeparated()
         )
+    }
+
+    func replaceSomeWithAny(in type: TypeSyntax) -> TypeSyntax {
+        if let someType = type.as(SomeOrAnyTypeSyntax.self), someType.someOrAnySpecifier.tokenKind == .keyword(.some) {
+            return TypeSyntax(someType.with(\.someOrAnySpecifier, .keyword(.any, trailingTrivia: .space)))
+        }
+
+        if let optionalType = type.as(OptionalTypeSyntax.self) {
+            return TypeSyntax(optionalType.with(\.wrappedType, replaceSomeWithAny(in: optionalType.wrappedType)))
+        }
+
+        if let attributedType = type.as(AttributedTypeSyntax.self) {
+            return TypeSyntax(attributedType.with(\.baseType, replaceSomeWithAny(in: attributedType.baseType)))
+        }
+
+        return type
     }
 
     func parameterArrayExpression(for parameters: [FunctionParameterSyntax]) -> ArrayExprSyntax {

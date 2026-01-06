@@ -257,6 +257,25 @@ struct MockTypeMethodTests {
         """#)
     }
 
+    @Test func `implementation replaces some with any`() throws {
+        let syntax = Parser.parse(source: #"""
+        func withSome(_ some: some TestGenericProtocol<Int>)
+        """#).statements.first?.item
+        let declaration = try #require(FunctionDeclSyntax(syntax))
+
+        let sut = MockType.Method(declaration: declaration)
+
+        #expect(sut.implementation(in: "TestMock").formatted().description == #"""
+        func withSome(_ some: some TestGenericProtocol<Int>) {
+            let perform = _perform(
+                Methods.\#(sut.stubIdentifier),
+                [some]
+            ) as! (_ some: any TestGenericProtocol<Int>) -> Void
+            return perform(some)
+        }
+        """#)
+    }
+
     @Test func `expect emits correct method for simple function`() throws {
         let syntax = Parser.parse(source: "func foo()").statements.first?.item
         let declaration = try #require(FunctionDeclSyntax(syntax))
