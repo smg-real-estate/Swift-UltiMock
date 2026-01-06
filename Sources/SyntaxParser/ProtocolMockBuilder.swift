@@ -70,8 +70,13 @@ final class ProtocolMockBuilder: SyntaxBuilder {
     }
 
     var typealiasDeclarations: [TypeAliasDeclSyntax] {
-        allAssociatedTypes.map { associatedType in
+        let isPublic = mockedProtocol.declaration.modifiers.contains { modifier in
+            modifier.name.tokenKind == .keyword(.public)
+        }
+        
+        return allAssociatedTypes.map { associatedType in
             TypeAliasDeclSyntax(
+                modifiers: isPublic ? DeclModifierListSyntax([DeclModifierSyntax(name: .keyword(.public, trailingTrivia: .space))]) : DeclModifierListSyntax([]),
                 typealiasKeyword: .keyword(.typealias, trailingTrivia: .space),
                 name: associatedType.name,
                 initializer: TypeInitializerClauseSyntax(

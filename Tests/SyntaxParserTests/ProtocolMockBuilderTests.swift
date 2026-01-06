@@ -43,6 +43,28 @@ struct ProtocolMockBuilderTests {
         """)
     }
 
+    @Test func `mockClass contains correct declaration for a public protocol with associated types`() throws {
+        let source = Parser.parse(source: """
+        public protocol TestProtocol {
+            associatedtype Item
+            associatedtype Identifier: Hashable
+
+            func doSomething() -> Int
+        }
+        """)
+
+        let declaration = try #require(source.statements.first?.item.as(ProtocolDeclSyntax.self))
+
+        let sut = MockedProtocol(declaration: declaration, inherited: []).mockBuilder
+
+        #expect(sut.mockClass.withoutMembers().description == """
+        open class TestProtocolMock<Item, Identifier: Hashable>: Mock, TestProtocol, @unchecked Sendable {
+        public typealias Item = Item 
+        public typealias Identifier = Identifier 
+        }
+        """)
+    }
+
     @Test func `mockClass contains declaration with generic parameters from inherited protocol with associated types`() {
         let source = Parser.parse(source: """
         protocol Foo {
