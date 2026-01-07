@@ -374,6 +374,33 @@ struct MockTypeMethodTests {
         """)
     }
 
+    @Test func `expect replaces some with any`() throws {
+        let syntax = Parser.parse(source: "func foo(bar: some Bar)").statements.first?.item
+        let declaration = try #require(FunctionDeclSyntax(syntax))
+
+        let sut = MockType.Method(declaration: declaration, mockName: "TestMock")
+
+        #expect(sut.expect.formatted().description == """
+        public func expect(
+            _ expectation: MethodExpectation<(any Bar) -> Void>,
+            fileID: String = #fileID,
+            filePath: StaticString = #filePath,
+            line: UInt = #line,
+            column: Int = #column,
+            perform: @escaping (any Bar) -> Void
+        ) {
+            _record(
+                expectation.expectation,
+                fileID,
+                filePath,
+                line,
+                column,
+                perform
+            )
+        }
+        """)
+    }
+
     @Test func `expectationMethodDeclaration emits correct method`() throws {
         let syntax = Parser.parse(source: """
         func withParamsVoid(

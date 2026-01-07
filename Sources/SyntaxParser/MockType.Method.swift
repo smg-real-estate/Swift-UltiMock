@@ -19,7 +19,7 @@ extension MockType {
             }.map { MockType.Method(declaration: $0, mockName: mockName) }
         }
 
-        lazy var closureSignatureType = declaration.asType(mockName: mockName)
+        lazy var closureSignatureType = declaration.asType(mockName: mockName).replacingSomeWithAny()
 
         var stubIdentifier: String {
             var parts: [String] = []
@@ -473,7 +473,9 @@ extension MockType {
                                 colon: .colonToken(trailingTrivia: .space),
                                 type: IdentifierTypeSyntax(
                                     name: .identifier("MethodExpectation"),
-                                    genericArgumentClause: genericArgumentClause(arguments: [closureSignatureType])
+                                    genericArgumentClause: genericArgumentClause(arguments: [
+                                        closureSignatureType
+                                    ])
                                 ),
                                 trailingComma: .commaToken(trailingTrivia: .newline)
                             ),
