@@ -136,6 +136,43 @@ struct ProtocolMockBuilderTests {
         """)
     }
 
+    @Test func `methodsEnum contains stub identifiers for all properties`() {
+        let source = Parser.parse(source: """
+        protocol Foo {
+            var readonly: Int { get }
+        }
+
+        protocol Bar: Foo {
+            var readwrite: String { get set }
+        }
+        """)
+
+        let types = source.statements.map { $0.item.cast(ProtocolDeclSyntax.self) }
+
+        let sut = MockedProtocol(declaration: types[1], inherited: [types[0]]).mockBuilder
+
+        #expect(sut.methodsEnum.formatted().description == """
+
+        enum Methods {
+            static var get_readonly_Int: MockMethod {
+                .init { _ in
+                    "readonly"
+                }
+            }
+            static var get_readwrite_String: MockMethod {
+                .init {
+                    "readwrite"
+                }
+            }
+            static var set_readwrite_String: MockMethod {
+                .init {
+                    "readwrite = \\($0 [0] ?? "nil")"
+                }
+            }
+        }
+        """)
+    }
+
     @Test func `methodExpectation contains expectations for all methods`() {
         let source = Parser.parse(source: """
         protocol Foo {

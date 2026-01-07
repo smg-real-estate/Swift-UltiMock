@@ -3,6 +3,7 @@ import SwiftSyntax
 final class ProtocolMockBuilder: SyntaxBuilder {
     let mockedProtocol: MockedProtocol
     let allMethods: [MockType.Method]
+    let allProperties: [MockType.Property]
 
     lazy var allAssociatedTypes = mockedProtocol.allProtocols
         .flatMap { protocolDecl in
@@ -15,20 +16,30 @@ final class ProtocolMockBuilder: SyntaxBuilder {
     init(_ mockedProtocol: MockedProtocol) {
         self.mockedProtocol = mockedProtocol
         self.allMethods = MockType.Method.collectMethods(from: mockedProtocol.allProtocols)
+        self.allProperties = MockType.Property.collectProperties(from: mockedProtocol.allProtocols)
     }
 
     lazy var mockClassName = mockedProtocol.declaration.name.text + "Mock"
 
     var methodsEnum: EnumDeclSyntax {
-        EnumDeclSyntax(
+        var members: [MemberBlockItemSyntax] = []
+        
+        // Add method variable declarations
+        members.append(contentsOf: allMethods.map(\.variableDeclaration).map { MemberBlockItemSyntax(decl: $0) })
+        
+        // Add property getter variable declarations
+        members.append(contentsOf: allProperties.map(\.variableDeclaration).map { MemberBlockItemSyntax(decl: $0) })
+        
+        // Add property setter variable declarations (only for read-write properties)
+        members.append(contentsOf: allProperties.compactMap(\.setterVariableDeclaration).map { MemberBlockItemSyntax(decl: $0) })
+        
+        return EnumDeclSyntax(
             leadingTrivia: .newline,
             enumKeyword: .keyword(.enum, trailingTrivia: .space),
             name: .identifier("Methods"),
             memberBlock: MemberBlockSyntax(
                 leftBrace: .leftBraceToken(leadingTrivia: .space),
-                members: MemberBlockItemListSyntax(
-                    allMethods.map(\.variableDeclaration).map { MemberBlockItemSyntax(decl: $0) }
-                ),
+                members: MemberBlockItemListSyntax(members),
                 rightBrace: .rightBraceToken(leadingTrivia: .newline)
             )
         )

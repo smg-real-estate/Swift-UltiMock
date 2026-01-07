@@ -5,11 +5,11 @@ import Testing
 
 struct MockTypePropertyTests {
     @Test(arguments: [
-        ("var property: Int { get }", "property_get_Int"),
-        ("var property: Int { get set }", "property_get_set_Int"),
-        ("var property: Int { get throws }", "property_get_throws_Int"),
-        ("var property: Int { get async }", "property_get_async_Int"),
-        ("var property: Int { get async throws }", "property_get_async_throws_Int"),
+        ("var property: Int { get }", "property_Int"),
+        ("var property: Int { get set }", "property_Int"),
+        ("var property: Int { get throws }", "property_throws_Int"),
+        ("var property: Int { get async }", "property_async_Int"),
+        ("var property: Int { get async throws }", "property_async_throws_Int"),
     ])
     func `stubIdentifier maps non-textual information`(source: String, expectedIdentifier: String) throws {
         let syntax = Parser.parse(source: source).statements.first?.item

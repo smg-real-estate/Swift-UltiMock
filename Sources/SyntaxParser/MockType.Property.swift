@@ -5,12 +5,12 @@ extension MockType {
     struct Property: SyntaxBuilder {
         let declaration: VariableDeclSyntax
 
-        static func collectProperties(from protocols: [ProtocolDeclSyntax]) -> [MockType.Method] {
+        static func collectProperties(from protocols: [ProtocolDeclSyntax]) -> [MockType.Property] {
             protocols.flatMap { protocolDecl in
                 protocolDecl.memberBlock.members.compactMap { member in
-                    member.decl.as(FunctionDeclSyntax.self)
+                    member.decl.as(VariableDeclSyntax.self)
                 }
-            }.map { MockType.Method(declaration: $0) }
+            }.map { MockType.Property(declaration: $0) }
         }
 
         var stubIdentifier: String {
@@ -25,29 +25,25 @@ extension MockType {
             let propertyName = pattern.identifier.text
             parts.append(propertyName)
 
-            var accessorParts: [String] = []
+            // Add accessor effect specifiers (async, throws)
             switch accessorBlock.accessors {
             case let .accessors(accessorList):
                 for accessor in accessorList {
-                    let accessorKind = accessor.accessorSpecifier.text
-                    accessorParts.append(accessorKind)
-
                     if accessor.accessorSpecifier.tokenKind == .keyword(.get) {
                         if let effectSpecifiers = accessor.effectSpecifiers {
                             if effectSpecifiers.asyncSpecifier != nil {
-                                accessorParts.append("async")
+                                parts.append("async")
                             }
                             if effectSpecifiers.throwsSpecifier != nil {
-                                accessorParts.append("throws")
+                                parts.append("throws")
                             }
                         }
                     }
                 }
             case .getter:
-                accessorParts.append("get")
+                break
             }
 
-            parts.append(contentsOf: accessorParts)
             parts.append(type.stubIdentifierSlug)
 
             return parts.joined(separator: "_")
@@ -109,7 +105,155 @@ extension MockType {
         }
 
         var variableDeclaration: VariableDeclSyntax {
-            fatalError()
+            guard let binding = declaration.bindings.first,
+                  let pattern = binding.pattern.as(IdentifierPatternSyntax.self),
+                  let accessorBlock = binding.accessorBlock else {
+                fatalError("Property must have accessor block")
+            }
+
+            let propertyName = pattern.identifier.text
+
+            // Check if this is a read-write property
+            let hasSet: Bool
+            switch accessorBlock.accessors {
+            case let .accessors(accessorList):
+                hasSet = accessorList.contains { $0.accessorSpecifier.tokenKind == .keyword(.set) }
+            case .getter:
+                hasSet = false
+            }
+
+            // Getter: for read-only uses closure signature { _ in }, for read-write has no closure signature
+            let callDescription = propertyName
+            let closureSignature: ClosureSignatureSyntax? = hasSet ? nil : ClosureSignatureSyntax(
+                parameterClause: .simpleInput(
+                    ClosureShorthandParameterListSyntax([
+                        ClosureShorthandParameterSyntax(name: .wildcardToken(leadingTrivia: .space, trailingTrivia: .space))
+                    ])
+                ),
+                inKeyword: .keyword(.in)
+            )
+
+            let sourceFile = Parser.parse(source: "\"\(callDescription)\"")
+            guard let item = sourceFile.statements.first?.item,
+                  case let .expr(expr) = item else {
+                fatalError("Failed to parse string literal")
+            }
+
+            return VariableDeclSyntax(
+                leadingTrivia: .newline,
+                modifiers: DeclModifierListSyntax([
+                    DeclModifierSyntax(name: .keyword(.static, trailingTrivia: .space))
+                ]),
+                bindingSpecifier: .keyword(.var, trailingTrivia: .space),
+                bindings: PatternBindingListSyntax([
+                    PatternBindingSyntax(
+                        pattern: IdentifierPatternSyntax(identifier: .identifier("get_\(stubIdentifier)")),
+                        typeAnnotation: TypeAnnotationSyntax(
+                            colon: .colonToken(trailingTrivia: .space),
+                            type: IdentifierTypeSyntax(name: .identifier("MockMethod"))
+                        ),
+                        accessorBlock: AccessorBlockSyntax(
+                            leftBrace: .leftBraceToken(leadingTrivia: .space),
+                            accessors: .getter(CodeBlockItemListSyntax([
+                                CodeBlockItemSyntax(
+                                    item: .expr(ExprSyntax(FunctionCallExprSyntax(
+                                        leadingTrivia: .newline,
+                                        calledExpression: MemberAccessExprSyntax(
+                                            period: .periodToken(),
+                                            name: .identifier("init")
+                                        ),
+                                        arguments: [],
+                                        trailingClosure: ClosureExprSyntax(
+                                            leftBrace: .leftBraceToken(leadingTrivia: .space),
+                                            signature: closureSignature,
+                                            statements: CodeBlockItemListSyntax([
+                                                CodeBlockItemSyntax(
+                                                    item: .expr(expr)
+                                                )
+                                            ]),
+                                            rightBrace: .rightBraceToken(leadingTrivia: .newline)
+                                        )
+                                    )))
+                                )
+                            ])),
+                            rightBrace: .rightBraceToken(leadingTrivia: .newline)
+                        )
+                    )
+                ])
+            )
+        }
+
+        var setterVariableDeclaration: VariableDeclSyntax? {
+            guard let binding = declaration.bindings.first,
+                  let pattern = binding.pattern.as(IdentifierPatternSyntax.self),
+                  let accessorBlock = binding.accessorBlock else {
+                return nil
+            }
+
+            // Check if this is a read-write property
+            let hasSet: Bool
+            switch accessorBlock.accessors {
+            case let .accessors(accessorList):
+                hasSet = accessorList.contains { $0.accessorSpecifier.tokenKind == .keyword(.set) }
+            case .getter:
+                hasSet = false
+            }
+
+            guard hasSet else {
+                return nil
+            }
+
+            let propertyName = pattern.identifier.text
+            let setterCallDescription = "\(propertyName) = \\($0 [0] ?? \"nil\")"
+
+            let setterSourceFile = Parser.parse(source: "\"\(setterCallDescription)\"")
+            guard let setterItem = setterSourceFile.statements.first?.item,
+                  case let .expr(setterExpr) = setterItem else {
+                fatalError("Failed to parse string literal")
+            }
+
+            return VariableDeclSyntax(
+                leadingTrivia: .newline,
+                modifiers: DeclModifierListSyntax([
+                    DeclModifierSyntax(name: .keyword(.static, trailingTrivia: .space))
+                ]),
+                bindingSpecifier: .keyword(.var, trailingTrivia: .space),
+                bindings: PatternBindingListSyntax([
+                    PatternBindingSyntax(
+                        pattern: IdentifierPatternSyntax(identifier: .identifier("set_\(stubIdentifier)")),
+                        typeAnnotation: TypeAnnotationSyntax(
+                            colon: .colonToken(trailingTrivia: .space),
+                            type: IdentifierTypeSyntax(name: .identifier("MockMethod"))
+                        ),
+                        accessorBlock: AccessorBlockSyntax(
+                            leftBrace: .leftBraceToken(leadingTrivia: .space),
+                            accessors: .getter(CodeBlockItemListSyntax([
+                                CodeBlockItemSyntax(
+                                    item: .expr(ExprSyntax(FunctionCallExprSyntax(
+                                        leadingTrivia: .newline,
+                                        calledExpression: MemberAccessExprSyntax(
+                                            period: .periodToken(),
+                                            name: .identifier("init")
+                                        ),
+                                        arguments: [],
+                                        trailingClosure: ClosureExprSyntax(
+                                            leftBrace: .leftBraceToken(leadingTrivia: .space),
+                                            statements: CodeBlockItemListSyntax([
+                                                CodeBlockItemSyntax(
+                                                    leadingTrivia: .newline,
+                                                    item: .expr(setterExpr)
+                                                )
+                                            ]),
+                                            rightBrace: .rightBraceToken(leadingTrivia: .newline)
+                                        )
+                                    )))
+                                )
+                            ])),
+                            rightBrace: .rightBraceToken(leadingTrivia: .newline)
+                        )
+                    )
+                ])
+            )
         }
 
         var expect: FunctionDeclSyntax {
