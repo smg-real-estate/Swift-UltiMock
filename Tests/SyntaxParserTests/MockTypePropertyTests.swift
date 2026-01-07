@@ -6,6 +6,8 @@ import Testing
 struct MockTypePropertyTests {
     @Test(arguments: [
         ("var property: Int { get }", "property_Int"),
+        ("var property: String? { get }", "property_String_opt"),
+        ("var property: String! { get }", "property_String_impopt"),
         ("var property: Int { get set }", "property_Int"),
         ("var property: Int { get throws }", "property_throws_Int"),
         ("var property: Int { get async }", "property_async_Int"),
@@ -111,6 +113,31 @@ struct MockTypePropertyTests {
                     Methods.set_\(sut.stubIdentifier),
                     [newValue]
                 ) as! (Int) -> Void
+                return perform(newValue)
+            }
+        }
+        """)
+    }
+
+    @Test func `implementation replaces ! with ? for force-unwrapped type`() throws {
+        let syntax = Parser.parse(source: "var readwrite: Int! { get set }").statements.first?.item
+        let declaration = try #require(VariableDeclSyntax(syntax))
+
+        let sut = MockType.Property(declaration: declaration)
+
+        #expect(sut.implementation().formatted().description == """
+        var readwrite: Int! {
+            get {
+                let perform = _perform(
+                    Methods.get_\(sut.stubIdentifier)
+                ) as! () -> Int?
+                return perform()
+            }
+            set {
+                let perform = _perform(
+                    Methods.set_\(sut.stubIdentifier),
+                    [newValue]
+                ) as! (Int?) -> Void
                 return perform(newValue)
             }
         }

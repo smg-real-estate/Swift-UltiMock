@@ -1,33 +1,16 @@
 import SwiftSyntax
 
-private final class ImplicitlyUnwrappedOptionalTypeRewriter: SyntaxRewriter, SyntaxBuilder {
-    let mockName: String
-
-    init(mockName: String) {
-        self.mockName = mockName
-        super.init(viewMode: .fixedUp)
-    }
-
-    override func visit(_ node: ImplicitlyUnwrappedOptionalTypeSyntax) -> TypeSyntax {
-        OptionalTypeSyntax(wrappedType: node.wrappedType).cast(TypeSyntax.self)
-    }
-}
-
 extension FunctionDeclSyntax {
     func asType(mockName: String) -> FunctionTypeSyntax {
-        let rewriter = ImplicitlyUnwrappedOptionalTypeRewriter(mockName: mockName)
-        let parameters = signature.parameterClause.parameters
-
-        return rewriter.rewrite(
-            FunctionTypeSyntax(
-                parameters: parameters.asTupleTypeElementList(mockName: mockName),
-                effectSpecifiers: signature.effectSpecifiers?.asTypeEffectSpecifiersSyntax,
-                returnClause: signature.returnClause ?? ReturnClauseSyntax(
-                    type: TypeSyntax(IdentifierTypeSyntax(name: .identifier("Void")))
-                )
+        FunctionTypeSyntax(
+            parameters: signature.parameterClause.parameters.asTupleTypeElementList(mockName: mockName),
+            effectSpecifiers: signature.effectSpecifiers?.asTypeEffectSpecifiersSyntax,
+            returnClause: signature.returnClause ?? ReturnClauseSyntax(
+                type: TypeSyntax(IdentifierTypeSyntax(name: .identifier("Void")))
             )
-            .with(\.trailingTrivia, [])
-        ).cast(FunctionTypeSyntax.self)
+        )
+        .with(\.trailingTrivia, [])
+        .replacingImplicitlyUnwrappedOptionals()
     }
 }
 

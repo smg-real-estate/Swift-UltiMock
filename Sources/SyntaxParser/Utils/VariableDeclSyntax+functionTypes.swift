@@ -5,7 +5,7 @@ extension VariableDeclSyntax {
         FunctionTypeSyntax(
             parameters: [],
             returnClause: ReturnClauseSyntax(
-                type: type
+                type: type.replacingImplicitlyUnwrappedOptionals()
             )
         )
     }
@@ -13,7 +13,7 @@ extension VariableDeclSyntax {
     var setterFunctionType: FunctionTypeSyntax {
         FunctionTypeSyntax(
             parameters: [
-                TupleTypeElementSyntax(type: type)
+                TupleTypeElementSyntax(type: type.replacingImplicitlyUnwrappedOptionals())
             ],
             returnClause: ReturnClauseSyntax(
                 type: .void

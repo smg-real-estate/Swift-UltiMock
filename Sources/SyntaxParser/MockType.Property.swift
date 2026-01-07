@@ -118,8 +118,8 @@ extension MockType {
 
         var variableDeclaration: VariableDeclSyntax {
             guard let binding = declaration.bindings.first,
-                  let pattern = binding.pattern.as(IdentifierPatternSyntax.self),
-                  let accessorBlock = binding.accessorBlock else {
+                  let pattern = binding.pattern.as(IdentifierPatternSyntax.self)
+            else {
                 fatalError("Property must have accessor block")
             }
 
