@@ -462,6 +462,7 @@ extension MockType {
                 modifiers: DeclModifierListSyntax([DeclModifierSyntax(name: .keyword(.public, trailingTrivia: .space))]),
                 funcKeyword: .keyword(.func, trailingTrivia: .space),
                 name: .identifier("expect"),
+                genericParameterClause: declaration.genericParameterClause,
                 signature: FunctionSignatureSyntax(
                     parameterClause: FunctionParameterClauseSyntax(
                         leftParen: .leftParenToken(),

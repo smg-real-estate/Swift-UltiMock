@@ -374,6 +374,33 @@ struct MockTypeMethodTests {
         """)
     }
 
+    @Test func `expect emits correct method for generic function`() throws {
+        let syntax = Parser.parse(source: "func foo<I, O>(_ input: I) -> O").statements.first?.item
+        let declaration = try #require(FunctionDeclSyntax(syntax))
+
+        let sut = MockType.Method(declaration: declaration, mockName: "TestMock")
+
+        #expect(sut.expect.formatted().description == """
+        public func expect<I, O>(
+            _ expectation: MethodExpectation<(I) -> O>,
+            fileID: String = #fileID,
+            filePath: StaticString = #filePath,
+            line: UInt = #line,
+            column: Int = #column,
+            perform: @escaping (I) -> O
+        ) {
+            _record(
+                expectation.expectation,
+                fileID,
+                filePath,
+                line,
+                column,
+                perform
+            )
+        }
+        """)
+    }
+
     @Test func `expect replaces some with any`() throws {
         let syntax = Parser.parse(source: "func foo(bar: some Bar)").statements.first?.item
         let declaration = try #require(FunctionDeclSyntax(syntax))
