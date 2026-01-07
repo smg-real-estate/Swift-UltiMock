@@ -167,7 +167,7 @@ extension SyntaxBuilder {
                     elements.map { element in
                         ArrayElementSyntax(expression: ExprSyntax(element))
                     }
-                        .commaSeparated(leadingTrivia: wrapped ? .newline : [])
+                    .commaSeparated(leadingTrivia: wrapped ? .newline : [])
                 )
                 .with(\.leadingTrivia, wrapped ? .newline : []),
                 rightSquare: .rightSquareToken(leadingTrivia: wrapped ? .newline : [])

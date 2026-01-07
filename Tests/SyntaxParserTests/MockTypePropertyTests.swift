@@ -103,14 +103,14 @@ struct MockTypePropertyTests {
             get {
                 let perform = _perform(
                     Methods.get_\(sut.stubIdentifier)
-                ) as! () -> Void
+                ) as! () -> Int
                 return perform()
             }
             set {
                 let perform = _perform(
                     Methods.set_\(sut.stubIdentifier),
                     [newValue]
-                ) as! (_ newValue: Int) -> Int
+                ) as! (Int) -> Void
                 return perform(newValue)
             }
         }

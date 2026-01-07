@@ -36,7 +36,7 @@ final class TypeAliasRewriter: SyntaxRewriter {
 
         return node.with(
             \.type,
-             TypeSyntax(resolvedType)
+            TypeSyntax(resolvedType)
                 .with(\.trailingTrivia, node.type.trailingTrivia)
         )
     }

@@ -176,7 +176,7 @@ struct ProtocolMockBuilderTests {
     @Test(arguments: [
         "",
         "public "
-    ]) func `methodExpectation contains expectations for all methods`(accessModifier: String) throws {
+    ]) func `methodExpectation contains expectations for all methods`(accessModifier: String) {
         let source = Parser.parse(source: """
         \(accessModifier)protocol Foo {
             func doSomething() -> Int // Some comment 
@@ -414,7 +414,7 @@ struct ProtocolMockBuilderTests {
                 let perform = _perform(
                     Methods.make_value_Int_ret_String,
                     [value]
-                ) as! (_ value: Int) -> String
+                ) as! (Int) -> String
                 return perform(value)
             }
             """#
@@ -460,12 +460,12 @@ struct ProtocolMockBuilderTests {
         let secondExpect = try #require(sut.expectationSetters.last)
         #expect(secondExpect.formatted().trimmedDescription == """
         public func expect(
-            _ expectation: MethodExpectation<(_ with: String) async throws -> Bool>,
+            _ expectation: MethodExpectation<(String) async throws -> Bool>,
             fileID: String = #fileID,
             filePath: StaticString = #filePath,
             line: UInt = #line,
             column: Int = #column,
-            perform: @escaping (_ with: String) async throws -> Bool
+            perform: @escaping (String) async throws -> Bool
         ) {
             _record(
                 expectation.expectation,

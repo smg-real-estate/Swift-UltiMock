@@ -1,5 +1,5 @@
-import SwiftSyntax
 import SwiftParser
+import SwiftSyntax
 
 public protocol MockedType {
     var mockSyntax: CodeBlockItemListSyntax { get }
@@ -10,20 +10,20 @@ public struct MockedTypesResolver {
     var annotationKeys: [String]
 
     public init(
-        typeAliases: [String : [String : TypeAliasDeclSyntax]],
+        typeAliases: [String: [String: TypeAliasDeclSyntax]],
         annotationKeys: [String] = ["sourcery", "UltiMock"]
     ) {
         self.typeAliases = typeAliases
         self.annotationKeys = annotationKeys
     }
 
-    static public func resolve(from contentSequence: some Sequence<() throws -> String>) throws -> [MockedType] {
+    public static func resolve(from contentSequence: some Sequence<() throws -> String>) throws -> [MockedType] {
         let typesCollector = TypesVisitor()
         let aliasCollector = AliasTableBuilder()
 
         for content in contentSequence {
             do {
-                let source = Parser.parse(source: try content())
+                let source = try Parser.parse(source: content())
                 typesCollector.walk(source)
                 aliasCollector.walk(source)
             }

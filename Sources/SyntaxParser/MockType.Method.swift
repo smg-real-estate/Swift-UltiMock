@@ -4,18 +4,22 @@ import SwiftSyntax
 extension MockType {
     final class Method: SyntaxBuilder {
         let declaration: FunctionDeclSyntax
+        let mockName: String
 
-        init(declaration: FunctionDeclSyntax) {
+        init(declaration: FunctionDeclSyntax, mockName: String) {
             self.declaration = declaration
+            self.mockName = mockName
         }
 
-        static func collectMethods(from protocols: [ProtocolDeclSyntax]) -> [MockType.Method] {
+        static func collectMethods(from protocols: [ProtocolDeclSyntax], mockName: String) -> [MockType.Method] {
             protocols.flatMap { protocolDecl in
                 protocolDecl.memberBlock.members.compactMap { member in
                     member.decl.as(FunctionDeclSyntax.self)
                 }
-            }.map { MockType.Method(declaration: $0) }
+            }.map { MockType.Method(declaration: $0, mockName: mockName) }
         }
+
+        lazy var closureSignatureType = declaration.asType(mockName: mockName)
 
         var stubIdentifier: String {
             var parts: [String] = []
@@ -102,14 +106,14 @@ extension MockType {
             return description
         }
 
-        func implementation(in mockType: String? = nil, isPublic: Bool = false) -> FunctionDeclSyntax {
+        func implementation(isPublic: Bool = false) -> FunctionDeclSyntax {
             var implementationDeclaration = declaration
 
             let rewrittenParameters = declaration.signature.parameterClause.parameters.map { param -> FunctionParameterSyntax in
                 var updatedParam = param
 
-                if let mockType, param.type.as(IdentifierTypeSyntax.self)?.name.text == "Self" {
-                    updatedParam = updatedParam.with(\.type, TypeSyntax(IdentifierTypeSyntax(name: .identifier(mockType))))
+                if param.type.as(IdentifierTypeSyntax.self)?.name.text == "Self" {
+                    updatedParam = updatedParam.with(\.type, TypeSyntax(IdentifierTypeSyntax(name: .identifier(mockName))))
                 }
 
                 let secondNameText = updatedParam.secondName?.text
@@ -143,20 +147,6 @@ extension MockType {
                 rightParenTrivia: .newline
             )
 
-            let effectSpecifiers = typeEffectSpecifiers(
-                asyncSpecifier: declaration.signature.effectSpecifiers?.asyncSpecifier,
-                throwsSpecifier: declaration.signature.effectSpecifiers?.throwsSpecifier
-            )
-            let closureType = TypeSyntax(FunctionTypeSyntax(
-                parameters: closureParameterElements(for: parameters),
-                effectSpecifiers: effectSpecifiers,
-                returnClause: ReturnClauseSyntax(
-                    leadingTrivia: effectSpecifiers == nil ? .space : [],
-                    arrow: .arrowToken(trailingTrivia: .space),
-                    type: closureReturnType
-                )
-            ))
-
             let castExpression = ExprSyntax(SequenceExprSyntax(
                 elements: ExprListSyntax([
                     ExprSyntax(performCall),
@@ -165,7 +155,7 @@ extension MockType {
                         operator: .binaryOperator("as!", leadingTrivia: .space, trailingTrivia: .space),
                         trailingTrivia: []
                     )),
-                    ExprSyntax(TypeExprSyntax(type: closureType))
+                    ExprSyntax(TypeExprSyntax(type: closureSignatureType.replacingSomeWithAny()))
                 ])
             ))
 
@@ -225,16 +215,15 @@ extension MockType {
             ]) : DeclModifierListSyntax([])
 
             // Adjust funcKeyword leading trivia based on whether we have modifiers or attributes
-            let funcKeywordLeadingTrivia: Trivia
-            if !modifiers.isEmpty {
+            let funcKeywordLeadingTrivia: Trivia = if !modifiers.isEmpty {
                 // If we have modifiers, no leading trivia on func
-                funcKeywordLeadingTrivia = []
+                []
             } else if !implementationDeclaration.attributes.isEmpty {
                 // If we have attributes but no modifiers, preserve newline
-                funcKeywordLeadingTrivia = .newline
+                .newline
             } else {
                 // Otherwise, clear leading trivia
-                funcKeywordLeadingTrivia = []
+                []
             }
 
             return implementationDeclaration
@@ -300,7 +289,7 @@ extension MockType {
                 ]
                     .commaSeparated(trailingTrivia: .newline)
             )
-                .with(\.leadingTrivia, .newline)
+            .with(\.leadingTrivia, .newline)
 
             // Build tuple elements for where clause signature
             let whereSignatureSyntaxElements: [TupleTypeElementSyntax] = parameters.compactMap { param in
@@ -329,7 +318,7 @@ extension MockType {
             let whereSignatureElements = TupleTypeElementListSyntax(
                 whereSignatureSyntaxElements.commaSeparated(leadingTrivia: .newline)
             )
-                .with(\.leadingTrivia, .newline)
+            .with(\.leadingTrivia, .newline)
 
             let returnType: TypeSyntax = if let returnClause = declaration.signature.returnClause {
                 ExistentialAnyRewriter()
@@ -380,25 +369,27 @@ extension MockType {
                         )
                     ])
                 ))
-                .with(\.body, CodeBlockSyntax(
-                    leftBrace: .leftBraceToken(),
-                    statements: CodeBlockItemListSyntax([
-                        CodeBlockItemSyntax(
-                            item: .expr(ExprSyntax(FunctionCallExprSyntax(
-                                leadingTrivia: .newline,
-                                calledExpression: MemberAccessExprSyntax(
-                                    period: .periodToken(),
-                                    name: .identifier("init")
-                                ),
-                                leftParen: .leftParenToken(),
-                                arguments: argumentList,
-                                rightParen: .rightParenToken(leadingTrivia: .newline)
-                            )))
-                        )
-                    ]),
-                    rightBrace: .rightBraceToken()
+                .with(
+                    \.body,
+                    CodeBlockSyntax(
+                        leftBrace: .leftBraceToken(),
+                        statements: CodeBlockItemListSyntax([
+                            CodeBlockItemSyntax(
+                                item: .expr(ExprSyntax(FunctionCallExprSyntax(
+                                    leadingTrivia: .newline,
+                                    calledExpression: MemberAccessExprSyntax(
+                                        period: .periodToken(),
+                                        name: .identifier("init")
+                                    ),
+                                    leftParen: .leftParenToken(),
+                                    arguments: argumentList,
+                                    rightParen: .rightParenToken(leadingTrivia: .newline)
+                                )))
+                            )
+                        ]),
+                        rightBrace: .rightBraceToken()
+                    )
                 )
-            )
         }
 
         var variableDeclaration: VariableDeclSyntax {
@@ -465,25 +456,6 @@ extension MockType {
                 ])
             )
         }
-
-        lazy var closureSignatureType: FunctionTypeSyntax = {
-            let parameters = declaration.signature.parameterClause.parameters.map(\.self)
-            let effectSpecifiers = typeEffectSpecifiers(
-                asyncSpecifier: declaration.signature.effectSpecifiers?.asyncSpecifier,
-                throwsSpecifier: declaration.signature.effectSpecifiers?.throwsSpecifier
-            )
-            return FunctionTypeSyntax(
-                leftParen: .leftParenToken(),
-                parameters: closureParameterElements(for: parameters),
-                rightParen: .rightParenToken(),
-                effectSpecifiers: effectSpecifiers,
-                returnClause: ReturnClauseSyntax(
-                    leadingTrivia: effectSpecifiers == nil ? .space : [],
-                    arrow: .arrowToken(trailingTrivia: .space),
-                    type: closureReturnType
-                )
-            )
-        }()
 
         var expect: FunctionDeclSyntax {
             FunctionDeclSyntax(
@@ -616,72 +588,16 @@ private final class ExistentialAnyRewriter: SyntaxRewriter {
 }
 
 private extension MockType.Method {
-    func closureParameterElements(for parameters: [FunctionParameterSyntax]) -> TupleTypeElementListSyntax {
-        TupleTypeElementListSyntax(
-            parameters.map { parameter in
-                let type: TypeSyntax
-                if let implicitOptional = parameter.type.as(ImplicitlyUnwrappedOptionalTypeSyntax.self) {
-                    type = TypeSyntax(OptionalTypeSyntax(
-                        wrappedType: implicitOptional.wrappedType.trimmed,
-                        questionMark: .postfixQuestionMarkToken()
-                    ))
-                } else {
-                    type = parameter.type.trimmed
-                }
-
-                return tupleTypeElement(
-                    secondName: parameter.parameterIdentifier.text,
-                    type: replaceSomeWithAny(in: type)
-                )
-            }
-            .commaSeparated()
-        )
-    }
-
-    func replaceSomeWithAny(in type: TypeSyntax) -> TypeSyntax {
-        if let someType = type.as(SomeOrAnyTypeSyntax.self), someType.someOrAnySpecifier.tokenKind == .keyword(.some) {
-            return TypeSyntax(someType.with(\.someOrAnySpecifier, .keyword(.any, trailingTrivia: .space)))
-        }
-
-        if let optionalType = type.as(OptionalTypeSyntax.self) {
-            return TypeSyntax(optionalType.with(\.wrappedType, replaceSomeWithAny(in: optionalType.wrappedType)))
-        }
-
-        if let attributedType = type.as(AttributedTypeSyntax.self) {
-            return TypeSyntax(attributedType.with(\.baseType, replaceSomeWithAny(in: attributedType.baseType)))
-        }
-
-        return type
-    }
-
     func parameterArrayExpression(for parameters: [FunctionParameterSyntax]) -> ArrayExprSyntax {
         arrayExpression(elements: parameters.map(\.reference))
     }
 
-    var closureReturnType: TypeSyntax {
-        if let type = declaration.signature.returnClause?.type {
-            if let implicitOptional = type.as(ImplicitlyUnwrappedOptionalTypeSyntax.self) {
-                return TypeSyntax(OptionalTypeSyntax(
-                    wrappedType: implicitOptional.wrappedType.trimmed,
-                    questionMark: .postfixQuestionMarkToken()
-                ))
-            }
-            return type.trimmed
-        }
-        return TypeSyntax(IdentifierTypeSyntax(name: .identifier("Void")))
-    }
-    
-    // Normalize type for Parameter<T> - removes inout, attributes, converts implicit optional
-    func normalizeTypeForParameter(_ type: TypeSyntax, replaceSelfWith mockName: String) -> TypeSyntax {
-        normalizeTypeInternal(type, replaceSelfWith: mockName, preserveInout: false)
-    }
-    
     // Normalize type for where clause signature - keeps inout, but removes attributes and converts implicit optional
     func normalizeTypeForSignature(_ type: TypeSyntax, replaceSelfWith mockName: String) -> TypeSyntax {
         normalizeTypeInternal(type, replaceSelfWith: mockName, preserveInout: true)
             .withoutTrivia(\.isComment)
     }
-    
+
     func normalizeTypeInternal(_ type: TypeSyntax, replaceSelfWith mockName: String, preserveInout: Bool) -> TypeSyntax {
         // Handle inout specifier
         if let attributedType = type.as(AttributedTypeSyntax.self),
@@ -698,13 +614,13 @@ private extension MockType.Method {
                 return normalizeTypeInternal(attributedType.baseType, replaceSelfWith: mockName, preserveInout: preserveInout)
             }
         }
-        
+
         // Remove attributes like @escaping, @Sendable, @MainActor etc.
         if let attributedType = type.as(AttributedTypeSyntax.self),
            !attributedType.attributes.isEmpty {
             return normalizeTypeInternal(attributedType.baseType, replaceSelfWith: mockName, preserveInout: preserveInout)
         }
-        
+
         // Convert implicit optional (!) to optional (?)
         if let implicitOptional = type.as(ImplicitlyUnwrappedOptionalTypeSyntax.self) {
             let wrappedType = normalizeTypeInternal(implicitOptional.wrappedType, replaceSelfWith: mockName, preserveInout: preserveInout)
@@ -713,7 +629,7 @@ private extension MockType.Method {
                 questionMark: .postfixQuestionMarkToken()
             ))
         }
-        
+
         // Replace Self with mock name
         if let identifierType = type.as(IdentifierTypeSyntax.self),
            identifierType.name.text == "Self" {
@@ -722,7 +638,7 @@ private extension MockType.Method {
                 genericArgumentClause: identifierType.genericArgumentClause
             ))
         }
-        
+
         // Recursively normalize optional types
         if let optionalType = type.as(OptionalTypeSyntax.self) {
             let wrappedType = normalizeTypeInternal(optionalType.wrappedType, replaceSelfWith: mockName, preserveInout: preserveInout)
@@ -731,7 +647,7 @@ private extension MockType.Method {
                 questionMark: optionalType.questionMark
             ))
         }
-        
+
         // Recursively normalize array types
         if let arrayType = type.as(ArrayTypeSyntax.self) {
             let elementType = normalizeTypeInternal(arrayType.element, replaceSelfWith: mockName, preserveInout: preserveInout)
@@ -741,7 +657,7 @@ private extension MockType.Method {
                 rightSquare: arrayType.rightSquare
             ))
         }
-        
+
         // Recursively normalize dictionary types
         if let dictType = type.as(DictionaryTypeSyntax.self) {
             let keyType = normalizeTypeInternal(dictType.key, replaceSelfWith: mockName, preserveInout: preserveInout)
@@ -754,7 +670,7 @@ private extension MockType.Method {
                 rightSquare: dictType.rightSquare
             ))
         }
-        
+
         // Recursively normalize tuple types
         if let tupleType = type.as(TupleTypeSyntax.self) {
             let normalizedElements = tupleType.elements.map { element in
@@ -773,7 +689,7 @@ private extension MockType.Method {
                 rightParen: tupleType.rightParen
             ))
         }
-        
+
         // Recursively normalize function types (closures)
         if let functionType = type.as(FunctionTypeSyntax.self) {
             let normalizedParameters = functionType.parameters.map { param in
@@ -800,7 +716,7 @@ private extension MockType.Method {
                 )
             ))
         }
-        
+
         // Recursively normalize generic types
         if let identifierType = type.as(IdentifierTypeSyntax.self),
            let genericArgs = identifierType.genericArgumentClause {
@@ -819,7 +735,7 @@ private extension MockType.Method {
                 )
             ))
         }
-        
+
         // Return the type as-is if no normalization is needed
         return type
     }

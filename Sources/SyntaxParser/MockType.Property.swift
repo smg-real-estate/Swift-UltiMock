@@ -2,8 +2,12 @@ import SwiftParser
 import SwiftSyntax
 
 extension MockType {
-    struct Property: SyntaxBuilder {
+    final class Property: SyntaxBuilder {
         let declaration: VariableDeclSyntax
+
+        init(declaration: VariableDeclSyntax) {
+            self.declaration = declaration
+        }
 
         static func collectProperties(from protocols: [ProtocolDeclSyntax]) -> [MockType.Property] {
             protocols.flatMap { protocolDecl in
@@ -12,6 +16,9 @@ extension MockType {
                 }
             }.map { MockType.Property(declaration: $0) }
         }
+
+        lazy var getterFunctionType = declaration.getterFunctionType
+        lazy var setterFunctionType = declaration.setterFunctionType
 
         var stubIdentifier: String {
             guard let binding = declaration.bindings.first,
@@ -53,9 +60,8 @@ extension MockType {
             ""
         }
 
-        func implementation(in mockType: String? = nil, isPublic: Bool = false) -> VariableDeclSyntax {
+        func implementation(isPublic: Bool = false) -> VariableDeclSyntax {
             guard let binding = declaration.bindings.first,
-                  let pattern = binding.pattern.as(IdentifierPatternSyntax.self),
                   let type = binding.typeAnnotation?.type,
                   let accessorBlock = binding.accessorBlock else {
                 return declaration
@@ -118,15 +124,6 @@ extension MockType {
             }
 
             let propertyName = pattern.identifier.text
-
-            // Check if this is a read-write property
-            let hasSet: Bool
-            switch accessorBlock.accessors {
-            case let .accessors(accessorList):
-                hasSet = accessorList.contains { $0.accessorSpecifier.tokenKind == .keyword(.set) }
-            case .getter:
-                hasSet = false
-            }
 
             // All getters use closure signature { _ in }
             let callDescription = propertyName
@@ -197,12 +194,11 @@ extension MockType {
             }
 
             // Check if this is a read-write property
-            let hasSet: Bool
-            switch accessorBlock.accessors {
+            let hasSet: Bool = switch accessorBlock.accessors {
             case let .accessors(accessorList):
-                hasSet = accessorList.contains { $0.accessorSpecifier.tokenKind == .keyword(.set) }
+                accessorList.contains { $0.accessorSpecifier.tokenKind == .keyword(.set) }
             case .getter:
-                hasSet = false
+                false
             }
 
             guard hasSet else {
@@ -284,46 +280,16 @@ private extension MockType.Property {
             rightParenTrivia: .newline
         )
 
-        // Determine if this is a read-write property (has a setter)
-        let isReadWrite: Bool
-        if let binding = declaration.bindings.first,
-           let accessorBlock = binding.accessorBlock {
-            switch accessorBlock.accessors {
-            case let .accessors(accessorList):
-                isReadWrite = accessorList.contains { $0.accessorSpecifier.tokenKind == .keyword(.set) }
-            case .getter:
-                isReadWrite = false
-            }
-        } else {
-            isReadWrite = false
-        }
-
-        // For async properties, closure signature includes async and throws if specified
-        // For read-write properties, getter returns Void
-        let closureEffectSpecifiers: TypeEffectSpecifiersSyntax? = typeEffectSpecifiers(
-            asyncSpecifier: effectSpecifiers?.asyncSpecifier,
-            throwsSpecifier: effectSpecifiers?.throwsSpecifier
-        )
-
-        let returnType: TypeSyntax = isReadWrite ? TypeSyntax(IdentifierTypeSyntax(name: .identifier("Void"))) : type.trimmed
-
-        let closureType = TypeSyntax(FunctionTypeSyntax(
-            parameters: TupleTypeElementListSyntax([]),
-            effectSpecifiers: closureEffectSpecifiers,
-            returnClause: ReturnClauseSyntax(
-                leadingTrivia: closureEffectSpecifiers == nil ? .space : [],
-                arrow: .arrowToken(trailingTrivia: .space),
-                type: returnType
-            )
-        ))
-
         let castExpression = ExprSyntax(SequenceExprSyntax(
             elements: ExprListSyntax([
                 ExprSyntax(performCall),
                 ExprSyntax(BinaryOperatorExprSyntax(
                     operator: .binaryOperator("as!", leadingTrivia: .space, trailingTrivia: .space)
                 )),
-                ExprSyntax(TypeExprSyntax(type: closureType))
+                ExprSyntax(TypeExprSyntax(
+                    type: getterFunctionType
+                        .with(\.effectSpecifiers, effectSpecifiers?.asTypeEffectSpecifiersSyntax))
+                )
             ])
         ))
 
@@ -373,7 +339,7 @@ private extension MockType.Property {
             asyncSpecifier: effectSpecifiers?.asyncSpecifier?.with(\.leadingTrivia, .space).with(\.trailingTrivia, []),
             throwsSpecifier: effectSpecifiers?.throwsSpecifier?.with(
                 \.leadingTrivia,
-                 effectSpecifiers?.asyncSpecifier == nil ? .space : .space
+                effectSpecifiers?.asyncSpecifier == nil ? .space : .space
             ).with(\.trailingTrivia, [])
         )
 
@@ -414,24 +380,13 @@ private extension MockType.Property {
             rightParenTrivia: .newline
         )
 
-        let closureType = TypeSyntax(FunctionTypeSyntax(
-            parameters: TupleTypeElementListSyntax([
-                tupleTypeElement(secondName: "newValue", type: type.trimmed)
-            ]),
-            returnClause: ReturnClauseSyntax(
-                leadingTrivia: .space,
-                arrow: .arrowToken(trailingTrivia: .space),
-                type: type.trimmed
-            )
-        ))
-
         let castExpression = ExprSyntax(SequenceExprSyntax(
             elements: ExprListSyntax([
                 ExprSyntax(performCall),
                 ExprSyntax(BinaryOperatorExprSyntax(
                     operator: .binaryOperator("as!", leadingTrivia: .space, trailingTrivia: .space)
                 )),
-                ExprSyntax(TypeExprSyntax(type: closureType))
+                ExprSyntax(TypeExprSyntax(type: setterFunctionType))
             ])
         ))
 

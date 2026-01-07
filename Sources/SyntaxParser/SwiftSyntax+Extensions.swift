@@ -1,5 +1,5 @@
-import SwiftSyntax
 import SwiftBasicFormat
+import SwiftSyntax
 
 let keywordsToEscape: Set<String> = ["internal", "inout", "public", "private", "open", "fileprivate"]
 
@@ -89,7 +89,7 @@ extension FunctionTypeSyntax {
         var parts: [String] = []
 
         parts.append("lpar")
-        parts.append(contentsOf: parameters.map { $0.type.stubIdentifierSlug })
+        parts.append(contentsOf: parameters.map(\.type.stubIdentifierSlug))
         parts.append("rpar")
 
         if effectSpecifiers?.asyncSpecifier != nil {
@@ -109,9 +109,9 @@ extension FunctionTypeSyntax {
 extension IdentifierTypeSyntax {
     var stubIdentifierSlug: String {
         var slug = name.text
-        if let genericArgumentClause = genericArgumentClause {
+        if let genericArgumentClause {
             slug += "_lab_"
-            slug += genericArgumentClause.arguments.map { $0.argument.stubIdentifierSlug }.joined(separator: "_")
+            slug += genericArgumentClause.arguments.map(\.argument.stubIdentifierSlug).joined(separator: "_")
             slug += "_rab"
         }
         return slug
@@ -122,9 +122,9 @@ extension TriviaPiece {
     var isComment: Bool {
         switch self {
         case .lineComment, .blockComment, .docLineComment, .docBlockComment:
-            return true
+            true
         default:
-            return false
+            false
         }
     }
 }

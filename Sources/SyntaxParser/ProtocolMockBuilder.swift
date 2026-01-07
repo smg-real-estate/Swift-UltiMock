@@ -1,6 +1,7 @@
 import SwiftSyntax
 
 final class ProtocolMockBuilder: SyntaxBuilder {
+    let mockClassName: String
     let mockedProtocol: MockedProtocol
     let allMethods: [MockType.Method]
     let allProperties: [MockType.Property]
@@ -14,12 +15,11 @@ final class ProtocolMockBuilder: SyntaxBuilder {
         .unique(by: \.name.text)
 
     init(_ mockedProtocol: MockedProtocol) {
+        self.mockClassName = mockedProtocol.declaration.name.text + "Mock"
         self.mockedProtocol = mockedProtocol
-        self.allMethods = MockType.Method.collectMethods(from: mockedProtocol.allProtocols)
+        self.allMethods = MockType.Method.collectMethods(from: mockedProtocol.allProtocols, mockName: mockClassName)
         self.allProperties = MockType.Property.collectProperties(from: mockedProtocol.allProtocols)
     }
-
-    lazy var mockClassName = mockedProtocol.declaration.name.text + "Mock"
 
     var isPublic: Bool {
         mockedProtocol.allProtocols.contains { protocolDecl in
@@ -31,16 +31,16 @@ final class ProtocolMockBuilder: SyntaxBuilder {
 
     var methodsEnum: EnumDeclSyntax {
         var members: [MemberBlockItemSyntax] = []
-        
+
         // Add method variable declarations
         members.append(contentsOf: allMethods.map(\.variableDeclaration).map { MemberBlockItemSyntax(decl: $0) })
-        
+
         // Add property getter variable declarations
         members.append(contentsOf: allProperties.map(\.variableDeclaration).map { MemberBlockItemSyntax(decl: $0) })
-        
+
         // Add property setter variable declarations (only for read-write properties)
         members.append(contentsOf: allProperties.compactMap(\.setterVariableDeclaration).map { MemberBlockItemSyntax(decl: $0) })
-        
+
         return EnumDeclSyntax(
             leadingTrivia: .newline,
             enumKeyword: .keyword(.enum, trailingTrivia: .space),
@@ -81,7 +81,7 @@ final class ProtocolMockBuilder: SyntaxBuilder {
                 inheritedType: inheritedType
             )
         }
-            .commaSeparated(trailingTrivia: .space)
+        .commaSeparated(trailingTrivia: .space)
 
         return GenericParameterClauseSyntax(
             parameters: GenericParameterListSyntax(parameters)
@@ -89,7 +89,7 @@ final class ProtocolMockBuilder: SyntaxBuilder {
     }
 
     var typealiasDeclarations: [TypeAliasDeclSyntax] {
-        return allAssociatedTypes.map { associatedType in
+        allAssociatedTypes.map { associatedType in
             TypeAliasDeclSyntax(
                 modifiers: isPublic ? DeclModifierListSyntax([DeclModifierSyntax(name: .keyword(.public, trailingTrivia: .space))]) : DeclModifierListSyntax([]),
                 typealiasKeyword: .keyword(.typealias, trailingTrivia: .space),
@@ -104,7 +104,7 @@ final class ProtocolMockBuilder: SyntaxBuilder {
     }
 
     var methodExpectations: StructDeclSyntax {
-        return MethodExpectationBuilder(
+        MethodExpectationBuilder(
             mockName: mockClassName,
             allMethods: allMethods,
             isPublic: isPublic
@@ -187,11 +187,11 @@ final class ProtocolMockBuilder: SyntaxBuilder {
     }
 
     var implementationMethods: [FunctionDeclSyntax] {
-        return allMethods.map { $0.implementation(in: mockClassName, isPublic: isPublic) }
+        allMethods.map { $0.implementation(isPublic: isPublic) }
     }
 
     var implementationProperties: [VariableDeclSyntax] {
-        return allProperties.map { $0.implementation(in: mockClassName, isPublic: isPublic) }
+        allProperties.map { $0.implementation(isPublic: isPublic) }
     }
 
     var expectationSetters: [FunctionDeclSyntax] {
@@ -251,7 +251,8 @@ final class ProtocolMockBuilder: SyntaxBuilder {
                                                 ]),
                                                 closingQuote: .stringQuoteToken()
                                             )
-                                        ))))
+                                        )))
+                                    )
                                 ]),
                                 rightBrace: .rightBraceToken(leadingTrivia: .newline)
                             )
@@ -532,7 +533,7 @@ final class ProtocolMockBuilder: SyntaxBuilder {
         let modifiers: DeclModifierListSyntax = isPublic ? DeclModifierListSyntax([
             DeclModifierSyntax(name: .keyword(.open, trailingTrivia: .space))
         ]) : DeclModifierListSyntax([])
-        
+
         return ClassDeclSyntax(
             modifiers: modifiers,
             classKeyword: .keyword(.class, trailingTrivia: .space),
