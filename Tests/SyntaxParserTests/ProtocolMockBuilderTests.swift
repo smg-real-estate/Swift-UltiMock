@@ -160,7 +160,7 @@ struct ProtocolMockBuilderTests {
                 }
             }
             static var get_readwrite_String: MockMethod {
-                .init {
+                .init { _ in
                     "readwrite"
                 }
             }
@@ -357,6 +357,36 @@ struct ProtocolMockBuilderTests {
             return stub.perform
         }
         """)
+    }
+
+    @Test(arguments: [
+        "",
+        "public "
+    ]) func `implementationProperties contains property implementations`(accessModifier: String) throws {
+        let source = Parser.parse(source: #"""
+        \#(accessModifier)protocol Foo {
+            var readonly: Int { get }
+        }
+        """#)
+
+        let types = source.statements.map { $0.item.cast(ProtocolDeclSyntax.self) }
+
+        let sut = MockedProtocol(declaration: types[0], inherited: []).mockBuilder
+
+        let generatedMethod = try #require(sut.implementationProperties.first)
+
+        #expect(
+            generatedMethod.formatted().trimmedDescription == """
+            \(accessModifier)var readonly: Int {
+                get {
+                    let perform = _perform(
+                        Methods.get_readonly_Int
+                    ) as! () -> Int
+                    return perform()
+                }
+            }
+            """
+        )
     }
 
     @Test(arguments: [

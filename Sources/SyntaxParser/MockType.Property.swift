@@ -96,7 +96,13 @@ extension MockType {
                 .with(\.accessorBlock, newAccessorBlock)
                 .with(\.typeAnnotation, binding.typeAnnotation?.with(\.type, binding.typeAnnotation!.type.with(\.trailingTrivia, [])))
 
+            let modifiers: DeclModifierListSyntax = isPublic ? DeclModifierListSyntax([
+                DeclModifierSyntax(name: .keyword(.public, trailingTrivia: .space))
+            ]) : DeclModifierListSyntax([])
+
             return declaration
+                .with(\.modifiers, modifiers)
+                .with(\.bindingSpecifier, declaration.bindingSpecifier.with(\.leadingTrivia, []))
                 .with(\.bindings, PatternBindingListSyntax([newBinding]))
         }
 
@@ -122,9 +128,9 @@ extension MockType {
                 hasSet = false
             }
 
-            // Getter: for read-only uses closure signature { _ in }, for read-write has no closure signature
+            // All getters use closure signature { _ in }
             let callDescription = propertyName
-            let closureSignature: ClosureSignatureSyntax? = hasSet ? nil : ClosureSignatureSyntax(
+            let closureSignature = ClosureSignatureSyntax(
                 parameterClause: .simpleInput(
                     ClosureShorthandParameterListSyntax([
                         ClosureShorthandParameterSyntax(name: .wildcardToken(leadingTrivia: .space, trailingTrivia: .space))

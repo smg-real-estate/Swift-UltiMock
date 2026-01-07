@@ -168,6 +168,12 @@ final class ProtocolMockBuilder: SyntaxBuilder {
         MemberBlockItemSyntax(decl: methodExpectations)
         MemberBlockItemSyntax(decl: recordMethod)
         MemberBlockItemSyntax(decl: performMethod)
+        expectationSetters.map { setter in
+            MemberBlockItemSyntax(decl: setter)
+        }
+        implementationProperties.map { property in
+            MemberBlockItemSyntax(decl: property)
+        }
         implementationMethods.map { method in
             MemberBlockItemSyntax(
                 decl: method
@@ -180,6 +186,13 @@ final class ProtocolMockBuilder: SyntaxBuilder {
             modifier.name.tokenKind == .keyword(.public)
         }
         return allMethods.map { $0.implementation(in: mockClassName, isPublic: isPublic) }
+    }
+
+    var implementationProperties: [VariableDeclSyntax] {
+        let isPublic = mockedProtocol.declaration.modifiers.contains { modifier in
+            modifier.name.tokenKind == .keyword(.public)
+        }
+        return allProperties.map { $0.implementation(in: mockClassName, isPublic: isPublic) }
     }
 
     var expectationSetters: [FunctionDeclSyntax] {
