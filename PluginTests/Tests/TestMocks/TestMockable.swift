@@ -12,15 +12,15 @@ public struct OnlyProperty: Equatable {
 
 // sourcery:AutoMockable
 public protocol TestMockable: Sendable {
-    var property: OnlyProperty { get }
-    var throwingProperty: Int { get throws }
-    var asyncProperty: Int { get async }
-    var asyncThrowingProperty: Int { get async throws }
-    var readwriteProperty: Int { get set }
-    var forceUnwrapped: String! { get set }
-
-    subscript(key: Int) -> String { get }
-    subscript(key: String) -> Int { get set }
+//    var property: OnlyProperty { get }
+//    var throwingProperty: Int { get throws }
+//    var asyncProperty: Int { get async }
+//    var asyncThrowingProperty: Int { get async throws }
+//    var readwriteProperty: Int { get set }
+//    var forceUnwrapped: String! { get set }
+//
+//    subscript(key: Int) -> String { get }
+//    subscript(key: String) -> Int { get set }
 
     func forceUnwrappedResult() -> String!
 

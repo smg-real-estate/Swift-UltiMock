@@ -32,7 +32,7 @@
 - Keep functions focused and single-purpose
 - Use guard statements for early returns and validation
 - Leverage type safety and Swift's type system
-- Use private extensions for private helper methods
+- **Always** use private **extensions** for private helper methods
 - Write production grade code from the get-go, avoid placeholder/simple code.
 - Follow the Dependency Inversion Principle: apply protocol-oriented programming or use closures for dependencies.
 - Prefer method references for DI over wrapping closures
