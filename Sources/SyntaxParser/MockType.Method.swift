@@ -2,8 +2,12 @@ import SwiftParser
 import SwiftSyntax
 
 extension MockType {
-    struct Method: SyntaxBuilder {
+    final class Method: SyntaxBuilder {
         let declaration: FunctionDeclSyntax
+
+        init(declaration: FunctionDeclSyntax) {
+            self.declaration = declaration
+        }
 
         static func collectMethods(from protocols: [ProtocolDeclSyntax]) -> [MockType.Method] {
             protocols.flatMap { protocolDecl in
@@ -253,7 +257,7 @@ extension MockType {
                 ))
         }
 
-        func expectationMethodDeclaration(mockName: String) -> FunctionDeclSyntax {
+        func expectationMethodDeclaration(mockName: String, isPublic: Bool = false) -> FunctionDeclSyntax {
             let parameters = declaration.signature.parameterClause.parameters
             let argumentList = LabeledExprListSyntax(
                 [
@@ -345,11 +349,20 @@ extension MockType {
                 )
             )
 
+            let modifiers: [DeclModifierSyntax] = if isPublic {
+                [
+                    DeclModifierSyntax(name: .keyword(.public, trailingTrivia: .space)),
+                    DeclModifierSyntax(name: .keyword(.static, trailingTrivia: .space))
+                ]
+            } else {
+                [
+                    DeclModifierSyntax(name: .keyword(.static, trailingTrivia: .space))
+                ]
+            }
+
             return declaration.with(\.leadingTrivia, [])
                 .withExpectationParameters(mockName: mockName)
-                .with(\.modifiers, DeclModifierListSyntax([
-                    DeclModifierSyntax(name: .keyword(.static, trailingTrivia: .space))
-                ]))
+                .with(\.modifiers, DeclModifierListSyntax(modifiers))
                 .with(\.signature.returnClause, ReturnClauseSyntax(
                     arrow: .arrowToken(trailingTrivia: .space),
                     type: IdentifierTypeSyntax(name: .keyword(.Self)),
@@ -453,14 +466,13 @@ extension MockType {
             )
         }
 
-        var expect: FunctionDeclSyntax {
+        lazy var closureSignatureType: FunctionTypeSyntax = {
             let parameters = declaration.signature.parameterClause.parameters.map(\.self)
             let effectSpecifiers = typeEffectSpecifiers(
                 asyncSpecifier: declaration.signature.effectSpecifiers?.asyncSpecifier,
                 throwsSpecifier: declaration.signature.effectSpecifiers?.throwsSpecifier
             )
-
-            let signatureType = FunctionTypeSyntax(
+            return FunctionTypeSyntax(
                 leftParen: .leftParenToken(),
                 parameters: closureParameterElements(for: parameters),
                 rightParen: .rightParenToken(),
@@ -471,25 +483,10 @@ extension MockType {
                     type: closureReturnType
                 )
             )
+        }()
 
-            var performParametersElements: [TupleTypeElementSyntax] = []
-            for param in closureParameterElements(for: parameters) {
-                performParametersElements.append(param)
-            }
-
-            let performType = FunctionTypeSyntax(
-                leftParen: .leftParenToken(),
-                parameters: TupleTypeElementListSyntax(performParametersElements),
-                rightParen: .rightParenToken(),
-                effectSpecifiers: effectSpecifiers,
-                returnClause: ReturnClauseSyntax(
-                    leadingTrivia: effectSpecifiers == nil ? .space : [],
-                    arrow: .arrowToken(trailingTrivia: .space),
-                    type: closureReturnType
-                )
-            )
-
-            return FunctionDeclSyntax(
+        var expect: FunctionDeclSyntax {
+            FunctionDeclSyntax(
                 modifiers: DeclModifierListSyntax([DeclModifierSyntax(name: .keyword(.public, trailingTrivia: .space))]),
                 funcKeyword: .keyword(.func, trailingTrivia: .space),
                 name: .identifier("expect"),
@@ -504,7 +501,7 @@ extension MockType {
                                 colon: .colonToken(trailingTrivia: .space),
                                 type: IdentifierTypeSyntax(
                                     name: .identifier("MethodExpectation"),
-                                    genericArgumentClause: genericArgumentClause(arguments: [signatureType])
+                                    genericArgumentClause: genericArgumentClause(arguments: [closureSignatureType])
                                 ),
                                 trailingComma: .commaToken(trailingTrivia: .newline)
                             ),
@@ -558,7 +555,7 @@ extension MockType {
                                             attributeName: IdentifierTypeSyntax(name: .identifier("escaping", trailingTrivia: .space))
                                         ))
                                     ]),
-                                    baseType: TypeSyntax(performType)
+                                    baseType: TypeSyntax(closureSignatureType)
                                 )
                             )
                         ]),

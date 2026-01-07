@@ -173,9 +173,12 @@ struct ProtocolMockBuilderTests {
         """)
     }
 
-    @Test func `methodExpectation contains expectations for all methods`() {
+    @Test(arguments: [
+        "",
+        "public "
+    ]) func `methodExpectation contains expectations for all methods`(accessModifier: String) throws {
         let source = Parser.parse(source: """
-        protocol Foo {
+        \(accessModifier)protocol Foo {
             func doSomething() -> Int // Some comment 
         }
 
@@ -190,7 +193,7 @@ struct ProtocolMockBuilderTests {
 
         #expect(sut.methodExpectations.formatted().description == """
 
-        struct MethodExpectation<Signature> {
+        \(accessModifier)struct MethodExpectation<Signature> {
             let expectation: Recorder.Expectation
 
             init(method: MockMethod, parameters: [AnyParameter]) {
@@ -200,14 +203,14 @@ struct ProtocolMockBuilderTests {
                 )
             }
 
-            static func doSomething() -> Self where Signature == () -> Int {
+            \(accessModifier)static func doSomething() -> Self where Signature == () -> Int {
                 .init(
                     method: Methods.doSomething_ret_Int,
                     parameters: []
                 )
             }
 
-            static func doSomethingElse<T>(with: Parameter<T>) async throws -> Self where Signature == (
+            \(accessModifier)static func doSomethingElse<T>(with: Parameter<T>) async throws -> Self where Signature == (
                 _ with: T
             ) -> String {
                 .init(
@@ -418,10 +421,11 @@ struct ProtocolMockBuilderTests {
         )
     }
 
-    @Test func `expectationSetters contains expect method declarations`() throws {
+    @Test func `expectationSetters contains expect method declarations without duplicated signatures`() throws {
         let source = Parser.parse(source: """
         protocol Foo {
             func doSomething() -> Int
+            func doSomethingElse() -> Int // Duplicated signature
             func doSomethingElse(with: String) async throws -> Bool
         }
         """)

@@ -21,6 +21,14 @@ final class ProtocolMockBuilder: SyntaxBuilder {
 
     lazy var mockClassName = mockedProtocol.declaration.name.text + "Mock"
 
+    var isPublic: Bool {
+        mockedProtocol.allProtocols.contains { protocolDecl in
+            protocolDecl.modifiers.contains { modifier in
+                modifier.name.tokenKind == .keyword(.public)
+            }
+        }
+    }
+
     var methodsEnum: EnumDeclSyntax {
         var members: [MemberBlockItemSyntax] = []
         
@@ -81,10 +89,6 @@ final class ProtocolMockBuilder: SyntaxBuilder {
     }
 
     var typealiasDeclarations: [TypeAliasDeclSyntax] {
-        let isPublic = mockedProtocol.declaration.modifiers.contains { modifier in
-            modifier.name.tokenKind == .keyword(.public)
-        }
-        
         return allAssociatedTypes.map { associatedType in
             TypeAliasDeclSyntax(
                 modifiers: isPublic ? DeclModifierListSyntax([DeclModifierSyntax(name: .keyword(.public, trailingTrivia: .space))]) : DeclModifierListSyntax([]),
@@ -100,9 +104,10 @@ final class ProtocolMockBuilder: SyntaxBuilder {
     }
 
     var methodExpectations: StructDeclSyntax {
-        MethodExpectationBuilder(
+        return MethodExpectationBuilder(
             mockName: mockClassName,
-            allMethods: allMethods
+            allMethods: allMethods,
+            isPublic: isPublic
         ).declaration
     }
 
@@ -182,21 +187,16 @@ final class ProtocolMockBuilder: SyntaxBuilder {
     }
 
     var implementationMethods: [FunctionDeclSyntax] {
-        let isPublic = mockedProtocol.declaration.modifiers.contains { modifier in
-            modifier.name.tokenKind == .keyword(.public)
-        }
         return allMethods.map { $0.implementation(in: mockClassName, isPublic: isPublic) }
     }
 
     var implementationProperties: [VariableDeclSyntax] {
-        let isPublic = mockedProtocol.declaration.modifiers.contains { modifier in
-            modifier.name.tokenKind == .keyword(.public)
-        }
         return allProperties.map { $0.implementation(in: mockClassName, isPublic: isPublic) }
     }
 
     var expectationSetters: [FunctionDeclSyntax] {
-        allMethods.map(\.expect)
+        allMethods.unique(by: \.closureSignatureType.description)
+            .map(\.expect)
     }
 
     var recordMethod: FunctionDeclSyntax {
@@ -529,10 +529,6 @@ final class ProtocolMockBuilder: SyntaxBuilder {
     }
 
     var mockClass: ClassDeclSyntax {
-        let isPublic = mockedProtocol.declaration.modifiers.contains { modifier in
-            modifier.name.tokenKind == .keyword(.public)
-        }
-        
         let modifiers: DeclModifierListSyntax = isPublic ? DeclModifierListSyntax([
             DeclModifierSyntax(name: .keyword(.open, trailingTrivia: .space))
         ]) : DeclModifierListSyntax([])

@@ -298,20 +298,12 @@ private extension MockType.Property {
             isReadWrite = false
         }
 
-        // For async properties, closure signature always includes throws
+        // For async properties, closure signature includes async and throws if specified
         // For read-write properties, getter returns Void
-        let closureEffectSpecifiers: TypeEffectSpecifiersSyntax?
-        if effectSpecifiers?.asyncSpecifier != nil {
-            // Async getters always have throws in their closure signature
-            closureEffectSpecifiers = TypeEffectSpecifiersSyntax(
-                throwsSpecifier: .keyword(.throws, leadingTrivia: .space, trailingTrivia: .space)
-            )
-        } else {
-            closureEffectSpecifiers = typeEffectSpecifiers(
-                asyncSpecifier: nil,
-                throwsSpecifier: effectSpecifiers?.throwsSpecifier
-            )
-        }
+        let closureEffectSpecifiers: TypeEffectSpecifiersSyntax? = typeEffectSpecifiers(
+            asyncSpecifier: effectSpecifiers?.asyncSpecifier,
+            throwsSpecifier: effectSpecifiers?.throwsSpecifier
+        )
 
         let returnType: TypeSyntax = isReadWrite ? TypeSyntax(IdentifierTypeSyntax(name: .identifier("Void"))) : type.trimmed
 

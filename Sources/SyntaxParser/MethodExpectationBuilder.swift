@@ -3,10 +3,12 @@ import SwiftSyntax
 struct MethodExpectationBuilder: SyntaxBuilder {
     let mockName: String
     let allMethods: [MockType.Method]
+    let isPublic: Bool
 
     var declaration: StructDeclSyntax {
         StructDeclSyntax(
             leadingTrivia: .newline,
+            modifiers: isPublic ? DeclModifierListSyntax([DeclModifierSyntax(name: .keyword(.public, trailingTrivia: .space))]) : DeclModifierListSyntax([]),
             structKeyword: .keyword(.struct, trailingTrivia: .space),
             name: .identifier("MethodExpectation"),
             genericParameterClause: GenericParameterClauseSyntax(
@@ -39,7 +41,7 @@ struct MethodExpectationBuilder: SyntaxBuilder {
         for method in allMethods {
             MemberBlockItemSyntax(
                 leadingTrivia: .newlines(2),
-                decl: method.expectationMethodDeclaration(mockName: mockName),
+                decl: method.expectationMethodDeclaration(mockName: mockName, isPublic: isPublic),
             )
         }
     }

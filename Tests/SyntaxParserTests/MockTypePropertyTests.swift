@@ -67,7 +67,7 @@ struct MockTypePropertyTests {
             get async {
                 let perform = _perform(
                     Methods.get_\(sut.stubIdentifier)
-                ) as! () throws -> String
+                ) as! () async -> String
                 return await perform()
             }
         }
@@ -85,7 +85,7 @@ struct MockTypePropertyTests {
             get async throws {
                 let perform = _perform(
                     Methods.get_\(sut.stubIdentifier)
-                ) as! () throws -> Int
+                ) as! () async throws -> Int
                 return try await perform()
             }
         }
