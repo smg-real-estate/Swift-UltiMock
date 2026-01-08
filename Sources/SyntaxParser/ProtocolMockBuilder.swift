@@ -103,7 +103,7 @@ final class ProtocolMockBuilder: SyntaxBuilder {
         }
     }
 
-    var methodExpectations: StructDeclSyntax {
+    var methodExpectationStruct: StructDeclSyntax {
         MethodExpectationBuilder(
             mockName: mockClassName,
             allMethods: allMethods,
@@ -111,7 +111,7 @@ final class ProtocolMockBuilder: SyntaxBuilder {
         ).declaration
     }
 
-    var propertyExpectations: StructDeclSyntax {
+    var propertyExpectationsStruct: StructDeclSyntax {
         PropertyExpectationBuilder(
             allMethods: allMethods,
             isPublic: isPublic
@@ -177,7 +177,8 @@ final class ProtocolMockBuilder: SyntaxBuilder {
         properties
         MemberBlockItemSyntax(decl: initializer)
         MemberBlockItemSyntax(decl: methodsEnum)
-        MemberBlockItemSyntax(decl: methodExpectations)
+        MemberBlockItemSyntax(decl: methodExpectationStruct)
+        MemberBlockItemSyntax(decl: propertyExpectationsStruct)
         MemberBlockItemSyntax(decl: recordMethod)
         MemberBlockItemSyntax(decl: performMethod)
         expectationSetters.map { setter in

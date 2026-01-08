@@ -187,7 +187,7 @@ struct ProtocolMockBuilderTests {
 
         let sut = MockedProtocol(declaration: declaration, inherited: []).mockBuilder
 
-        #expect(sut.propertyExpectations.formatted().description == """
+        #expect(sut.propertyExpectationsStruct.formatted().description == """
         \(accessModifier)struct PropertyExpectation<Signature> {
             private let method: MockMethod
 
@@ -230,7 +230,7 @@ struct ProtocolMockBuilderTests {
 
         let sut = MockedProtocol(declaration: types[1], inherited: [types[0]]).mockBuilder
 
-        #expect(sut.methodExpectations.formatted().description == """
+        #expect(sut.methodExpectationStruct.formatted().description == """
 
         \(accessModifier)struct MethodExpectation<Signature> {
             let expectation: Recorder.Expectation
