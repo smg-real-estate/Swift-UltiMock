@@ -144,18 +144,101 @@ struct MockTypePropertyTests {
         """)
     }
 
+    @Test func `getterExpect for async throwing`() throws {
+        let syntax = Parser.parse(source: "var readonly: Int! { get async throws }").statements.first?.item
+        let declaration = try #require(VariableDeclSyntax(syntax))
+
+        let sut = MockType.Property(declaration: declaration, mockName: "TestMock")
+
+        #expect(sut.getterExpect.formatted().description == """
+        public func expect(
+            _ expectation: PropertyExpectation<() async throws -> Int?>,
+            fileID: String = #fileID,
+            filePath: StaticString = #filePath,
+            line: UInt = #line,
+            column: Int = #column,
+            perform: @escaping () async throws -> Int?
+        ) {
+            _record(
+                expectation.getterExpectation,
+                fileID,
+                filePath,
+                line,
+                column,
+                perform
+            )
+        }
+        """)
+    }
+
+    @Test func `getterExpect for readwrite`() throws {
+        let syntax = Parser.parse(source: "var readwrite: Int! { get set }").statements.first?.item
+        let declaration = try #require(VariableDeclSyntax(syntax))
+
+        let sut = MockType.Property(declaration: declaration, mockName: "TestMock")
+
+        #expect(sut.getterExpect.formatted().description == """
+        public func expect(
+            _ expectation: PropertyExpectation<() -> Int?>,
+            fileID: String = #fileID,
+            filePath: StaticString = #filePath,
+            line: UInt = #line,
+            column: Int = #column,
+            perform: @escaping () -> Int?
+        ) {
+            _record(
+                expectation.getterExpectation,
+                fileID,
+                filePath,
+                line,
+                column,
+                perform
+            )
+        }
+        """)
+    }
+
+    @Test func `setterExpect for readwrite`() throws {
+        let syntax = Parser.parse(source: "var readwrite: Int! { get set }").statements.first?.item
+        let declaration = try #require(VariableDeclSyntax(syntax))
+
+        let sut = MockType.Property(declaration: declaration, mockName: "TestMock")
+
+        #expect(sut.setterExpect.formatted().description == """
+        public func expect(
+            set expectation: PropertyExpectation<(Int?) -> Void>,
+            to newValue: Parameter<Int?>,
+            fileID: String = #fileID,
+            filePath: StaticString = #filePath,
+            line: UInt = #line,
+            column: Int = #column,
+            perform: @escaping (Int?) -> Void = { _ in
+            }
+        ) {
+            _record(
+                expectation.setterExpectation,
+                fileID,
+                filePath,
+                line,
+                column,
+                perform
+            )
+        }
+        """)
+    }
+
     @Test(arguments: [
         (false, ""),
         (true, "public ")
     ]) func `getterExpectationExtension for readonly async throwing`(isPublic: Bool, accessModifier: String) throws {
-        let syntax = Parser.parse(source: "var readwrite: Int! { get async throws }").statements.first?.item
+        let syntax = Parser.parse(source: "var readonly: Int! { get async throws }").statements.first?.item
         let declaration = try #require(VariableDeclSyntax(syntax))
 
         let sut = MockType.Property(declaration: declaration, mockName: "TestMock")
 
         #expect(sut.getterExpectationExtension(isPublic: isPublic).formatted().description == """
         \(accessModifier)extension TestMock.PropertyExpectation where Signature == () async throws -> Int? {
-            static var readwrite: Self {
+            static var readonly: Self {
                 .init(method: TestMock.Methods.get_\(sut.stubIdentifier))
             }
         }

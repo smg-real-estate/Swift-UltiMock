@@ -61,10 +61,6 @@ extension MockType {
             return parts.joined(separator: "_")
         }
 
-        var callDescription: String {
-            ""
-        }
-
         func implementation(isPublic: Bool = false) -> VariableDeclSyntax {
             guard let binding = declaration.bindings.first,
                   let type = binding.typeAnnotation?.type,
@@ -259,8 +255,48 @@ extension MockType {
             )
         }
 
-        var expect: FunctionDeclSyntax {
-            fatalError()
+        var getterExpect: FunctionDeclSyntax {
+            guard let binding = declaration.bindings.first,
+                  let accessorBlock = binding.accessorBlock else {
+                fatalError("Property must have accessor block")
+            }
+
+            var effectSpecifiers: AccessorEffectSpecifiersSyntax?
+            switch accessorBlock.accessors {
+            case let .accessors(accessorList):
+                for accessor in accessorList {
+                    if accessor.accessorSpecifier.tokenKind == .keyword(.get) {
+                        effectSpecifiers = accessor.effectSpecifiers
+                        break
+                    }
+                }
+            case .getter:
+                effectSpecifiers = nil
+            }
+
+            let signatureType = getterFunctionType
+                .with(\.effectSpecifiers, effectSpecifiers?.asTypeEffectSpecifiersSyntax)
+
+            return buildExpectFunction(
+                expectationType: "PropertyExpectation",
+                signatureType: signatureType,
+                expectationPropertyName: "getterExpectation",
+                isPublic: true
+            )
+        }
+
+        var setterExpect: FunctionDeclSyntax {
+            guard let binding = declaration.bindings.first,
+                  let type = binding.typeAnnotation?.type else {
+                fatalError("Property must have accessor block")
+            }
+
+            return buildSetterExpectFunction(
+                expectationType: "PropertyExpectation",
+                signatureType: setterFunctionType,
+                valueType: type.replacingImplicitlyUnwrappedOptionals(),
+                isPublic: true
+            )
         }
 
         func getterExpectationExtension(isPublic: Bool = false) -> ExtensionDeclSyntax {
