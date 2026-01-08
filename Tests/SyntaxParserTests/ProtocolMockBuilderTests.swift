@@ -176,6 +176,45 @@ struct ProtocolMockBuilderTests {
     @Test(arguments: [
         "",
         "public "
+    ]) func `propertyExpectation contains correct declaration`(accessModifier: String) throws {
+        let source = Parser.parse(source: """
+        \(accessModifier)protocol Foo {
+            func doSomething() -> Int // Some comment 
+        }
+        """)
+
+        let declaration = try #require(source.statements.first?.item.as(ProtocolDeclSyntax.self))
+
+        let sut = MockedProtocol(declaration: declaration, inherited: []).mockBuilder
+
+        #expect(sut.propertyExpectations.formatted().description == """
+        \(accessModifier)struct PropertyExpectation<Signature> {
+            private let method: MockMethod
+
+            init(method: MockMethod) {
+                self.method = method
+            }
+
+            \(accessModifier)var getterExpectation: Recorder.Expectation {
+                .init(
+                    method: method,
+                    parameters: []
+                )
+            }
+
+            \(accessModifier)func setterExpectation(_ newValue: AnyParameter) -> Recorder.Expectation {
+                .init(
+                    method: method,
+                    parameters: [newValue]
+                )
+            }
+        }
+        """)
+    }
+
+    @Test(arguments: [
+        "",
+        "public "
     ]) func `methodExpectation contains expectations for all methods`(accessModifier: String) {
         let source = Parser.parse(source: """
         \(accessModifier)protocol Foo {

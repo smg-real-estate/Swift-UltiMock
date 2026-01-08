@@ -111,6 +111,13 @@ final class ProtocolMockBuilder: SyntaxBuilder {
         ).declaration
     }
 
+    var propertyExpectations: StructDeclSyntax {
+        PropertyExpectationBuilder(
+            allMethods: allMethods,
+            isPublic: isPublic
+        ).declaration
+    }
+
     @ArrayBuilder<MemberBlockItemSyntax>
     var properties: [MemberBlockItemSyntax] {
         property(.public, name: "recorder", initializer: InitializerClauseSyntax(
@@ -556,7 +563,7 @@ final class ProtocolMockBuilder: SyntaxBuilder {
                     $0.setterExpectationExtension(isPublic: isPublic)
                 ]
             }
-                .compactMap { $0?.asCodeBlockItem() }
+            .compactMap { $0?.asCodeBlockItem() }
         )
     }
 }
