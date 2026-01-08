@@ -28,8 +28,7 @@ extension MockType {
         var stubIdentifier: String {
             guard let binding = declaration.bindings.first,
                   let pattern = binding.pattern.as(IdentifierPatternSyntax.self),
-                  let type = binding.typeAnnotation?.type,
-                  let accessorBlock = binding.accessorBlock else {
+                  let type = binding.typeAnnotation?.type else {
                 return ""
             }
 
@@ -37,23 +36,13 @@ extension MockType {
             let propertyName = pattern.identifier.text
             parts.append(propertyName)
 
-            // Add accessor effect specifiers (async, throws)
-            switch accessorBlock.accessors {
-            case let .accessors(accessorList):
-                for accessor in accessorList {
-                    if accessor.accessorSpecifier.tokenKind == .keyword(.get) {
-                        if let effectSpecifiers = accessor.effectSpecifiers {
-                            if effectSpecifiers.asyncSpecifier != nil {
-                                parts.append("async")
-                            }
-                            if effectSpecifiers.throwsSpecifier != nil {
-                                parts.append("throws")
-                            }
-                        }
-                    }
-                }
-            case .getter:
-                break
+            if let effectSpecifiers = declaration.getterEffectSpecifiers {
+                parts.append(contentsOf: [
+                    effectSpecifiers.asyncSpecifier,
+                    effectSpecifiers.throwsSpecifier
+                ]
+                    .compactMap(\.?.text)
+                )
             }
 
             parts.append(type.stubIdentifierSlug)
