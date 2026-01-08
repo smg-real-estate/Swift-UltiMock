@@ -9,7 +9,7 @@ struct MockedProtocol: MockedType, Equatable {
 
         return [
             builder.mockClass.asCodeBlockItem(),
-        ]
+        ] + builder.extensions
     }
 
     var allProtocols: [ProtocolDeclSyntax] {

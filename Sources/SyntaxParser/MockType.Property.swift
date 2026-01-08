@@ -299,7 +299,7 @@ extension MockType {
             )
         }
 
-        func getterExpectationExtension(isPublic: Bool = false) -> ExtensionDeclSyntax {
+        func getterExpectationExtension(isPublic: Bool) -> ExtensionDeclSyntax {
             guard let binding = declaration.bindings.first,
                   let pattern = binding.pattern.as(IdentifierPatternSyntax.self),
                   let accessorBlock = binding.accessorBlock else {
@@ -405,25 +405,15 @@ extension MockType {
             )
         }
 
-        func setterExpectationExtension(isPublic: Bool = false) -> ExtensionDeclSyntax {
+        func setterExpectationExtension(isPublic: Bool = false) -> ExtensionDeclSyntax? {
             guard let binding = declaration.bindings.first,
                   let pattern = binding.pattern.as(IdentifierPatternSyntax.self),
-                  let accessorBlock = binding.accessorBlock else {
-                fatalError("Property must have accessor block")
+                  let accessors = declaration.accessors,
+                  accessors.contains(where: { $0.accessorSpecifier.tokenKind == .keyword(.set) }) else {
+                return nil
             }
 
             let propertyName = pattern.identifier.text
-
-            let hasSet: Bool = switch accessorBlock.accessors {
-            case let .accessors(accessorList):
-                accessorList.contains { $0.accessorSpecifier.tokenKind == .keyword(.set) }
-            case .getter:
-                false
-            }
-
-            guard hasSet else {
-                fatalError("Property must have setter")
-            }
 
             let signatureType = setterFunctionType
 

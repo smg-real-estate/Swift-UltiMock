@@ -547,4 +547,16 @@ final class ProtocolMockBuilder: SyntaxBuilder {
             )
         )
     }
+
+    var extensions: CodeBlockItemListSyntax {
+        CodeBlockItemListSyntax(
+            allProperties.flatMap {
+                [
+                    $0.getterExpectationExtension(isPublic: isPublic),
+                    $0.setterExpectationExtension(isPublic: isPublic)
+                ]
+            }
+                .compactMap { $0?.asCodeBlockItem() }
+        )
+    }
 }

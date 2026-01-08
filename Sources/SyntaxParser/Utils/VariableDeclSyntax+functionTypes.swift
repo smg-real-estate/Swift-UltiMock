@@ -24,6 +24,22 @@ extension VariableDeclSyntax {
     var type: TypeSyntax {
         bindings.first?.typeAnnotation?.type.trimmed ?? .void
     }
+
+    var getterEffectSpecifiers: TypeEffectSpecifiersSyntax? {
+        accessors?.compactMap {
+            $0.effectSpecifiers?.asTypeEffectSpecifiersSyntax
+        }
+        .first
+    }
+
+    var accessors: AccessorDeclListSyntax? {
+        switch bindings.first?.accessorBlock?.accessors {
+        case let .accessors(accessorList):
+            accessorList
+        default:
+            nil
+        }
+    }
 }
 
 extension TypeSyntax {

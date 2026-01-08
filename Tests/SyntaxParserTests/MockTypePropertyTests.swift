@@ -272,7 +272,7 @@ struct MockTypePropertyTests {
 
         let sut = MockType.Property(declaration: declaration, mockName: "TestMock")
 
-        #expect(sut.setterExpectationExtension(isPublic: isPublic).formatted().description == """
+        #expect(sut.setterExpectationExtension(isPublic: isPublic)?.formatted().description == """
         \(accessModifier)extension TestMock.PropertyExpectation where Signature == (Int?) -> Void {
             static var readwrite: Self {
                 .init(method: TestMock.Methods.set_\(sut.stubIdentifier))
