@@ -4,17 +4,22 @@ import SwiftSyntax
 extension MockType {
     final class Property: SyntaxBuilder {
         let declaration: VariableDeclSyntax
+        let mockName: String
 
-        init(declaration: VariableDeclSyntax) {
+        init(declaration: VariableDeclSyntax, mockName: String) {
             self.declaration = declaration
+            self.mockName = mockName
         }
 
-        static func collectProperties(from protocols: [ProtocolDeclSyntax]) -> [MockType.Property] {
+        static func collectProperties(from protocols: [ProtocolDeclSyntax], mockName: String) -> [MockType.Property] {
             protocols.flatMap { protocolDecl in
                 protocolDecl.memberBlock.members.compactMap { member in
                     member.decl.as(VariableDeclSyntax.self)
                 }
-            }.map { MockType.Property(declaration: $0) }
+            }
+            .map {
+                MockType.Property(declaration: $0, mockName: mockName)
+            }
         }
 
         lazy var getterFunctionType = declaration.getterFunctionType
@@ -110,10 +115,6 @@ extension MockType {
                 .with(\.modifiers, modifiers)
                 .with(\.bindingSpecifier, declaration.bindingSpecifier.with(\.leadingTrivia, []))
                 .with(\.bindings, PatternBindingListSyntax([newBinding]))
-        }
-
-        func expectationMethodDeclaration(mockName: String) -> FunctionDeclSyntax {
-            fatalError()
         }
 
         var variableDeclaration: VariableDeclSyntax {
@@ -261,6 +262,215 @@ extension MockType {
         var expect: FunctionDeclSyntax {
             fatalError()
         }
+
+        func getterExpectationExtension(isPublic: Bool = false) -> ExtensionDeclSyntax {
+            guard let binding = declaration.bindings.first,
+                  let pattern = binding.pattern.as(IdentifierPatternSyntax.self),
+                  let accessorBlock = binding.accessorBlock else {
+                fatalError("Property must have accessor block")
+            }
+
+            let propertyName = pattern.identifier.text
+
+            var effectSpecifiers: AccessorEffectSpecifiersSyntax?
+            switch accessorBlock.accessors {
+            case let .accessors(accessorList):
+                for accessor in accessorList {
+                    if accessor.accessorSpecifier.tokenKind == .keyword(.get) {
+                        effectSpecifiers = accessor.effectSpecifiers
+                        break
+                    }
+                }
+            case .getter:
+                effectSpecifiers = nil
+            }
+
+            let signatureType = getterFunctionType
+                .with(\.effectSpecifiers, effectSpecifiers?.asTypeEffectSpecifiersSyntax)
+
+            let modifiers: DeclModifierListSyntax = isPublic ? DeclModifierListSyntax([
+                DeclModifierSyntax(name: .keyword(.public, trailingTrivia: .space))
+            ]) : DeclModifierListSyntax([])
+
+            return ExtensionDeclSyntax(
+                modifiers: modifiers,
+                extensionKeyword: .keyword(.extension, trailingTrivia: .space),
+                extendedType: MemberTypeSyntax(
+                    baseType: IdentifierTypeSyntax(name: .identifier(mockName)),
+                    period: .periodToken(),
+                    name: .identifier("PropertyExpectation")
+                ),
+                genericWhereClause: GenericWhereClauseSyntax(
+                    whereKeyword: .keyword(.where, trailingTrivia: .space),
+                    requirements: GenericRequirementListSyntax([
+                        GenericRequirementSyntax(
+                            requirement: .sameTypeRequirement(SameTypeRequirementSyntax(
+                                leftType: IdentifierTypeSyntax(name: .identifier("Signature")),
+                                equal: .binaryOperator("==", leadingTrivia: .space, trailingTrivia: .space),
+                                rightType: TypeSyntax(signatureType)
+                            ))
+                        )
+                    ])
+                ),
+                memberBlock: MemberBlockSyntax(
+                    leftBrace: .leftBraceToken(leadingTrivia: .space),
+                    members: MemberBlockItemListSyntax([
+                        MemberBlockItemSyntax(
+                            leadingTrivia: .newline,
+                            decl: VariableDeclSyntax(
+                                modifiers: DeclModifierListSyntax([
+                                    DeclModifierSyntax(name: .keyword(.static, trailingTrivia: .space))
+                                ]),
+                                bindingSpecifier: .keyword(.var, trailingTrivia: .space),
+                                bindings: PatternBindingListSyntax([
+                                    PatternBindingSyntax(
+                                        pattern: IdentifierPatternSyntax(identifier: .identifier(propertyName)),
+                                        typeAnnotation: TypeAnnotationSyntax(
+                                            colon: .colonToken(trailingTrivia: .space),
+                                            type: IdentifierTypeSyntax(name: .identifier("Self"))
+                                        ),
+                                        accessorBlock: AccessorBlockSyntax(
+                                            leftBrace: .leftBraceToken(leadingTrivia: .space),
+                                            accessors: .getter(CodeBlockItemListSyntax([
+                                                CodeBlockItemSyntax(
+                                                    leadingTrivia: .newline,
+                                                    item: .expr(ExprSyntax(FunctionCallExprSyntax(
+                                                        calledExpression: MemberAccessExprSyntax(
+                                                            period: .periodToken(),
+                                                            name: .identifier("init")
+                                                        ),
+                                                        leftParen: .leftParenToken(),
+                                                        arguments: LabeledExprListSyntax([
+                                                            LabeledExprSyntax(
+                                                                label: .identifier("method"),
+                                                                colon: .colonToken(trailingTrivia: .space),
+                                                                expression: memberAccess(
+                                                                    base: memberAccess(
+                                                                        base: DeclReferenceExprSyntax(baseName: .identifier(mockName)),
+                                                                        name: "Methods"
+                                                                    ),
+                                                                    name: "get_\(stubIdentifier)"
+                                                                )
+                                                            )
+                                                        ]),
+                                                        rightParen: .rightParenToken()
+                                                    )))
+                                                )
+                                            ])),
+                                            rightBrace: .rightBraceToken(leadingTrivia: .newline)
+                                        )
+                                    )
+                                ])
+                            )
+                        )
+                    ]),
+                    rightBrace: .rightBraceToken(leadingTrivia: .newline)
+                )
+            )
+        }
+
+        func setterExpectationExtension(isPublic: Bool = false) -> ExtensionDeclSyntax {
+            guard let binding = declaration.bindings.first,
+                  let pattern = binding.pattern.as(IdentifierPatternSyntax.self),
+                  let accessorBlock = binding.accessorBlock else {
+                fatalError("Property must have accessor block")
+            }
+
+            let propertyName = pattern.identifier.text
+
+            let hasSet: Bool = switch accessorBlock.accessors {
+            case let .accessors(accessorList):
+                accessorList.contains { $0.accessorSpecifier.tokenKind == .keyword(.set) }
+            case .getter:
+                false
+            }
+
+            guard hasSet else {
+                fatalError("Property must have setter")
+            }
+
+            let signatureType = setterFunctionType
+
+            let modifiers: DeclModifierListSyntax = isPublic ? DeclModifierListSyntax([
+                DeclModifierSyntax(name: .keyword(.public, trailingTrivia: .space))
+            ]) : DeclModifierListSyntax([])
+
+            return ExtensionDeclSyntax(
+                modifiers: modifiers,
+                extensionKeyword: .keyword(.extension, trailingTrivia: .space),
+                extendedType: MemberTypeSyntax(
+                    baseType: IdentifierTypeSyntax(name: .identifier(mockName)),
+                    period: .periodToken(),
+                    name: .identifier("PropertyExpectation")
+                ),
+                genericWhereClause: GenericWhereClauseSyntax(
+                    whereKeyword: .keyword(.where, trailingTrivia: .space),
+                    requirements: GenericRequirementListSyntax([
+                        GenericRequirementSyntax(
+                            requirement: .sameTypeRequirement(SameTypeRequirementSyntax(
+                                leftType: IdentifierTypeSyntax(name: .identifier("Signature")),
+                                equal: .binaryOperator("==", leadingTrivia: .space, trailingTrivia: .space),
+                                rightType: TypeSyntax(signatureType)
+                            ))
+                        )
+                    ])
+                ),
+                memberBlock: MemberBlockSyntax(
+                    leftBrace: .leftBraceToken(leadingTrivia: .space),
+                    members: MemberBlockItemListSyntax([
+                        MemberBlockItemSyntax(
+                            leadingTrivia: .newline,
+                            decl: VariableDeclSyntax(
+                                modifiers: DeclModifierListSyntax([
+                                    DeclModifierSyntax(name: .keyword(.static, trailingTrivia: .space))
+                                ]),
+                                bindingSpecifier: .keyword(.var, trailingTrivia: .space),
+                                bindings: PatternBindingListSyntax([
+                                    PatternBindingSyntax(
+                                        pattern: IdentifierPatternSyntax(identifier: .identifier(propertyName)),
+                                        typeAnnotation: TypeAnnotationSyntax(
+                                            colon: .colonToken(trailingTrivia: .space),
+                                            type: IdentifierTypeSyntax(name: .identifier("Self"))
+                                        ),
+                                        accessorBlock: AccessorBlockSyntax(
+                                            leftBrace: .leftBraceToken(leadingTrivia: .space),
+                                            accessors: .getter(CodeBlockItemListSyntax([
+                                                CodeBlockItemSyntax(
+                                                    leadingTrivia: .newline,
+                                                    item: .expr(ExprSyntax(FunctionCallExprSyntax(
+                                                        calledExpression: MemberAccessExprSyntax(
+                                                            period: .periodToken(),
+                                                            name: .identifier("init")
+                                                        ),
+                                                        leftParen: .leftParenToken(),
+                                                        arguments: LabeledExprListSyntax([
+                                                            LabeledExprSyntax(
+                                                                label: .identifier("method"),
+                                                                colon: .colonToken(trailingTrivia: .space),
+                                                                expression: memberAccess(
+                                                                    base: memberAccess(
+                                                                        base: DeclReferenceExprSyntax(baseName: .identifier(mockName)),
+                                                                        name: "Methods"
+                                                                    ),
+                                                                    name: "set_\(stubIdentifier)"
+                                                                )
+                                                            )
+                                                        ]),
+                                                        rightParen: .rightParenToken()
+                                                    )))
+                                                )
+                                            ])),
+                                            rightBrace: .rightBraceToken(leadingTrivia: .newline)
+                                        )
+                                    )
+                                ])
+                            )
+                        )
+                    ]),
+                    rightBrace: .rightBraceToken(leadingTrivia: .newline)
+                )
+            )
+        }
     }
 }
 
@@ -363,7 +573,7 @@ private extension MockType.Property {
         )
     }
 
-    private func buildSetAccessor(type: TypeSyntax) -> AccessorDeclSyntax {
+    func buildSetAccessor(type: TypeSyntax) -> AccessorDeclSyntax {
         let methodReference = memberAccess(
             base: DeclReferenceExprSyntax(baseName: .identifier("Methods")),
             name: "set_\(stubIdentifier)"

@@ -17,7 +17,7 @@ struct MockTypePropertyTests {
         let syntax = Parser.parse(source: source).statements.first?.item
         let declaration = try #require(VariableDeclSyntax(syntax))
 
-        let sut = MockType.Property(declaration: declaration)
+        let sut = MockType.Property(declaration: declaration, mockName: "TestMock")
 
         #expect(sut.stubIdentifier == expectedIdentifier)
     }
@@ -26,7 +26,7 @@ struct MockTypePropertyTests {
         let syntax = Parser.parse(source: "var readonly: Int { get }").statements.first?.item
         let declaration = try #require(VariableDeclSyntax(syntax))
 
-        let sut = MockType.Property(declaration: declaration)
+        let sut = MockType.Property(declaration: declaration, mockName: "TestMock")
 
         #expect(sut.implementation().formatted().description == """
         var readonly: Int {
@@ -44,7 +44,7 @@ struct MockTypePropertyTests {
         let syntax = Parser.parse(source: "var readonlyThrowing: Double { get throws }").statements.first?.item
         let declaration = try #require(VariableDeclSyntax(syntax))
 
-        let sut = MockType.Property(declaration: declaration)
+        let sut = MockType.Property(declaration: declaration, mockName: "TestMock")
 
         #expect(sut.implementation().formatted().description == """
         var readonlyThrowing: Double {
@@ -62,7 +62,7 @@ struct MockTypePropertyTests {
         let syntax = Parser.parse(source: "var readonlyAsync: String { get async }").statements.first?.item
         let declaration = try #require(VariableDeclSyntax(syntax))
 
-        let sut = MockType.Property(declaration: declaration)
+        let sut = MockType.Property(declaration: declaration, mockName: "TestMock")
 
         #expect(sut.implementation().formatted().description == """
         var readonlyAsync: String {
@@ -80,7 +80,7 @@ struct MockTypePropertyTests {
         let syntax = Parser.parse(source: "var readonlyAsyncThrowing: Int { get async throws }").statements.first?.item
         let declaration = try #require(VariableDeclSyntax(syntax))
 
-        let sut = MockType.Property(declaration: declaration)
+        let sut = MockType.Property(declaration: declaration, mockName: "TestMock")
 
         #expect(sut.implementation().formatted().description == """
         var readonlyAsyncThrowing: Int {
@@ -98,7 +98,7 @@ struct MockTypePropertyTests {
         let syntax = Parser.parse(source: "var readwrite: Int { get set }").statements.first?.item
         let declaration = try #require(VariableDeclSyntax(syntax))
 
-        let sut = MockType.Property(declaration: declaration)
+        let sut = MockType.Property(declaration: declaration, mockName: "TestMock")
 
         #expect(sut.implementation().formatted().description == """
         var readwrite: Int {
@@ -123,7 +123,7 @@ struct MockTypePropertyTests {
         let syntax = Parser.parse(source: "var readwrite: Int! { get set }").statements.first?.item
         let declaration = try #require(VariableDeclSyntax(syntax))
 
-        let sut = MockType.Property(declaration: declaration)
+        let sut = MockType.Property(declaration: declaration, mockName: "TestMock")
 
         #expect(sut.implementation().formatted().description == """
         var readwrite: Int! {
@@ -139,6 +139,60 @@ struct MockTypePropertyTests {
                     [newValue]
                 ) as! (Int?) -> Void
                 return perform(newValue)
+            }
+        }
+        """)
+    }
+
+    @Test(arguments: [
+        (false, ""),
+        (true, "public ")
+    ]) func `getterExpectationExtension for readonly async throwing`(isPublic: Bool, accessModifier: String) throws {
+        let syntax = Parser.parse(source: "var readwrite: Int! { get async throws }").statements.first?.item
+        let declaration = try #require(VariableDeclSyntax(syntax))
+
+        let sut = MockType.Property(declaration: declaration, mockName: "TestMock")
+
+        #expect(sut.getterExpectationExtension(isPublic: isPublic).formatted().description == """
+        \(accessModifier)extension TestMock.PropertyExpectation where Signature == () async throws -> Int? {
+            static var readwrite: Self {
+                .init(method: TestMock.Methods.get_\(sut.stubIdentifier))
+            }
+        }
+        """)
+    }
+
+    @Test(arguments: [
+        (false, ""),
+        (true, "public ")
+    ]) func `getterExpectationExtension for readwrite`(isPublic: Bool, accessModifier: String) throws {
+        let syntax = Parser.parse(source: "var readwrite: Int! { get set }").statements.first?.item
+        let declaration = try #require(VariableDeclSyntax(syntax))
+
+        let sut = MockType.Property(declaration: declaration, mockName: "TestMock")
+
+        #expect(sut.getterExpectationExtension(isPublic: isPublic).formatted().description == """
+        \(accessModifier)extension TestMock.PropertyExpectation where Signature == () -> Int? {
+            static var readwrite: Self {
+                .init(method: TestMock.Methods.get_\(sut.stubIdentifier))
+            }
+        }
+        """)
+    }
+
+    @Test(arguments: [
+        (false, ""),
+        (true, "public ")
+    ]) func `setterExpectationExtension for readwrite`(isPublic: Bool, accessModifier: String) throws {
+        let syntax = Parser.parse(source: "var readwrite: Int! { get set }").statements.first?.item
+        let declaration = try #require(VariableDeclSyntax(syntax))
+
+        let sut = MockType.Property(declaration: declaration, mockName: "TestMock")
+
+        #expect(sut.setterExpectationExtension(isPublic: isPublic).formatted().description == """
+        \(accessModifier)extension TestMock.PropertyExpectation where Signature == (Int?) -> Void {
+            static var readwrite: Self {
+                .init(method: TestMock.Methods.set_\(sut.stubIdentifier))
             }
         }
         """)

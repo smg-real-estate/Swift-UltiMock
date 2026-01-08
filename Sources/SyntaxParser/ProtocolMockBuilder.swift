@@ -18,7 +18,7 @@ final class ProtocolMockBuilder: SyntaxBuilder {
         self.mockClassName = mockedProtocol.declaration.name.text + "Mock"
         self.mockedProtocol = mockedProtocol
         self.allMethods = MockType.Method.collectMethods(from: mockedProtocol.allProtocols, mockName: mockClassName)
-        self.allProperties = MockType.Property.collectProperties(from: mockedProtocol.allProtocols)
+        self.allProperties = MockType.Property.collectProperties(from: mockedProtocol.allProtocols, mockName: mockClassName)
     }
 
     var isPublic: Bool {

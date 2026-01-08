@@ -16,7 +16,10 @@ extension MockType {
                 protocolDecl.memberBlock.members.compactMap { member in
                     member.decl.as(FunctionDeclSyntax.self)
                 }
-            }.map { MockType.Method(declaration: $0, mockName: mockName) }
+            }
+            .map {
+                MockType.Method(declaration: $0, mockName: mockName)
+            }
         }
 
         lazy var closureSignatureType = declaration.asType(mockName: mockName).replacingSomeWithAny()
