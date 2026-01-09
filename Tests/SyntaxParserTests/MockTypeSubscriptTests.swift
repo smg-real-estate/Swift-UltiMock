@@ -70,24 +70,6 @@ struct MockTypeSubscriptTests {
         #expect(sut.setterCallDescription == #"[key: \($0[0] ?? "nil")] = \($0.last! ?? "nil")"#)
     }
 
-    @Test func `hasSet returns false for readonly subscript`() throws {
-        let syntax = Parser.parse(source: "subscript(key: Int) -> String { get }").statements.first?.item
-        let declaration = try #require(SubscriptDeclSyntax(syntax))
-
-        let sut = MockType.Subscript(declaration: declaration, mockName: "TestMock")
-
-        #expect(!sut.hasSet)
-    }
-
-    @Test func `hasSet returns true for readwrite subscript`() throws {
-        let syntax = Parser.parse(source: "subscript(key: Int) -> String { get set }").statements.first?.item
-        let declaration = try #require(SubscriptDeclSyntax(syntax))
-
-        let sut = MockType.Subscript(declaration: declaration, mockName: "TestMock")
-
-        #expect(sut.hasSet)
-    }
-
     @Test func `implementation for readonly subscript`() throws {
         let syntax = Parser.parse(source: "subscript(key: Int) -> String { get }").statements.first?.item
         let declaration = try #require(SubscriptDeclSyntax(syntax))
@@ -243,17 +225,7 @@ struct MockTypeSubscriptTests {
 
         let sut = MockType.Subscript(declaration: declaration, mockName: "TestMock")
 
-        let result = sut.getterFunctionType.description.trimmingCharacters(in: .whitespaces)
-        #expect(result == "(Int) -> String")
-    }
-
-    @Test func `getterFunctionType for anonymous parameter`() throws {
-        let syntax = Parser.parse(source: "subscript(_ index: Int) -> String { get }").statements.first?.item
-        let declaration = try #require(SubscriptDeclSyntax(syntax))
-
-        let sut = MockType.Subscript(declaration: declaration, mockName: "TestMock")
-
-        let result = sut.getterFunctionType.description.trimmingCharacters(in: .whitespaces)
+        let result = sut.getterFunctionType.formatted().trimmedDescription
         #expect(result == "(Int) -> String")
     }
 
@@ -263,7 +235,7 @@ struct MockTypeSubscriptTests {
 
         let sut = MockType.Subscript(declaration: declaration, mockName: "TestMock")
 
-        let result = sut.setterFunctionType.description.replacingOccurrences(of: " ", with: "")
-        #expect(result == "(Int,String)->Void")
+        let result = sut.setterFunctionType.formatted().trimmedDescription
+        #expect(result == "(Int, String) -> Void")
     }
 }

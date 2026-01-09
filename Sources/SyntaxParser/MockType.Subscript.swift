@@ -12,7 +12,7 @@ extension MockType {
         }
 
         static func collectSubscripts(from protocols: [ProtocolDeclSyntax], mockName: String) -> [MockType.Subscript] {
-            let allSubscripts = protocols.flatMap { protocolDecl in
+            protocols.flatMap { protocolDecl in
                 protocolDecl.memberBlock.members.compactMap { member in
                     member.decl.as(SubscriptDeclSyntax.self)
                 }
@@ -20,99 +20,16 @@ extension MockType {
             .map {
                 MockType.Subscript(declaration: $0, mockName: mockName)
             }
-
-            var uniqueSubscripts: [String: MockType.Subscript] = [:]
-            for sub in allSubscripts {
-                let key = sub.uniqueSignature
-                if let existing = uniqueSubscripts[key] {
-                    if sub.hasSet && !existing.hasSet {
-                        uniqueSubscripts[key] = sub
-                    }
-                } else {
-                    uniqueSubscripts[key] = sub
-                }
-            }
-
-            return Array(uniqueSubscripts.values)
         }
 
         var parameters: FunctionParameterListSyntax {
             declaration.parameterClause.parameters
         }
 
-        var returnType: TypeSyntax {
-            declaration.returnClause.type
-        }
-
-        lazy var getterFunctionType: FunctionTypeSyntax = {
-            let parameterElements = parameters.map { param -> TupleTypeElementSyntax in
-                let type = param.type.replacingImplicitlyUnwrappedOptionals()
-
-                return TupleTypeElementSyntax(type: type)
-            }
-
-            let effectSpecifiers = declaration.getterEffectSpecifiers
-
-            return FunctionTypeSyntax(
-                parameters: TupleTypeElementListSyntax(parameterElements.commaSeparated()),
-                effectSpecifiers: effectSpecifiers?.asTypeEffectSpecifiersSyntax,
-                returnClause: ReturnClauseSyntax(
-                    arrow: .arrowToken(leadingTrivia: .space, trailingTrivia: .space),
-                    type: returnType.replacingImplicitlyUnwrappedOptionals()
-                )
-            )
-        }()
-
-        lazy var setterFunctionType: FunctionTypeSyntax = {
-            var parameterElements = parameters.map { param -> TupleTypeElementSyntax in
-                let type = param.type.replacingImplicitlyUnwrappedOptionals()
-
-                return TupleTypeElementSyntax(type: type)
-            }
-
-            parameterElements.append(TupleTypeElementSyntax(
-                type: returnType.replacingImplicitlyUnwrappedOptionals()
-            ))
-
-            return FunctionTypeSyntax(
-                parameters: TupleTypeElementListSyntax(parameterElements.commaSeparated()),
-                returnClause: ReturnClauseSyntax(
-                    arrow: .arrowToken(leadingTrivia: .space, trailingTrivia: .space),
-                    type: IdentifierTypeSyntax(name: .identifier("Void"))
-                )
-            )
-        }()
+        lazy var getterFunctionType = declaration.getterFunctionType
+        lazy var setterFunctionType = declaration.setterFunctionType
 
         var stubIdentifier: String {
-            var parts: [String] = ["subscript"]
-
-            for param in parameters {
-                let label = param.firstName.text
-                let secondName = param.secondName?.text
-                let paramName = secondName ?? label
-                let typeName = param.type.stubIdentifierSlug
-
-                parts.append("\(label)_\(paramName)_\(typeName)")
-            }
-
-            parts.append(returnType.stubIdentifierSlug)
-
-            return parts.joined(separator: "_")
-        }
-
-        var getterStubIdentifier: String {
-            "subscript_get_\(stubIdentifierSuffix)"
-        }
-
-        var setterStubIdentifier: String {
-            "subscript_set_\(stubIdentifierSuffix)"
-        }
-
-        var uniqueSignature: String {
-            stubIdentifierSuffix
-        }
-
-        private var stubIdentifierSuffix: String {
             var parts: [String] = []
 
             for param in parameters {
@@ -124,9 +41,17 @@ extension MockType {
                 parts.append("\(label)_\(paramName)_\(typeName)")
             }
 
-            parts.append(returnType.stubIdentifierSlug)
+            parts.append(declaration.returnType.stubIdentifierSlug)
 
             return parts.joined(separator: "_")
+        }
+
+        var getterStubIdentifier: String {
+            "subscript_get_\(stubIdentifier)"
+        }
+
+        var setterStubIdentifier: String {
+            "subscript_set_\(stubIdentifier)"
         }
 
         var callDescription: String {
@@ -150,19 +75,6 @@ extension MockType {
 
         var setterCallDescription: String {
             "\(callDescription) = \\($0.last! ?? \"nil\")"
-        }
-
-        var hasSet: Bool {
-            guard let accessorBlock = declaration.accessorBlock else {
-                return false
-            }
-
-            switch accessorBlock.accessors {
-            case let .accessors(accessorList):
-                return accessorList.contains { $0.accessorSpecifier.tokenKind == .keyword(.set) }
-            case .getter:
-                return false
-            }
         }
 
         var getterVariableDeclaration: VariableDeclSyntax {
@@ -217,7 +129,7 @@ extension MockType {
         }
 
         var setterVariableDeclaration: VariableDeclSyntax? {
-            guard hasSet else {
+            guard declaration.isReadwrite else {
                 return nil
             }
 
@@ -322,7 +234,7 @@ extension MockType {
             buildSetterExpectFunction(
                 expectationType: "SubscriptExpectation",
                 signatureType: setterFunctionType,
-                valueType: returnType.replacingImplicitlyUnwrappedOptionals(),
+                valueType: declaration.returnType.replacingImplicitlyUnwrappedOptionals(),
                 isPublic: true,
                 numberOfClosureParameters: parameters.count + 1
             )
@@ -600,23 +512,5 @@ private extension MockType.Subscript {
                 rightBrace: .rightBraceToken(leadingTrivia: .newline)
             )
         )
-    }
-}
-
-private extension SubscriptDeclSyntax {
-    var getterEffectSpecifiers: AccessorEffectSpecifiersSyntax? {
-        guard let accessorBlock else { return nil }
-
-        switch accessorBlock.accessors {
-        case let .accessors(accessorList):
-            for accessor in accessorList {
-                if accessor.accessorSpecifier.tokenKind == .keyword(.get) {
-                    return accessor.effectSpecifiers
-                }
-            }
-            return nil
-        case .getter:
-            return nil
-        }
     }
 }

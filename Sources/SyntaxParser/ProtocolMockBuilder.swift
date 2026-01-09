@@ -21,6 +21,7 @@ final class ProtocolMockBuilder: SyntaxBuilder {
         self.allMethods = MockType.Method.collectMethods(from: mockedProtocol.allProtocols, mockName: mockClassName)
         self.allProperties = MockType.Property.collectProperties(from: mockedProtocol.allProtocols, mockName: mockClassName)
         self.allSubscripts = MockType.Subscript.collectSubscripts(from: mockedProtocol.allProtocols, mockName: mockClassName)
+            .unique(by: \.setterFunctionType.description)
     }
 
     var isPublic: Bool {
@@ -244,8 +245,7 @@ final class ProtocolMockBuilder: SyntaxBuilder {
             .map(\.setterExpect)
         allSubscripts.unique(by: \.getterFunctionType.description)
             .map(\.getterExpect)
-        allSubscripts.filter(\.hasSet).unique(by: \.setterFunctionType.description)
-            .map(\.setterExpect)
+        allSubscripts.map(\.setterExpect)
     }
 
     var recordMethod: FunctionDeclSyntax {

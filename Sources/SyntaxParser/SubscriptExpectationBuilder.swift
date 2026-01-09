@@ -323,7 +323,7 @@ struct SubscriptExpectationBuilder: SyntaxBuilder {
                 decl: sub.subscriptExpectationsSubscript(isGetter: true, isPublic: isPublic)
             ))
 
-            if sub.hasSet {
+            if sub.declaration.isReadwrite {
                 subscriptMembers.append(MemberBlockItemSyntax(
                     leadingTrivia: .newline + .newline,
                     decl: sub.subscriptExpectationsSubscript(isGetter: false, isPublic: isPublic)

@@ -58,6 +58,12 @@ extension Collection where Element: CommaJoinableSyntax {
     }
 }
 
+extension SyntaxCollection where Element: CommaJoinableSyntax {
+    func commaSeparated(leadingTrivia: Trivia = [], trailingTrivia: Trivia = []) -> Self {
+        .init(commaSeparated(leadingTrivia: leadingTrivia, trailingTrivia: trailingTrivia) as [Element])
+    }
+}
+
 extension TypeSyntax {
     var stubIdentifierSlug: String {
         if let type = `as`(ImplicitlyUnwrappedOptionalTypeSyntax.self) {

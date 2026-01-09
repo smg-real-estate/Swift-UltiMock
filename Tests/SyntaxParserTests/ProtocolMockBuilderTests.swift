@@ -535,6 +535,26 @@ struct ProtocolMockBuilderTests {
         let result = sut.expectationSetters
         try #require(result.count == 5)
     }
+
+    @Test func `expectationSetters contains subscript expect method declarations without duplicated signatures`() throws {
+        let source = Parser.parse(source: """
+        protocol Foo {
+            subscript(key: Int) -> String { get }
+        }
+
+        protocol Bar: Foo
+            // Subscript overriding
+            subscript(key: Int) -> String { get set }
+        }
+        """)
+
+        let types = source.statements.map { $0.item.cast(ProtocolDeclSyntax.self) }
+
+        let sut = MockedProtocol(declaration: types[1], inherited: []).mockBuilder
+
+        let result = sut.expectationSetters
+        try #require(result.count == 2)
+    }
 }
 
 extension ClassDeclSyntax {
