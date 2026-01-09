@@ -355,6 +355,7 @@ extension MockType {
             return declaration.with(\.leadingTrivia, [])
                 .withExpectationParameters(mockName: mockName)
                 .with(\.modifiers, DeclModifierListSyntax(modifiers))
+                .with(\.signature.effectSpecifiers, nil)
                 .with(\.signature.returnClause, ReturnClauseSyntax(
                     arrow: .arrowToken(trailingTrivia: .space),
                     type: IdentifierTypeSyntax(name: .keyword(.Self)),
