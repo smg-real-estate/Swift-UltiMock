@@ -643,4 +643,42 @@ struct MockTypeMethodTests {
         }
         """)
     }
+
+    @Test func `expectationMethodDeclaration does not contain @objc attribute`() throws {
+        let syntax = Parser.parse(source: """
+        @objc(doSomethingWith:) func doSomething()
+        """).statements.first?.item
+
+        let declaration = try #require(FunctionDeclSyntax(syntax))
+
+        let sut = MockType.Method(declaration: declaration, mockName: "TestMock")
+
+        #expect(sut.expectationMethodDeclaration().formatted().description == """
+        static func doSomething() -> Self where Signature == () -> Void {
+            .init(
+                method: Methods.\(sut.stubIdentifier),
+                parameters: []
+            )
+        }
+        """)
+    }
+
+    @Test func `expectationMethodDeclaration contains @available attribute`() throws {
+        let syntax = Parser.parse(source: """
+        @available(macOS 11.0, *) func doSomething()
+        """).statements.first?.item
+
+        let declaration = try #require(FunctionDeclSyntax(syntax))
+
+        let sut = MockType.Method(declaration: declaration, mockName: "TestMock")
+
+        #expect(sut.expectationMethodDeclaration().formatted().description == """
+        @available(macOS 11.0, *) static func doSomething() -> Self where Signature == () -> Void {
+            .init(
+                method: Methods.\(sut.stubIdentifier),
+                parameters: []
+            )
+        }
+        """)
+    }
 }

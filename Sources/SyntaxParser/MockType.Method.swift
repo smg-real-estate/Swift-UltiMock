@@ -312,7 +312,12 @@ extension MockType {
                 )
             ] + originalGenericRequirements
 
+            let attributes = declaration.attributes.filter {
+                $0.attributeNameKind != .identifier("objc")
+            }
+
             return declaration.with(\.leadingTrivia, [])
+                .with(\.attributes, attributes)
                 .withExpectationParameters(mockName: mockName)
                 .with(\.modifiers, DeclModifierListSyntax(modifiers))
                 .with(\.signature.effectSpecifiers, nil)

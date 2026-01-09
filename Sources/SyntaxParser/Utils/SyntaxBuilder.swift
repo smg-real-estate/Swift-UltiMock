@@ -261,7 +261,7 @@ extension SyntaxBuilder {
                             ClosureShorthandParameterListSyntax((0 ..< numberOfParameters).map { _ in
                                 ClosureShorthandParameterSyntax(name: .wildcardToken())
                             }
-                                .commaSeparated())
+                            .commaSeparated())
                         ),
                         inKeyword: .keyword(.in, trailingTrivia: .space)
                     ),
