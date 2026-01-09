@@ -611,7 +611,7 @@ final class ProtocolMockBuilder: SyntaxBuilder {
                     $0.setterExpectationExtension(isPublic: isPublic)
                 ]
             }
-            .compactMap { $0 }
+            .compactMap(\.self)
             .map { rewriter.rewrite($0).cast(ExtensionDeclSyntax.self) }
             .map { $0.asCodeBlockItem() }
         )

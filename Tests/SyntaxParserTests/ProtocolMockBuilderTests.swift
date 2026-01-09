@@ -536,7 +536,7 @@ struct ProtocolMockBuilderTests {
         try #require(result.count == 5)
     }
 
-    @Test func `expectationSetters contains subscript expect method declarations without duplicated signatures`() throws {
+    @Test func `expectationSetters contains subscript expect method declarations without duplicated signatures`() {
         let source = Parser.parse(source: """
         protocol Foo {
             subscript(key: Int) -> String { get }
@@ -574,7 +574,7 @@ struct ProtocolMockBuilderTests {
         #expect(subscriptDecl.declaration.isReadwrite)
     }
 
-    @Test func `generic parameters resolve where constraints correctly`() throws {
+    @Test func `generic parameters resolve where constraints correctly`() {
         let source = Parser.parse(source: """
         protocol BaseGenericProtocol<Base> {
             associatedtype Base

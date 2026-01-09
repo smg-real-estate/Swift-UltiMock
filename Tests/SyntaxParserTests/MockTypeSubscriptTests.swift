@@ -58,16 +58,7 @@ struct MockTypeSubscriptTests {
 
         let sut = MockType.Subscript(declaration: declaration, mockName: "TestMock")
 
-        #expect(sut.callDescription == #"[key: \($0[0] ?? "nil"), secondary: \($0[1] ?? "nil")]"#)
-    }
-
-    @Test func `setterCallDescription includes newValue`() throws {
-        let syntax = Parser.parse(source: "subscript(key: Int) -> String { get set }").statements.first?.item
-        let declaration = try #require(SubscriptDeclSyntax(syntax))
-
-        let sut = MockType.Subscript(declaration: declaration, mockName: "TestMock")
-
-        #expect(sut.setterCallDescription == #"[key: \($0[0] ?? "nil")] = \($0.last! ?? "nil")"#)
+        #expect(sut.callDescription == #"[key: \($0[0] ?? "nil"), secondary: \"\($0[1] ?? "nil")\"]"#)
     }
 
     @Test func `implementation for readonly subscript`() throws {
@@ -186,7 +177,7 @@ struct MockTypeSubscriptTests {
 
         static var \(sut.setterStubIdentifier): MockMethod {
             .init {
-                "[key: \\($0 [0] ?? "nil")] = \\($0.last! ?? "nil")"
+                "[key: \\($0 [0] ?? "nil")] = \\"\\($0.last! ?? "nil")\\""
             }
         }
         """)
@@ -327,5 +318,33 @@ struct MockTypeSubscriptTests {
         let sut = MockType.Subscript(declaration: declaration, mockName: "TestMock")
 
         #expect(sut.setterFunctionType.formatted().trimmedDescription == "(Int, String) -> Void")
+    }
+
+    @Test(arguments: [
+        ("subscript(key: String) -> Int { get }", #"[key: \"\($0[0] ?? "nil")\"]"#),
+        ("subscript(key: Int) -> String { get }", #"[key: \($0[0] ?? "nil")]"#),
+        ("subscript(id: Int, name: String) -> Bool { get }", #"[id: \($0[0] ?? "nil"), name: \"\($0[1] ?? "nil")\"]"#),
+    ])
+    func `callDescription quotes String key parameters`(source: String, expectedDescription: String) throws {
+        let syntax = Parser.parse(source: source).statements.first?.item
+        let declaration = try #require(SubscriptDeclSyntax(syntax))
+
+        let sut = MockType.Subscript(declaration: declaration, mockName: "TestMock")
+
+        #expect(sut.callDescription == expectedDescription)
+    }
+
+    @Test(arguments: [
+        ("subscript(key: Int) -> String { get set }", #"[key: \($0[0] ?? "nil")] = \"\($0.last! ?? "nil")\""#),
+        ("subscript(key: String) -> Int { get set }", #"[key: \"\($0[0] ?? "nil")\"] = \($0.last! ?? "nil")"#),
+        ("subscript(key: String) -> String { get set }", #"[key: \"\($0[0] ?? "nil")\"] = \"\($0.last! ?? "nil")\""#),
+    ])
+    func `setterCallDescription quotes String parameters and return values`(source: String, expectedDescription: String) throws {
+        let syntax = Parser.parse(source: source).statements.first?.item
+        let declaration = try #require(SubscriptDeclSyntax(syntax))
+
+        let sut = MockType.Subscript(declaration: declaration, mockName: "TestMock")
+
+        #expect(sut.setterCallDescription == expectedDescription)
     }
 }

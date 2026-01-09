@@ -66,7 +66,14 @@ extension MockType {
                     description += "\(label): "
                 }
 
-                description += "\\($0[\(index)] ?? \"nil\")"
+                let typeDescription = param.type.description.trimmingCharacters(in: .whitespaces)
+                let isStringType = typeDescription == "String"
+
+                if isStringType {
+                    description += "\\\"\\($0[\(index)] ?? \"nil\")\\\""
+                } else {
+                    description += "\\($0[\(index)] ?? \"nil\")"
+                }
             }
             description += "]"
 
@@ -74,7 +81,14 @@ extension MockType {
         }
 
         var setterCallDescription: String {
-            "\(callDescription) = \\($0.last! ?? \"nil\")"
+            let returnTypeDescription = declaration.returnType.description.trimmingCharacters(in: .whitespaces)
+            let isStringReturnType = returnTypeDescription == "String"
+
+            if isStringReturnType {
+                return "\(callDescription) = \\\"\\($0.last! ?? \"nil\")\\\""
+            } else {
+                return "\(callDescription) = \\($0.last! ?? \"nil\")"
+            }
         }
 
         var getterVariableDeclaration: VariableDeclSyntax {
@@ -327,7 +341,7 @@ private extension MockType.Subscript {
             name: getterStubIdentifier
         )
 
-        let parameterReferences = Array(parameters).map { $0.reference }
+        let parameterReferences = Array(parameters).map(\.reference)
 
         var performArguments = [
             labeledExpr(expression: methodReference)
@@ -441,7 +455,7 @@ private extension MockType.Subscript {
             name: setterStubIdentifier
         )
 
-        var parameterReferences: [DeclReferenceExprSyntax] = Array(parameters).map { $0.reference }
+        var parameterReferences: [DeclReferenceExprSyntax] = Array(parameters).map(\.reference)
         parameterReferences.append(DeclReferenceExprSyntax(baseName: .identifier("newValue")))
 
         let performCall = functionCall(

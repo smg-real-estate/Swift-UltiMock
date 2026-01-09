@@ -681,4 +681,22 @@ struct MockTypeMethodTests {
         }
         """)
     }
+
+    @Test(arguments: [
+        ("func doSomething()", #"doSomething()"#),
+        ("func doSomething(value: Int)", #"doSomething(value: \($0[0] ?? "nil"))"#),
+        ("func doSomething(name: String)", #"doSomething(name: \"\($0[0] ?? "nil")\")"#),
+        ("func doSomething(id: Int, name: String, active: Bool)", #"doSomething(id: \($0[0] ?? "nil"), name: \"\($0[1] ?? "nil")\", active: \($0[2] ?? "nil"))"#),
+        ("func doSomething(_ value: String)", #"doSomething(\"\($0[0] ?? "nil")\")"#),
+        ("func doSomething(name: String?)", #"doSomething(name: \($0[0] ?? "nil"))"#),
+        ("func doSomething(first: String, second: String, third: String)", #"doSomething(first: \"\($0[0] ?? "nil")\", second: \"\($0[1] ?? "nil")\", third: \"\($0[2] ?? "nil")\")"#),
+    ])
+    func `callDescription formats String parameters with quotes`(source: String, expectedDescription: String) throws {
+        let syntax = Parser.parse(source: source).statements.first?.item
+        let declaration = try #require(FunctionDeclSyntax(syntax))
+
+        let sut = MockType.Method(declaration: declaration, mockName: "TestMock")
+
+        #expect(sut.callDescription == expectedDescription)
+    }
 }

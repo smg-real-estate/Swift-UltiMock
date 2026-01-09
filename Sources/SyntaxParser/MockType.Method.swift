@@ -103,7 +103,14 @@ extension MockType {
                     description += "\(label): "
                 }
 
-                description += "\\($0[\(index)] ?? \"nil\")"
+                let typeDescription = param.type.description.trimmingCharacters(in: .whitespaces)
+                let isStringType = typeDescription == "String"
+
+                if isStringType {
+                    description += "\\\"\\($0[\(index)] ?? \"nil\")\\\""
+                } else {
+                    description += "\\($0[\(index)] ?? \"nil\")"
+                }
             }
             description += ")"
 

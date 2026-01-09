@@ -65,22 +65,16 @@ final class AssociatedTypeResolver {
         return constraints
     }()
 
-    lazy var resolvedTypes: [ResolvedType] = {
-        associatedTypes.map { assoc in
-            let name = assoc.name.text
-            let resolvedTo = sameTypeConstraints[name]
-            let conformances = conformanceConstraints[name] ?? []
-            return ResolvedType(name: name, resolvedTo: resolvedTo, conformances: conformances)
-        }
-    }()
+    lazy var resolvedTypes: [ResolvedType] = associatedTypes.map { assoc in
+        let name = assoc.name.text
+        let resolvedTo = sameTypeConstraints[name]
+        let conformances = conformanceConstraints[name] ?? []
+        return ResolvedType(name: name, resolvedTo: resolvedTo, conformances: conformances)
+    }
 
-    lazy var primaryTypes: [ResolvedType] = {
-        resolvedTypes.filter { $0.resolvedTo == nil }
-    }()
+    lazy var primaryTypes: [ResolvedType] = resolvedTypes.filter { $0.resolvedTo == nil }
 
-    lazy var derivedTypes: [ResolvedType] = {
-        resolvedTypes.filter { $0.resolvedTo != nil }
-    }()
+    lazy var derivedTypes: [ResolvedType] = resolvedTypes.filter { $0.resolvedTo != nil }
 }
 
 private extension AssociatedTypeResolver {
