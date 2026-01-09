@@ -188,9 +188,7 @@ final class ProtocolMockBuilder: SyntaxBuilder {
             MemberBlockItemSyntax(decl: property)
         }
         implementationMethods.map { method in
-            MemberBlockItemSyntax(
-                decl: method
-            )
+            MemberBlockItemSyntax(decl: method)
         }
     }
 
@@ -202,9 +200,14 @@ final class ProtocolMockBuilder: SyntaxBuilder {
         allProperties.map { $0.implementation(isPublic: isPublic) }
     }
 
+    @ArrayBuilder<FunctionDeclSyntax>
     var expectationSetters: [FunctionDeclSyntax] {
         allMethods.unique(by: \.closureSignatureType.description)
             .map(\.expect)
+        allProperties.unique(by: \.getterFunctionType.description)
+            .map(\.getterExpect)
+        allProperties.unique(by: \.setterFunctionType.description)
+            .map(\.setterExpect)
     }
 
     var recordMethod: FunctionDeclSyntax {

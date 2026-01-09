@@ -503,9 +503,21 @@ extension SyntaxBuilder {
                             arguments: LabeledExprListSyntax([
                                 labeledExpr(
                                     leadingTrivia: .newline,
-                                    expression: memberAccess(
-                                        base: DeclReferenceExprSyntax(baseName: .identifier("expectation")),
-                                        name: "setterExpectation"
+                                    expression: FunctionCallExprSyntax(
+                                        calledExpression: memberAccess(
+                                            base: DeclReferenceExprSyntax(baseName: .identifier("expectation")),
+                                            name: "setterExpectation"
+                                        ),
+                                        leftParen: .leftParenToken(),
+                                        arguments: LabeledExprListSyntax([
+                                            LabeledExprSyntax(
+                                                expression: memberAccess(
+                                                    base: DeclReferenceExprSyntax(baseName: .identifier("newValue")),
+                                                    name: "anyParameter"
+                                                )
+                                            )
+                                        ]),
+                                        rightParen: .rightParenToken()
                                     )
                                 ),
                                 labeledExpr(

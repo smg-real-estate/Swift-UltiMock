@@ -250,25 +250,9 @@ extension MockType {
                 fatalError("Property must have accessor block")
             }
 
-            var effectSpecifiers: AccessorEffectSpecifiersSyntax?
-            switch accessorBlock.accessors {
-            case let .accessors(accessorList):
-                for accessor in accessorList {
-                    if accessor.accessorSpecifier.tokenKind == .keyword(.get) {
-                        effectSpecifiers = accessor.effectSpecifiers
-                        break
-                    }
-                }
-            case .getter:
-                effectSpecifiers = nil
-            }
-
-            let signatureType = getterFunctionType
-                .with(\.effectSpecifiers, effectSpecifiers?.asTypeEffectSpecifiersSyntax)
-
             return buildExpectFunction(
                 expectationType: "PropertyExpectation",
-                signatureType: signatureType,
+                signatureType: getterFunctionType,
                 expectationPropertyName: "getterExpectation",
                 isPublic: true
             )

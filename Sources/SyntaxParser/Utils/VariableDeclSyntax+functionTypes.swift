@@ -4,6 +4,7 @@ extension VariableDeclSyntax {
     var getterFunctionType: FunctionTypeSyntax {
         FunctionTypeSyntax(
             parameters: [],
+            effectSpecifiers: getterEffectSpecifiers,
             returnClause: ReturnClauseSyntax(
                 type: type.replacingImplicitlyUnwrappedOptionals()
             )

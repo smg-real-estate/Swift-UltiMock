@@ -216,7 +216,7 @@ struct MockTypePropertyTests {
             }
         ) {
             _record(
-                expectation.setterExpectation,
+                expectation.setterExpectation(newValue.anyParameter),
                 fileID,
                 filePath,
                 line,

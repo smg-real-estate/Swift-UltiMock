@@ -517,6 +517,26 @@ struct ProtocolMockBuilderTests {
         }
         """)
     }
+
+    @Test func `expectationSetters contains property expect method declarations without duplicated signatures`() throws {
+        let source = Parser.parse(source: """
+        protocol Foo {
+            var a: Int! { get }
+            var b: Int! { get }
+            var c: Int! { get async }
+            var d: Int! { get throws }
+            var d: Int! { get async throws }
+            var e: Int! { get set }
+        }
+        """)
+
+        let types = source.statements.map { $0.item.cast(ProtocolDeclSyntax.self) }
+
+        let sut = MockedProtocol(declaration: types[0], inherited: []).mockBuilder
+
+        let result = sut.expectationSetters
+        try #require(result.count == 5)
+    }
 }
 
 extension ClassDeclSyntax {
