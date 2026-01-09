@@ -76,14 +76,17 @@ struct MockTypeSubscriptTests {
 
         let sut = MockType.Subscript(declaration: declaration, mockName: "TestMock")
 
-        let result = sut.implementation().formatted().description
-        #expect(result.contains("subscript(key: Int) -> String"))
-        #expect(result.contains("get {"))
-        #expect(result.contains("_perform("))
-        #expect(result.contains("Methods.\(sut.getterStubIdentifier)"))
-        #expect(result.contains("[key]"))
-        #expect(result.contains("as! (Int) -> String"))
-        #expect(result.contains("return perform(key)"))
+        #expect(sut.implementation().formatted().description == """
+        subscript(key: Int) -> String  {
+            get {
+                let perform = _perform(
+                    Methods.\(sut.getterStubIdentifier),
+                    [key]
+                ) as! (Int) -> String
+                return perform(key)
+            }
+        }
+        """)
     }
 
     @Test func `implementation for readwrite subscript`() throws {
@@ -92,14 +95,24 @@ struct MockTypeSubscriptTests {
 
         let sut = MockType.Subscript(declaration: declaration, mockName: "TestMock")
 
-        let result = sut.implementation().formatted().description
-        #expect(result.contains("subscript(key: Int) -> String"))
-        #expect(result.contains("get {"))
-        #expect(result.contains("set {"))
-        #expect(result.contains("Methods.\(sut.getterStubIdentifier)"))
-        #expect(result.contains("Methods.\(sut.setterStubIdentifier)"))
-        #expect(result.contains("[key, newValue]"))
-        #expect(result.contains("return perform(key, newValue)"))
+        #expect(sut.implementation().formatted().description == """
+        subscript(key: Int) -> String  {
+            get {
+                let perform = _perform(
+                    Methods.\(sut.getterStubIdentifier),
+                    [key]
+                ) as! (Int) -> String
+                return perform(key)
+            }
+            set {
+                let perform = _perform(
+                    Methods.\(sut.setterStubIdentifier),
+                    [key, newValue]
+                ) as! (Int, String) -> Void
+                return perform(key, newValue)
+            }
+        }
+        """)
     }
 
     @Test func `implementation for anonymous parameter subscript`() throws {
@@ -108,13 +121,17 @@ struct MockTypeSubscriptTests {
 
         let sut = MockType.Subscript(declaration: declaration, mockName: "TestMock")
 
-        let result = sut.implementation().formatted().description
-        #expect(result.contains("subscript(_ index: Int) -> String"))
-        #expect(result.contains("get {"))
-        #expect(result.contains("_perform("))
-        #expect(result.contains("[index]"))
-        #expect(result.contains("as! (Int) -> String"))
-        #expect(result.contains("return perform(index)"))
+        #expect(sut.implementation().formatted().description == """
+        subscript(_ index: Int) -> String  {
+            get {
+                let perform = _perform(
+                    Methods.\(sut.getterStubIdentifier),
+                    [index]
+                ) as! (Int) -> String
+                return perform(index)
+            }
+        }
+        """)
     }
 
     @Test func `implementation replaces implicit optional with optional`() throws {
@@ -123,10 +140,24 @@ struct MockTypeSubscriptTests {
 
         let sut = MockType.Subscript(declaration: declaration, mockName: "TestMock")
 
-        let result = sut.implementation().formatted().description
-        #expect(result.contains("subscript(key: Int) -> String!"))
-        #expect(result.contains("as! (Int) -> String?"))
-        #expect(result.contains("as! (Int, String?) -> Void"))
+        #expect(sut.implementation().formatted().description == """
+        subscript(key: Int) -> String!  {
+            get {
+                let perform = _perform(
+                    Methods.\(sut.getterStubIdentifier),
+                    [key]
+                ) as! (Int) -> String?
+                return perform(key)
+            }
+            set {
+                let perform = _perform(
+                    Methods.\(sut.setterStubIdentifier),
+                    [key, newValue]
+                ) as! (Int, String?) -> Void
+                return perform(key, newValue)
+            }
+        }
+        """)
     }
 
     @Test func `getterVariableDeclaration generates correct method stub`() throws {
@@ -135,10 +166,14 @@ struct MockTypeSubscriptTests {
 
         let sut = MockType.Subscript(declaration: declaration, mockName: "TestMock")
 
-        let result = sut.getterVariableDeclaration.formatted().description
-        #expect(result.contains("static var \(sut.getterStubIdentifier): MockMethod"))
-        #expect(result.contains(".init {"))
-        #expect(result.contains("[key:"))
+        #expect(sut.getterVariableDeclaration.formatted().description == """
+
+        static var \(sut.getterStubIdentifier): MockMethod {
+            .init {
+                "[key: \\($0 [0] ?? "nil")]"
+            }
+        }
+        """)
     }
 
     @Test func `setterVariableDeclaration generates correct method stub`() throws {
@@ -147,11 +182,14 @@ struct MockTypeSubscriptTests {
 
         let sut = MockType.Subscript(declaration: declaration, mockName: "TestMock")
 
-        let result = try #require(sut.setterVariableDeclaration?.formatted().description)
-        #expect(result.contains("static var \(sut.setterStubIdentifier): MockMethod"))
-        #expect(result.contains(".init {"))
-        #expect(result.contains("[key:"))
-        #expect(result.contains("$0.last!"))
+        #expect(sut.setterVariableDeclaration?.formatted().description == """
+
+        static var \(sut.setterStubIdentifier): MockMethod {
+            .init {
+                "[key: \\($0 [0] ?? "nil")] = \\($0.last! ?? "nil")"
+            }
+        }
+        """)
     }
 
     @Test func `setterVariableDeclaration returns nil for readonly subscript`() throws {
@@ -169,13 +207,25 @@ struct MockTypeSubscriptTests {
 
         let sut = MockType.Subscript(declaration: declaration, mockName: "TestMock")
 
-        let result = sut.getterExpect.formatted().description
-        #expect(result.contains("public func expect("))
-        #expect(result.contains("_ expectation: SubscriptExpectation<(Int) -> String"))
-        #expect(result.contains("fileID: String = #fileID"))
-        #expect(result.contains("perform: @escaping (Int) -> String"))
-        #expect(result.contains("_record("))
-        #expect(result.contains("expectation.getterExpectation"))
+        #expect(sut.getterExpect.formatted().description == """
+        public func expect(
+            _ expectation: SubscriptExpectation<(Int) -> String >,
+            fileID: String = #fileID,
+            filePath: StaticString = #filePath,
+            line: UInt = #line,
+            column: Int = #column,
+            perform: @escaping (Int) -> String
+        ) {
+            _record(
+                expectation.getterExpectation,
+                fileID,
+                filePath,
+                line,
+                column,
+                perform
+            )
+        }
+        """)
     }
 
     @Test func `setterExpect generates correct expect function`() throws {
@@ -184,39 +234,81 @@ struct MockTypeSubscriptTests {
 
         let sut = MockType.Subscript(declaration: declaration, mockName: "TestMock")
 
-        let result = sut.setterExpect.formatted().description
-        #expect(result.contains("public func expect("))
-        #expect(result.contains("set expectation: SubscriptExpectation<(Int, String"))
-        #expect(result.contains("to newValue: Parameter<String"))
-        #expect(result.contains("perform: @escaping (Int, String"))
-        #expect(result.contains("_record("))
-        #expect(result.contains("expectation.setterExpectation(newValue.anyParameter)"))
+        #expect(sut.setterExpect.formatted().description == """
+        public func expect(
+            set expectation: SubscriptExpectation<(Int, String) -> Void>,
+            to newValue: Parameter<String >,
+            fileID: String = #fileID,
+            filePath: StaticString = #filePath,
+            line: UInt = #line,
+            column: Int = #column,
+            perform: @escaping (Int, String) -> Void = { _, _ in
+            }
+        ) {
+            _record(
+                expectation.setterExpectation(newValue.anyParameter),
+                fileID,
+                filePath,
+                line,
+                column,
+                perform
+            )
+        }
+        """)
     }
 
-    @Test func `subscriptExpectationsSubscript for getter`() throws {
+    @Test(arguments: [
+        (false, ""),
+        (true, "public "),
+    ]) func `subscriptExpectationsSubscript for getter`(isPublic: Bool, accessModifier: String) throws {
         let syntax = Parser.parse(source: "subscript(key: Int) -> String { get }").statements.first?.item
         let declaration = try #require(SubscriptDeclSyntax(syntax))
 
         let sut = MockType.Subscript(declaration: declaration, mockName: "TestMock")
 
-        let result = sut.subscriptExpectationsSubscript(isGetter: true, isPublic: true).formatted().description
-        #expect(result.contains("public subscript(key: Parameter<Int>) -> TestMock.SubscriptExpectation<(Int) -> String"))
-        #expect(result.contains(".init("))
-        #expect(result.contains("method: Methods.\(sut.getterStubIdentifier)"))
-        #expect(result.contains("parameters: [key.anyParameter]"))
+        #expect(sut.subscriptExpectationsSubscript(isGetter: true, isPublic: isPublic).formatted().description == """
+        \(accessModifier)subscript(key: Parameter<Int>) -> TestMock.SubscriptExpectation<(Int) -> String > {
+            .init(
+                method: Methods.\(sut.getterStubIdentifier),
+                parameters: [key.anyParameter]
+            )
+        }
+        """)
     }
 
-    @Test func `subscriptExpectationsSubscript for setter`() throws {
+    @Test(arguments: [
+        (false, ""),
+        (true, "public "),
+    ]) func `subscriptExpectationsSubscript for setter`(isPublic: Bool, accessModifier: String) throws {
         let syntax = Parser.parse(source: "subscript(key: Int) -> String { get set }").statements.first?.item
         let declaration = try #require(SubscriptDeclSyntax(syntax))
 
         let sut = MockType.Subscript(declaration: declaration, mockName: "TestMock")
 
-        let result = sut.subscriptExpectationsSubscript(isGetter: false, isPublic: true).formatted().description
-        #expect(result.contains("public subscript(key: Parameter<Int>) -> TestMock.SubscriptExpectation<(Int, String"))
-        #expect(result.contains(".init("))
-        #expect(result.contains("method: Methods.\(sut.setterStubIdentifier)"))
-        #expect(result.contains("parameters: [key.anyParameter]"))
+        #expect(sut.subscriptExpectationsSubscript(isGetter: false, isPublic: isPublic).formatted().description == """
+        \(accessModifier)subscript(key: Parameter<Int>) -> TestMock.SubscriptExpectation<(Int, String) -> Void> {
+            .init(
+                method: Methods.\(sut.setterStubIdentifier),
+                parameters: [key.anyParameter]
+            )
+        }
+        """)
+    }
+
+    @Test func `subscriptExpectationsSubscript for multiple parameters`() throws {
+        let syntax = Parser.parse(source: "subscript(key: Int, secondary: String) -> Bool { get }").statements.first?.item
+        let declaration = try #require(SubscriptDeclSyntax(syntax))
+
+        let sut = MockType.Subscript(declaration: declaration, mockName: "TestMock")
+
+        #expect(sut.subscriptExpectationsSubscript(isGetter: true, isPublic: true).formatted().description == """
+        public subscript(key: Parameter<Int>, secondary: Parameter<String>) -> TestMock.SubscriptExpectation<(Int, String) -> Bool > {
+            .init(
+                method: Methods.\(sut.getterStubIdentifier),
+                parameters: [key.anyParameter, secondary.anyParameter]
+            )
+        }
+        """)
     }
 
     @Test func `getterFunctionType for single labeled parameter`() throws {
@@ -225,8 +317,7 @@ struct MockTypeSubscriptTests {
 
         let sut = MockType.Subscript(declaration: declaration, mockName: "TestMock")
 
-        let result = sut.getterFunctionType.formatted().trimmedDescription
-        #expect(result == "(Int) -> String")
+        #expect(sut.getterFunctionType.formatted().trimmedDescription == "(Int) -> String")
     }
 
     @Test func `setterFunctionType for single parameter`() throws {
@@ -235,7 +326,6 @@ struct MockTypeSubscriptTests {
 
         let sut = MockType.Subscript(declaration: declaration, mockName: "TestMock")
 
-        let result = sut.setterFunctionType.formatted().trimmedDescription
-        #expect(result == "(Int, String) -> Void")
+        #expect(sut.setterFunctionType.formatted().trimmedDescription == "(Int, String) -> Void")
     }
 }
