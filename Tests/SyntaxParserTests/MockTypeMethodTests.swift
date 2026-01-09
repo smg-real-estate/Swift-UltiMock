@@ -448,13 +448,11 @@ struct MockTypeMethodTests {
 
         let sut = MockType.Method(declaration: declaration, mockName: "TestMock")
 
-        let mockClassName = "MockableMock"
-
-        #expect(sut.expectationMethodDeclaration(mockName: mockClassName).formatted().description == """
+        #expect(sut.expectationMethodDeclaration().formatted().description == """
         static func withParamsVoid(
             int: Parameter<Swift.Int>,
             label labelString: Parameter<String>,
-            _ self: Parameter<MockableMock>,
+            _ self: Parameter<TestMock>,
             _ string: Parameter<String>,
             _ optional: Parameter<Int?>,
             _ implicitOptional: Parameter<Int?>,
@@ -462,22 +460,13 @@ struct MockTypeMethodTests {
             _ array: Parameter<[Int]>,
             _ dictionary: Parameter<[String: Int]>,
             _ escapingClosure: Parameter<(Int) -> Void>
-        ) -> Self where Signature == (
-            _ int: Swift.Int,
-            _ labelString: String,
-            _ string: String,
-            _ optional: Int?,
-            _ implicitOptional: Int?,
-            _ `inout`: inout Int,
-            _ array: [Int],
-            _ dictionary: [String: Int],
-            _ escapingClosure: (Int) -> Void
-        ) -> Void {
+        ) -> Self where Signature == (Swift.Int, String, TestMock, String, Int?, Int?, inout Int, [Int], [String: Int], @escaping (Int) -> Void) -> Void {
             .init(
                 method: Methods.withParamsVoid_int_Swift_dot_Int_label_String___Self___String___Int_opt___Int_impopt___Int___lsb_Int_rsb___lsb_String_col_Int_rsb___lpar_Int_rpar_ret_Void_sync_ret_Void,
                 parameters: [
                     int.anyParameter,
                     labelString.anyParameter,
+                    self.anyParameter,
                     string.anyParameter,
                     optional.anyParameter,
                     implicitOptional.anyParameter,
@@ -500,12 +489,8 @@ struct MockTypeMethodTests {
 
         let sut = MockType.Method(declaration: declaration, mockName: "TestMock")
 
-        let mockClassName = "MockableMock"
-
-        #expect(sut.expectationMethodDeclaration(mockName: mockClassName).formatted().description == """
-        static func withGenerics<A, B>(_ a: Parameter<A>) -> Self where Signature == (
-            _ a: A
-        ) -> B {
+        #expect(sut.expectationMethodDeclaration().formatted().description == """
+        static func withGenerics<A, B>(_ a: Parameter<A>) -> Self where Signature == (A) -> B {
             .init(
                 method: Methods.withGenerics___A_ret_B,
                 parameters: [
@@ -525,16 +510,33 @@ struct MockTypeMethodTests {
 
         let sut = MockType.Method(declaration: declaration, mockName: "TestMock")
 
-        let mockClassName = "MockableMock"
-
-        #expect(sut.expectationMethodDeclaration(mockName: mockClassName).formatted().description == """
-        static func withSome(_ some: Parameter<any TestGenericProtocol<Int>>) -> Self where Signature == (
-            _ some: any TestGenericProtocol<Int>
-        ) -> Void {
+        #expect(sut.expectationMethodDeclaration().formatted().description == """
+        static func withSome(_ some: Parameter<any TestGenericProtocol<Int>>) -> Self where Signature == (any TestGenericProtocol<Int>) -> Void {
             .init(
                 method: Methods.\(sut.stubIdentifier),
                 parameters: [
                     some.anyParameter
+                ]
+            )
+        }
+        """)
+    }
+
+    @Test func `expectationMethodDeclaration replaces Self with mock class name in Signature`() throws {
+        let syntax = Parser.parse(source: """
+        func withSelf(_ `self`: Self) -> Self
+        """).statements.first?.item
+
+        let declaration = try #require(FunctionDeclSyntax(syntax))
+
+        let sut = MockType.Method(declaration: declaration, mockName: "TestMock")
+
+        #expect(sut.expectationMethodDeclaration().formatted().description == """
+        static func withSelf(_ `self`: Parameter<TestMock>) -> Self where Signature == (TestMock) -> TestMock {
+            .init(
+                method: Methods.\(sut.stubIdentifier),
+                parameters: [
+                    `self`.anyParameter
                 ]
             )
         }
@@ -550,13 +552,8 @@ struct MockTypeMethodTests {
 
         let sut = MockType.Method(declaration: declaration, mockName: "TestMock")
 
-        let mockClassName = "MockableMock"
-
-        #expect(sut.expectationMethodDeclaration(mockName: mockClassName).formatted().description == """
-        static func withKeywords(_ `internal`: Parameter<Int>, _ `inout`: Parameter<Int>) -> Self where Signature == (
-            _ `internal`: Int,
-            _ `inout`: Int
-        ) -> Void {
+        #expect(sut.expectationMethodDeclaration().formatted().description == """
+        static func withKeywords(_ `internal`: Parameter<Int>, _ `inout`: Parameter<Int>) -> Self where Signature == (Int, Int) -> Void {
             .init(
                 method: Methods.\(sut.stubIdentifier),
                 parameters: [

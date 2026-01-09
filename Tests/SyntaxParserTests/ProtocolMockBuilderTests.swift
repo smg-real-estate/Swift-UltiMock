@@ -249,9 +249,7 @@ struct ProtocolMockBuilderTests {
                 )
             }
 
-            \(accessModifier)static func doSomethingElse<T>(with: Parameter<T>) -> Self where Signature == (
-                _ with: T
-            ) -> String {
+            \(accessModifier)static func doSomethingElse<T>(with: Parameter<T>) -> Self where Signature == (T) async throws -> String {
                 .init(
                     method: Methods.doSomethingElse_async_with_T_async_throws_ret_String_where_T_con_Equatable,
                     parameters: [

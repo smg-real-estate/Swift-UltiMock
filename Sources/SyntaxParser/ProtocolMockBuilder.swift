@@ -105,7 +105,6 @@ final class ProtocolMockBuilder: SyntaxBuilder {
 
     var methodExpectationStruct: StructDeclSyntax {
         MethodExpectationBuilder(
-            mockName: mockClassName,
             allMethods: allMethods,
             isPublic: isPublic
         ).declaration
@@ -202,7 +201,7 @@ final class ProtocolMockBuilder: SyntaxBuilder {
 
     @ArrayBuilder<FunctionDeclSyntax>
     var expectationSetters: [FunctionDeclSyntax] {
-        allMethods.unique(by: \.closureSignatureType.description)
+        allMethods.unique(by: \.functionType.description)
             .map(\.expect)
         allProperties.unique(by: \.getterFunctionType.description)
             .map(\.getterExpect)

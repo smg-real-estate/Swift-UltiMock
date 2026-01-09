@@ -22,7 +22,8 @@ extension MockType {
             }
         }
 
-        lazy var closureSignatureType = declaration.asType(mockName: mockName).replacingSomeWithAny()
+        lazy var functionType = declaration.asType(mockName: mockName)
+            .replacingSomeWithAny()
 
         var stubIdentifier: String {
             var parts: [String] = []
@@ -158,7 +159,7 @@ extension MockType {
                         operator: .binaryOperator("as!", leadingTrivia: .space, trailingTrivia: .space),
                         trailingTrivia: []
                     )),
-                    ExprSyntax(TypeExprSyntax(type: closureSignatureType.replacingSomeWithAny()))
+                    ExprSyntax(TypeExprSyntax(type: functionType.replacingSomeWithAny()))
                 ])
             ))
 
@@ -249,7 +250,7 @@ extension MockType {
                 ))
         }
 
-        func expectationMethodDeclaration(mockName: String, isPublic: Bool = false) -> FunctionDeclSyntax {
+        func expectationMethodDeclaration(isPublic: Bool = false) -> FunctionDeclSyntax {
             let parameters = declaration.signature.parameterClause.parameters
             let argumentList = LabeledExprListSyntax(
                 [
@@ -267,11 +268,6 @@ extension MockType {
                                 let firstName = param.firstName.text
                                 let secondName = param.secondName?.text
                                 let paramName = secondName ?? firstName
-
-                                // Skip parameters named "self" in the parameters array
-                                if paramName == "self" || paramName == "`self`" {
-                                    return nil
-                                }
 
                                 let paramIdentifier: String = if paramName == "internal" {
                                     "`internal`"
@@ -293,53 +289,6 @@ extension MockType {
                     .commaSeparated(trailingTrivia: .newline)
             )
             .with(\.leadingTrivia, .newline)
-
-            // Build tuple elements for where clause signature
-            let whereSignatureSyntaxElements: [TupleTypeElementSyntax] = parameters.compactMap { param in
-                let firstName = param.firstName.text
-                let secondName = param.secondName?.text
-                let paramName = secondName ?? firstName
-
-                // Skip parameters named "self" in the where clause
-                if paramName == "self" || paramName == "`self`" {
-                    return nil
-                }
-
-                let signatureParamName = (paramName == "internal") ? "`internal`" : paramName
-
-                // For where clause, we preserve inout but still normalize Self and implicit optionals
-                let normalizedType = normalizeTypeForSignature(param.type, replaceSelfWith: mockName)
-                let existentialNormalizedType = ExistentialAnyRewriter().rewrite(normalizedType).cast(TypeSyntax.self)
-
-                return tupleTypeElement(
-                    secondName: signatureParamName,
-                    type: existentialNormalizedType
-                )
-                .with(\.leadingTrivia, .newline)
-            }
-
-            let whereSignatureElements = TupleTypeElementListSyntax(
-                whereSignatureSyntaxElements.commaSeparated(leadingTrivia: .newline)
-            )
-            .with(\.leadingTrivia, .newline)
-
-            let returnType: TypeSyntax = if let returnClause = declaration.signature.returnClause {
-                ExistentialAnyRewriter()
-                    .rewrite(normalizeTypeForSignature(returnClause.type, replaceSelfWith: mockName))
-                    .cast(TypeSyntax.self)
-            } else {
-                TypeSyntax(IdentifierTypeSyntax(name: .identifier("Void")))
-            }
-
-            let fullSignature = FunctionTypeSyntax(
-                parameters: whereSignatureElements,
-                rightParen: .rightParenToken(leadingTrivia: whereSignatureElements.isEmpty ? [] : .newline),
-                returnClause: ReturnClauseSyntax(
-                    leadingTrivia: .space,
-                    arrow: .arrowToken(trailingTrivia: .space),
-                    type: returnType
-                )
-            )
 
             let modifiers: [DeclModifierSyntax] = if isPublic {
                 [
@@ -368,7 +317,7 @@ extension MockType {
                             requirement: .sameTypeRequirement(SameTypeRequirementSyntax(
                                 leftType: IdentifierTypeSyntax(name: .identifier("Signature"), trailingTrivia: .space),
                                 equal: .binaryOperator("==", trailingTrivia: .space),
-                                rightType: fullSignature
+                                rightType: functionType.replacingSelfWithTypeName(mockName)
                             ))
                         )
                     ])
@@ -464,7 +413,7 @@ extension MockType {
         var expect: FunctionDeclSyntax {
             buildExpectFunction(
                 expectationType: "MethodExpectation",
-                signatureType: closureSignatureType,
+                signatureType: functionType,
                 genericParameterClause: declaration.genericParameterClause,
                 isPublic: true
             )

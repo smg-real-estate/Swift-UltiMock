@@ -1,7 +1,6 @@
 import SwiftSyntax
 
 struct MethodExpectationBuilder: SyntaxBuilder {
-    let mockName: String
     let allMethods: [MockType.Method]
     let isPublic: Bool
 
@@ -41,7 +40,7 @@ struct MethodExpectationBuilder: SyntaxBuilder {
         for method in allMethods {
             MemberBlockItemSyntax(
                 leadingTrivia: .newlines(2),
-                decl: method.expectationMethodDeclaration(mockName: mockName, isPublic: isPublic),
+                decl: method.expectationMethodDeclaration(isPublic: isPublic),
             )
         }
     }

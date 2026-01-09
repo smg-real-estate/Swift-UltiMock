@@ -245,12 +245,7 @@ extension MockType {
         }
 
         var getterExpect: FunctionDeclSyntax {
-            guard let binding = declaration.bindings.first,
-                  let accessorBlock = binding.accessorBlock else {
-                fatalError("Property must have accessor block")
-            }
-
-            return buildExpectFunction(
+            buildExpectFunction(
                 expectationType: "PropertyExpectation",
                 signatureType: getterFunctionType,
                 expectationPropertyName: "getterExpectation",
@@ -259,15 +254,10 @@ extension MockType {
         }
 
         var setterExpect: FunctionDeclSyntax {
-            guard let binding = declaration.bindings.first,
-                  let type = binding.typeAnnotation?.type else {
-                fatalError("Property must have accessor block")
-            }
-
-            return buildSetterExpectFunction(
+            buildSetterExpectFunction(
                 expectationType: "PropertyExpectation",
                 signatureType: setterFunctionType,
-                valueType: type.replacingImplicitlyUnwrappedOptionals(),
+                valueType: declaration.type.replacingImplicitlyUnwrappedOptionals(),
                 isPublic: true
             )
         }
