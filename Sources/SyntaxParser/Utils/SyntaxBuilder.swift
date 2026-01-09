@@ -259,8 +259,9 @@ extension SyntaxBuilder {
                     signature: numberOfParameters == 0 ? nil : ClosureSignatureSyntax(
                         parameterClause: .simpleInput(
                             ClosureShorthandParameterListSyntax((0 ..< numberOfParameters).map { _ in
-                                ClosureShorthandParameterSyntax(name: .wildcardToken(trailingTrivia: .space))
-                            })
+                                ClosureShorthandParameterSyntax(name: .wildcardToken())
+                            }
+                                .commaSeparated())
                         ),
                         inKeyword: .keyword(.in, trailingTrivia: .space)
                     ),

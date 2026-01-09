@@ -321,6 +321,34 @@ struct MockTypeMethodTests {
         """)
     }
 
+    @Test func `expect contains default perform closure for function with multiple parameters and no return type`() throws {
+        let syntax = Parser.parse(source: "func foo(a: Int, b: String)").statements.first?.item
+        let declaration = try #require(FunctionDeclSyntax(syntax))
+
+        let sut = MockType.Method(declaration: declaration, mockName: "TestMock")
+
+        #expect(sut.expect.formatted().description == """
+        public func expect(
+            _ expectation: MethodExpectation<(Int, String) -> Void>,
+            fileID: String = #fileID,
+            filePath: StaticString = #filePath,
+            line: UInt = #line,
+            column: Int = #column,
+            perform: @escaping (Int, String) -> Void = { _, _ in
+            }
+        ) {
+            _record(
+                expectation.expectation,
+                fileID,
+                filePath,
+                line,
+                column,
+                perform
+            )
+        }
+        """)
+    }
+
     @Test func `expect emits correct method for function with parameters and return`() throws {
         let syntax = Parser.parse(source: "func foo(bar: Int) -> String").statements.first?.item
         let declaration = try #require(FunctionDeclSyntax(syntax))
