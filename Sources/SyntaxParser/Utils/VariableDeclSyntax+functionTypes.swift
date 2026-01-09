@@ -47,6 +47,10 @@ extension TypeSyntax {
     static var void: Self {
         TypeSyntax(.void)
     }
+
+    var isVoid: Bool {
+        `as`(IdentifierTypeSyntax.self)?.name.tokenKind == .identifier("Void")
+    }
 }
 
 extension TypeSyntaxProtocol where Self == IdentifierTypeSyntax {

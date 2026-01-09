@@ -306,7 +306,8 @@ struct MockTypeMethodTests {
             filePath: StaticString = #filePath,
             line: UInt = #line,
             column: Int = #column,
-            perform: @escaping () -> Void
+            perform: @escaping () -> Void = {
+            }
         ) {
             _record(
                 expectation.expectation,
@@ -360,7 +361,8 @@ struct MockTypeMethodTests {
             filePath: StaticString = #filePath,
             line: UInt = #line,
             column: Int = #column,
-            perform: @escaping () async throws -> Void
+            perform: @escaping () async throws -> Void = {
+            }
         ) {
             _record(
                 expectation.expectation,
@@ -414,7 +416,8 @@ struct MockTypeMethodTests {
             filePath: StaticString = #filePath,
             line: UInt = #line,
             column: Int = #column,
-            perform: @escaping (any Bar) -> Void
+            perform: @escaping (any Bar) -> Void = { _ in
+            }
         ) {
             _record(
                 expectation.expectation,

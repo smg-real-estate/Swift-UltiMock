@@ -250,9 +250,30 @@ extension SyntaxBuilder {
         )
     }
 
+    func closureDefaultValue(numberOfParameters: Int = 0) -> InitializerClauseSyntax {
+        InitializerClauseSyntax(
+            equal: .equalToken(leadingTrivia: .space, trailingTrivia: .space),
+            value: ExprSyntax(
+                ClosureExprSyntax(
+                    leftBrace: .leftBraceToken(trailingTrivia: .space),
+                    signature: numberOfParameters == 0 ? nil : ClosureSignatureSyntax(
+                        parameterClause: .simpleInput(
+                            ClosureShorthandParameterListSyntax((0 ..< numberOfParameters).map { _ in
+                                ClosureShorthandParameterSyntax(name: .wildcardToken(trailingTrivia: .space))
+                            })
+                        ),
+                        inKeyword: .keyword(.in, trailingTrivia: .space)
+                    ),
+                    statements: CodeBlockItemListSyntax([]),
+                    rightBrace: .rightBraceToken(leadingTrivia: [])
+                ).with(\.rightBrace, .rightBraceToken())
+            )
+        )
+    }
+
     func buildExpectFunction(
         expectationType: String,
-        signatureType: some TypeSyntaxProtocol,
+        signatureType: FunctionTypeSyntax,
         expectationPropertyName: String = "expectation",
         genericParameterClause: GenericParameterClauseSyntax? = nil,
         isPublic: Bool = true
@@ -330,7 +351,10 @@ extension SyntaxBuilder {
                                     ))
                                 ]),
                                 baseType: TypeSyntax(signatureType)
-                            )
+                            ),
+                            defaultValue: signatureType.returnClause.type.isVoid
+                                ? closureDefaultValue(numberOfParameters: signatureType.parameters.count)
+                                : nil
                         )
                     ]),
                     rightParen: .rightParenToken(leadingTrivia: .newline)
@@ -469,24 +493,7 @@ extension SyntaxBuilder {
                                 ]),
                                 baseType: TypeSyntax(signatureType)
                             ),
-                            defaultValue: InitializerClauseSyntax(
-                                equal: .equalToken(leadingTrivia: .space, trailingTrivia: .space),
-                                value: ExprSyntax(
-                                    ClosureExprSyntax(
-                                        leftBrace: .leftBraceToken(trailingTrivia: .space),
-                                        signature: ClosureSignatureSyntax(
-                                            parameterClause: .simpleInput(
-                                                ClosureShorthandParameterListSyntax([
-                                                    ClosureShorthandParameterSyntax(name: .wildcardToken(trailingTrivia: .space))
-                                                ])
-                                            ),
-                                            inKeyword: .keyword(.in, trailingTrivia: .space)
-                                        ),
-                                        statements: CodeBlockItemListSyntax([]),
-                                        rightBrace: .rightBraceToken(leadingTrivia: [])
-                                    ).with(\.rightBrace, .rightBraceToken())
-                                )
-                            )
+                            defaultValue: closureDefaultValue(numberOfParameters: 1)
                         )
                     ]),
                     rightParen: .rightParenToken(leadingTrivia: .newline)
