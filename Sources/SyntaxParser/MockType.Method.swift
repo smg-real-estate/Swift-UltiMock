@@ -335,9 +335,7 @@ extension MockType {
                 .with(\.genericWhereClause, GenericWhereClauseSyntax(
                     leadingTrivia: .space,
                     whereKeyword: .keyword(.where, trailingTrivia: .space),
-                    requirements: GenericRequirementListSyntax(
-                        genericRequirements.commaSeparated()
-                    )
+                    requirements: genericRequirements.commaSeparated()
                 ))
                 .with(
                     \.body,

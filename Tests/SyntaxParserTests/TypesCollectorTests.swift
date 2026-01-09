@@ -4,8 +4,6 @@ import Testing
 @testable import SyntaxParser
 
 @Suite struct TypesCollectorTests {
-    let collector = TypesCollector()
-
     @Test
     func `collects protocol interface`() throws {
         let protocolSource = """
@@ -16,7 +14,7 @@ import Testing
         """
         let source = Parser.parse(source: protocolSource)
 
-        let types = collector.collect(from: source)
+        let types = TypesVisitor.collect(from: source)
 
         try #require(types.count == 1)
 
@@ -50,7 +48,7 @@ import Testing
 
         let source = Parser.parse(source: classSource)
 
-        let types = collector.collect(from: source)
+        let types = TypesVisitor.collect(from: source)
 
         try #require(types.count == 1)
 
@@ -92,7 +90,7 @@ import Testing
             classSource
         ].joined(separator: "\n"))
 
-        let types = collector.collect(from: source)
+        let types = TypesVisitor.collect(from: source)
 
         #expect(types.count == 2)
     }
@@ -118,5 +116,13 @@ private extension TypesCollectorTests {
         let visitor = TypeDeclarationVisitor(viewMode: .all)
         visitor.walk(syntax)
         return try #require(visitor.declarations.first)
+    }
+}
+
+extension TypesVisitor {
+    static func collect(from source: SourceFileSyntax) -> [SyntaxParser.Syntax.TypeInfo] {
+        let visitor = TypesVisitor()
+        visitor.walk(source.strippingImplementation())
+        return visitor.types
     }
 }
