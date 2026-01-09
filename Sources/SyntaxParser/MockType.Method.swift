@@ -301,6 +301,17 @@ extension MockType {
                 ]
             }
 
+            let originalGenericRequirements = declaration.genericWhereClause?.requirements ?? []
+            let genericRequirements = [
+                GenericRequirementSyntax(
+                    requirement: .sameTypeRequirement(SameTypeRequirementSyntax(
+                        leftType: IdentifierTypeSyntax(name: .identifier("Signature"), trailingTrivia: .space),
+                        equal: .binaryOperator("==", trailingTrivia: .space),
+                        rightType: functionType.replacingSelfWithTypeName(mockName)
+                    ))
+                )
+            ] + originalGenericRequirements
+
             return declaration.with(\.leadingTrivia, [])
                 .withExpectationParameters(mockName: mockName)
                 .with(\.modifiers, DeclModifierListSyntax(modifiers))
@@ -312,15 +323,9 @@ extension MockType {
                 .with(\.genericWhereClause, GenericWhereClauseSyntax(
                     leadingTrivia: .space,
                     whereKeyword: .keyword(.where, trailingTrivia: .space),
-                    requirements: GenericRequirementListSyntax([
-                        GenericRequirementSyntax(
-                            requirement: .sameTypeRequirement(SameTypeRequirementSyntax(
-                                leftType: IdentifierTypeSyntax(name: .identifier("Signature"), trailingTrivia: .space),
-                                equal: .binaryOperator("==", trailingTrivia: .space),
-                                rightType: functionType.replacingSelfWithTypeName(mockName)
-                            ))
-                        )
-                    ])
+                    requirements: GenericRequirementListSyntax(
+                        genericRequirements.commaSeparated()
+                    )
                 ))
                 .with(
                     \.body,

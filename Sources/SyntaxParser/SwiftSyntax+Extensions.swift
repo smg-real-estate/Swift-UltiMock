@@ -46,6 +46,7 @@ extension TupleTypeElementSyntax: CommaJoinableSyntax {}
 extension LabeledExprSyntax: CommaJoinableSyntax {}
 extension GenericParameterSyntax: CommaJoinableSyntax {}
 extension ClosureShorthandParameterSyntax: CommaJoinableSyntax {}
+extension GenericRequirementSyntax: CommaJoinableSyntax {}
 
 extension Collection where Element: CommaJoinableSyntax {
     func commaSeparated(leadingTrivia: Trivia = [], trailingTrivia: Trivia = []) -> [Element] {

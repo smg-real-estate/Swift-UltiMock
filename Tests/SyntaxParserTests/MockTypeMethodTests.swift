@@ -559,6 +559,27 @@ struct MockTypeMethodTests {
         """)
     }
 
+    @Test func `expectationMethodDeclaration contains generic constraints`() throws {
+        let syntax = Parser.parse(source: """
+        func withComplexGenericConstraints<I, O>(_ input: I) -> O where Value == (I) -> O
+        """).statements.first?.item
+
+        let declaration = try #require(FunctionDeclSyntax(syntax))
+
+        let sut = MockType.Method(declaration: declaration, mockName: "TestMock")
+
+        #expect(sut.expectationMethodDeclaration().formatted().description == """
+        static func withComplexGenericConstraints<I, O>(_ input: Parameter<I>) -> Self where Signature == (I) -> O, Value == (I) -> O {
+            .init(
+                method: Methods.withComplexGenericConstraints___I_ret_O_where_Value_eq_lpar_I_rpar_ret_O,
+                parameters: [
+                    input.anyParameter
+                ]
+            )
+        }
+        """)
+    }
+
     @Test func `expectationMethodDeclaration replaces some with any in Signature requirement`() throws {
         let syntax = Parser.parse(source: """
         func withSome(_ some: some TestGenericProtocol<Int>)
