@@ -559,7 +559,7 @@ struct MockTypeMethodTests {
         """)
     }
 
-    @Test func `expectationMethodDeclaration replaces some with any`() throws {
+    @Test func `expectationMethodDeclaration replaces some with any in Signature requirement`() throws {
         let syntax = Parser.parse(source: """
         func withSome(_ some: some TestGenericProtocol<Int>)
         """).statements.first?.item
@@ -569,7 +569,7 @@ struct MockTypeMethodTests {
         let sut = MockType.Method(declaration: declaration, mockName: "TestMock")
 
         #expect(sut.expectationMethodDeclaration().formatted().description == """
-        static func withSome(_ some: Parameter<any TestGenericProtocol<Int>>) -> Self where Signature == (any TestGenericProtocol<Int>) -> Void {
+        static func withSome(_ some: Parameter<some TestGenericProtocol<Int>>) -> Self where Signature == (any TestGenericProtocol<Int>) -> Void {
             .init(
                 method: Methods.\(sut.stubIdentifier),
                 parameters: [

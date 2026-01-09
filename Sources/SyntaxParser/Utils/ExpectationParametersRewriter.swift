@@ -45,14 +45,6 @@ final class ExpectationParametersRewriter: SyntaxRewriter, SyntaxBuilder {
             super.visit(node)
         }
     }
-
-    override func visit(_ node: SomeOrAnyTypeSyntax) -> TypeSyntax {
-        let constraint = node.constraint
-        return SomeOrAnyTypeSyntax(
-            someOrAnySpecifier: .keyword(.any, trailingTrivia: .space),
-            constraint: constraint
-        ).cast(TypeSyntax.self)
-    }
 }
 
 extension FunctionDeclSyntax {
