@@ -459,6 +459,33 @@ struct MockTypeMethodTests {
         """)
     }
 
+    @Test func `expect replaces Self with mock class name`() throws {
+        let syntax = Parser.parse(source: "func foo(self: Self) -> Self").statements.first?.item
+        let declaration = try #require(FunctionDeclSyntax(syntax))
+
+        let sut = MockType.Method(declaration: declaration, mockName: "TestMock")
+
+        #expect(sut.expect.formatted().description == """
+        public func expect(
+            _ expectation: MethodExpectation<(TestMock) -> TestMock>,
+            fileID: String = #fileID,
+            filePath: StaticString = #filePath,
+            line: UInt = #line,
+            column: Int = #column,
+            perform: @escaping (TestMock) -> TestMock
+        ) {
+            _record(
+                expectation.expectation,
+                fileID,
+                filePath,
+                line,
+                column,
+                perform
+            )
+        }
+        """)
+    }
+
     @Test func `expectationMethodDeclaration emits correct method`() throws {
         let syntax = Parser.parse(source: """
         func withParamsVoid(

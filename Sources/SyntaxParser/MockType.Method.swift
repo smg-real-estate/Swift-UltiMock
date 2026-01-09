@@ -413,7 +413,7 @@ extension MockType {
         var expect: FunctionDeclSyntax {
             buildExpectFunction(
                 expectationType: "MethodExpectation",
-                signatureType: functionType,
+                signatureType: functionType.replacingSelfWithTypeName(mockName),
                 genericParameterClause: declaration.genericParameterClause,
                 isPublic: true
             )
