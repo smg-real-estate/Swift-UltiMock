@@ -6,6 +6,7 @@ final class ProtocolMockBuilder: SyntaxBuilder {
     let allMethods: [MockType.Method]
     let allProperties: [MockType.Property]
     let allSubscripts: [MockType.Subscript]
+    lazy var associatedTypeResolver = AssociatedTypeResolver(protocols: mockedProtocol.allProtocols)
 
     lazy var allAssociatedTypes = mockedProtocol.allProtocols
         .flatMap { protocolDecl in
@@ -21,7 +22,9 @@ final class ProtocolMockBuilder: SyntaxBuilder {
         self.allMethods = MockType.Method.collectMethods(from: mockedProtocol.allProtocols, mockName: mockClassName)
         self.allProperties = MockType.Property.collectProperties(from: mockedProtocol.allProtocols, mockName: mockClassName)
         self.allSubscripts = MockType.Subscript.collectSubscripts(from: mockedProtocol.allProtocols, mockName: mockClassName)
-            .unique(by: \.setterFunctionType.description)
+            .unique(by: \.setterFunctionType.description) { lhs, rhs in
+                lhs.declaration.isReadwrite ? lhs : rhs
+            }
     }
 
     var isPublic: Bool {
@@ -63,29 +66,30 @@ final class ProtocolMockBuilder: SyntaxBuilder {
     }
 
     var genericParameterClause: GenericParameterClauseSyntax? {
-        guard !allAssociatedTypes.isEmpty else {
+        let primaryTypes = associatedTypeResolver.primaryTypes
+        guard !primaryTypes.isEmpty else {
             return nil
         }
-        let parameters = allAssociatedTypes.enumerated().map { _, associatedType -> GenericParameterSyntax in
-            let inheritedTypes = associatedType.inheritanceClause?.inheritedTypes.map(\.type) ?? []
+        let parameters = primaryTypes.map { resolvedType -> GenericParameterSyntax in
+            let conformances = resolvedType.conformances
 
             let inheritedType: TypeSyntax?
-            if inheritedTypes.isEmpty {
+            if conformances.isEmpty {
                 inheritedType = nil
-            } else if inheritedTypes.count == 1 {
-                inheritedType = inheritedTypes.first
+            } else if conformances.count == 1 {
+                inheritedType = conformances.first
             } else {
-                let elements = inheritedTypes.enumerated().map { i, type -> CompositionTypeElementSyntax in
+                let elements = conformances.enumerated().map { i, type -> CompositionTypeElementSyntax in
                     CompositionTypeElementSyntax(
                         type: type,
-                        ampersand: i < inheritedTypes.count - 1 ? TokenSyntax.binaryOperator("&", leadingTrivia: .space, trailingTrivia: .space) : nil
+                        ampersand: i < conformances.count - 1 ? TokenSyntax.binaryOperator("&", leadingTrivia: .space, trailingTrivia: .space) : nil
                     )
                 }
                 inheritedType = TypeSyntax(CompositionTypeSyntax(elements: CompositionTypeElementListSyntax(elements)))
             }
 
             return GenericParameterSyntax(
-                name: associatedType.name,
+                name: .identifier(resolvedType.name),
                 colon: inheritedType != nil ? .colonToken(trailingTrivia: .space) : nil,
                 inheritedType: inheritedType
             )
@@ -98,14 +102,15 @@ final class ProtocolMockBuilder: SyntaxBuilder {
     }
 
     var typealiasDeclarations: [TypeAliasDeclSyntax] {
-        allAssociatedTypes.map { associatedType in
-            TypeAliasDeclSyntax(
+        associatedTypeResolver.resolvedTypes.map { resolvedType in
+            let value: TypeSyntax = resolvedType.resolvedTo?.trimmed ?? TypeSyntax(IdentifierTypeSyntax(name: .identifier(resolvedType.name)))
+            return TypeAliasDeclSyntax(
                 modifiers: isPublic ? DeclModifierListSyntax([DeclModifierSyntax(name: .keyword(.public, trailingTrivia: .space))]) : DeclModifierListSyntax([]),
                 typealiasKeyword: .keyword(.typealias, trailingTrivia: .space),
-                name: associatedType.name,
+                name: .identifier(resolvedType.name),
                 initializer: TypeInitializerClauseSyntax(
                     equal: .equalToken(leadingTrivia: .space, trailingTrivia: .space),
-                    value: IdentifierTypeSyntax(name: associatedType.name),
+                    value: value,
                     trailingTrivia: .space
                 )
             )
@@ -598,14 +603,17 @@ final class ProtocolMockBuilder: SyntaxBuilder {
     }
 
     var extensions: CodeBlockItemListSyntax {
-        CodeBlockItemListSyntax(
+        let rewriter = AssociatedTypeRewriter(replacements: associatedTypeResolver.sameTypeConstraints)
+        return CodeBlockItemListSyntax(
             allProperties.flatMap {
                 [
                     $0.getterExpectationExtension(isPublic: isPublic),
                     $0.setterExpectationExtension(isPublic: isPublic)
                 ]
             }
-            .compactMap { $0?.asCodeBlockItem() }
+            .compactMap { $0 }
+            .map { rewriter.rewrite($0).cast(ExtensionDeclSyntax.self) }
+            .map { $0.asCodeBlockItem() }
         )
     }
 }

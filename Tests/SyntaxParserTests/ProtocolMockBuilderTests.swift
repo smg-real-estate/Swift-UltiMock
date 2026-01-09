@@ -542,18 +542,63 @@ struct ProtocolMockBuilderTests {
             subscript(key: Int) -> String { get }
         }
 
-        protocol Bar: Foo
-            // Subscript overriding
+        protocol Bar: Foo {
             subscript(key: Int) -> String { get set }
         }
         """)
 
         let types = source.statements.map { $0.item.cast(ProtocolDeclSyntax.self) }
 
-        let sut = MockedProtocol(declaration: types[1], inherited: []).mockBuilder
+        let sut = MockedProtocol(declaration: types[1], inherited: [types[0]]).mockBuilder
 
         let result = sut.expectationSetters
-        try #require(result.count == 2)
+        #expect(result.count == 2)
+    }
+
+    @Test func `subscripts prefer settable version when base protocol has read-only and refined protocol has read-write`() throws {
+        let source = Parser.parse(source: """
+        protocol Foo {
+            subscript(key: Int) -> String { get }
+        }
+
+        protocol Bar: Foo {
+            subscript(key: Int) -> String { get set }
+        }
+        """)
+
+        let types = source.statements.map { $0.item.cast(ProtocolDeclSyntax.self) }
+
+        let sut = MockedProtocol(declaration: types[1], inherited: [types[0]]).mockBuilder
+
+        let subscriptDecl = try #require(sut.allSubscripts.first)
+        #expect(subscriptDecl.declaration.isReadwrite)
+    }
+
+    @Test func `generic parameters resolve where constraints correctly`() throws {
+        let source = Parser.parse(source: """
+        protocol BaseGenericProtocol<Base> {
+            associatedtype Base
+            var base: Base { get set }
+        }
+
+        protocol RefinedGenericProtocol<A>: BaseGenericProtocol
+            where Base: Identifiable, Base.ID == A {
+            associatedtype A
+            associatedtype B where B == Base
+        }
+        """)
+
+        let types = source.statements.map { $0.item.cast(ProtocolDeclSyntax.self) }
+
+        let sut = MockedProtocol(declaration: types[1], inherited: [types[0]]).mockBuilder
+
+        #expect(sut.mockClass.withoutMembers().description == """
+        class RefinedGenericProtocolMock<Base: Identifiable>: Mock, RefinedGenericProtocol, @unchecked Sendable {
+        typealias Base = Base 
+        typealias A = Base.ID 
+        typealias B = Base 
+        }
+        """)
     }
 }
 
