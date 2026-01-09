@@ -5,6 +5,7 @@ final class ProtocolMockBuilder: SyntaxBuilder {
     let mockedProtocol: MockedProtocol
     let allMethods: [MockType.Method]
     let allProperties: [MockType.Property]
+    let allSubscripts: [MockType.Subscript]
 
     lazy var allAssociatedTypes = mockedProtocol.allProtocols
         .flatMap { protocolDecl in
@@ -19,6 +20,7 @@ final class ProtocolMockBuilder: SyntaxBuilder {
         self.mockedProtocol = mockedProtocol
         self.allMethods = MockType.Method.collectMethods(from: mockedProtocol.allProtocols, mockName: mockClassName)
         self.allProperties = MockType.Property.collectProperties(from: mockedProtocol.allProtocols, mockName: mockClassName)
+        self.allSubscripts = MockType.Subscript.collectSubscripts(from: mockedProtocol.allProtocols, mockName: mockClassName)
     }
 
     var isPublic: Bool {
@@ -40,6 +42,12 @@ final class ProtocolMockBuilder: SyntaxBuilder {
 
         // Add property setter variable declarations (only for read-write properties)
         members.append(contentsOf: allProperties.compactMap(\.setterVariableDeclaration).map { MemberBlockItemSyntax(decl: $0) })
+
+        // Add subscript getter variable declarations
+        members.append(contentsOf: allSubscripts.map(\.getterVariableDeclaration).map { MemberBlockItemSyntax(decl: $0) })
+
+        // Add subscript setter variable declarations (only for read-write subscripts)
+        members.append(contentsOf: allSubscripts.compactMap(\.setterVariableDeclaration).map { MemberBlockItemSyntax(decl: $0) })
 
         return EnumDeclSyntax(
             leadingTrivia: .newline,
@@ -117,6 +125,22 @@ final class ProtocolMockBuilder: SyntaxBuilder {
         ).declaration
     }
 
+    var subscriptExpectationBuilder: SubscriptExpectationBuilder {
+        SubscriptExpectationBuilder(
+            allSubscripts: allSubscripts,
+            mockName: mockClassName,
+            isPublic: isPublic
+        )
+    }
+
+    var subscriptExpectationStruct: StructDeclSyntax {
+        subscriptExpectationBuilder.declaration
+    }
+
+    var subscriptExpectationsStruct: StructDeclSyntax {
+        subscriptExpectationBuilder.subscriptExpectationsStruct
+    }
+
     @ArrayBuilder<MemberBlockItemSyntax>
     var properties: [MemberBlockItemSyntax] {
         property(.public, name: "recorder", initializer: InitializerClauseSyntax(
@@ -178,6 +202,10 @@ final class ProtocolMockBuilder: SyntaxBuilder {
         MemberBlockItemSyntax(decl: methodsEnum)
         MemberBlockItemSyntax(decl: methodExpectationStruct)
         MemberBlockItemSyntax(decl: propertyExpectationsStruct)
+        if !allSubscripts.isEmpty {
+            MemberBlockItemSyntax(decl: subscriptExpectationStruct)
+            MemberBlockItemSyntax(decl: subscriptExpectationsStruct)
+        }
         MemberBlockItemSyntax(decl: recordMethod)
         MemberBlockItemSyntax(decl: performMethod)
         expectationSetters.map { setter in
@@ -189,6 +217,9 @@ final class ProtocolMockBuilder: SyntaxBuilder {
         implementationMethods.map { method in
             MemberBlockItemSyntax(decl: method)
         }
+        implementationSubscripts.map { subscriptDecl in
+            MemberBlockItemSyntax(decl: subscriptDecl)
+        }
     }
 
     var implementationMethods: [FunctionDeclSyntax] {
@@ -199,6 +230,10 @@ final class ProtocolMockBuilder: SyntaxBuilder {
         allProperties.map { $0.implementation(isPublic: isPublic) }
     }
 
+    var implementationSubscripts: [SubscriptDeclSyntax] {
+        allSubscripts.map { $0.implementation(isPublic: isPublic) }
+    }
+
     @ArrayBuilder<FunctionDeclSyntax>
     var expectationSetters: [FunctionDeclSyntax] {
         allMethods.unique(by: \.functionType.description)
@@ -206,6 +241,10 @@ final class ProtocolMockBuilder: SyntaxBuilder {
         allProperties.unique(by: \.getterFunctionType.description)
             .map(\.getterExpect)
         allProperties.unique(by: \.setterFunctionType.description)
+            .map(\.setterExpect)
+        allSubscripts.unique(by: \.getterFunctionType.description)
+            .map(\.getterExpect)
+        allSubscripts.filter(\.hasSet).unique(by: \.setterFunctionType.description)
             .map(\.setterExpect)
     }
 

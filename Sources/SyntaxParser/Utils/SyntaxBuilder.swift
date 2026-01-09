@@ -407,7 +407,8 @@ extension SyntaxBuilder {
         expectationType: String,
         signatureType: some TypeSyntaxProtocol,
         valueType: some TypeSyntaxProtocol,
-        isPublic: Bool = true
+        isPublic: Bool = true,
+        numberOfClosureParameters: Int = 1
     ) -> FunctionDeclSyntax {
         FunctionDeclSyntax(
             modifiers: isPublic ? DeclModifierListSyntax([DeclModifierSyntax(name: .keyword(.public, trailingTrivia: .space))]) : DeclModifierListSyntax([]),
@@ -494,7 +495,7 @@ extension SyntaxBuilder {
                                 ]),
                                 baseType: TypeSyntax(signatureType)
                             ),
-                            defaultValue: closureDefaultValue(numberOfParameters: 1)
+                            defaultValue: closureDefaultValue(numberOfParameters: numberOfClosureParameters)
                         )
                     ]),
                     rightParen: .rightParenToken(leadingTrivia: .newline)
