@@ -293,6 +293,24 @@ struct MockTypeMethodTests {
         """)
     }
 
+    @Test func `implementation preserves nonisolated`() throws {
+        let syntax = Parser.parse(source: """
+        nonisolated func nonisolatedMethod()
+        """).statements.first?.item
+        let declaration = try #require(FunctionDeclSyntax(syntax))
+
+        let sut = MockType.Method(declaration: declaration, mockName: "TestMock")
+
+        #expect(sut.implementation().formatted().description == """
+        nonisolated func nonisolatedMethod() {
+            let perform = _perform(
+                Methods.\(sut.stubIdentifier)
+            ) as! () -> Void
+            return perform()
+        }
+        """)
+    }
+
     @Test func `expect emits correct method for simple function`() throws {
         let syntax = Parser.parse(source: "func foo()").statements.first?.item
         let declaration = try #require(FunctionDeclSyntax(syntax))

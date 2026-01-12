@@ -39,7 +39,19 @@ let package = Package(
                 "TestableMockables"
             ],
             swiftSettings: [
-                .enableExperimentalFeature("StrictConcurrency"),
+                .unsafeFlags(["-warnings-as-errors"])
+            ],
+            plugins: [
+                .plugin(name: "MockGenerationPlugin", package: "UltiMock")
+            ]
+        ),
+        .testTarget(
+            name: "DefaultIsolationTests",
+            dependencies: [
+                "UltiMock"
+            ],
+            swiftSettings: [
+                .defaultIsolation(MainActor.self),
                 .unsafeFlags(["-warnings-as-errors"])
             ],
             plugins: [

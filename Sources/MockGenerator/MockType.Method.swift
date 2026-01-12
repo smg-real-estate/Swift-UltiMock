@@ -221,25 +221,15 @@ extension MockType {
                 expression: returnExpression
             )
 
-            let modifiers: DeclModifierListSyntax = isPublic ? DeclModifierListSyntax([
-                DeclModifierSyntax(name: .keyword(.public, trailingTrivia: .space))
-            ]) : DeclModifierListSyntax([])
+            if isPublic {
+                implementationDeclaration.modifiers = [
+                    DeclModifierSyntax(name: .keyword(.public, trailingTrivia: .space))
+                ] + declaration.modifiers.trimmed(matching: \.isNewline)
 
-            // Adjust funcKeyword leading trivia based on whether we have modifiers or attributes
-            let funcKeywordLeadingTrivia: Trivia = if !modifiers.isEmpty {
-                // If we have modifiers, no leading trivia on func
-                []
-            } else if !implementationDeclaration.attributes.isEmpty {
-                // If we have attributes but no modifiers, preserve newline
-                .newline
-            } else {
-                // Otherwise, clear leading trivia
-                []
+                implementationDeclaration.funcKeyword.leadingTrivia = []
             }
 
             return implementationDeclaration
-                .with(\.modifiers, modifiers)
-                .with(\.funcKeyword, implementationDeclaration.funcKeyword.with(\.leadingTrivia, funcKeywordLeadingTrivia))
                 .with(\.signature, implementationDeclaration.signature.with(\.trailingTrivia, .space))
                 .with(\.genericWhereClause, implementationDeclaration.genericWhereClause?.with(\.trailingTrivia, .space))
                 .with(\.body, CodeBlockSyntax(

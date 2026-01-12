@@ -121,7 +121,7 @@ struct ProtocolMockBuilderTests {
 
         #expect(sut.methodsEnum.formatted().description == """
 
-        enum Methods {
+        private nonisolated enum Methods {
             static var doSomething_ret_Int: MockMethod {
                 .init { _ in
                     "doSomething()"
@@ -153,7 +153,7 @@ struct ProtocolMockBuilderTests {
 
         #expect(sut.methodsEnum.formatted().description == """
 
-        enum Methods {
+        private nonisolated enum Methods {
             static var get_readonly_Int: MockMethod {
                 .init { _ in
                     "readonly"
@@ -365,7 +365,7 @@ struct ProtocolMockBuilderTests {
         let sut = MockedProtocol(declaration: types[0], inherited: []).mockBuilder
 
         #expect(sut.performMethod.formatted().description == """
-        private func _perform(
+        private nonisolated func _perform(
             _ method: MockMethod,
             _ parameters: [Any?] = []
         ) -> Any {

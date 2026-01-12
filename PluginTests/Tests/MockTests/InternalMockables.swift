@@ -50,3 +50,10 @@ protocol RefinedGenericProtocol<A>: BaseGenericProtocol
     // Subscript overriding
     subscript(key: Int) -> String { get set }
 }
+
+// sourcery:AutoMockable
+@MainActor
+protocol IsolatedMockable {
+    func isolatedMethod()
+    nonisolated func nonisolatedMethod()
+}

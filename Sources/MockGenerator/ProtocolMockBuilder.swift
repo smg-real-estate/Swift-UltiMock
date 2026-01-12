@@ -55,6 +55,10 @@ final class ProtocolMockBuilder: SyntaxBuilder {
 
         return EnumDeclSyntax(
             leadingTrivia: .newline,
+            modifiers: [
+                DeclModifierSyntax(name: .keyword(.private, trailingTrivia: .space)),
+                DeclModifierSyntax(name: .keyword(.nonisolated, trailingTrivia: .space)),
+            ],
             enumKeyword: .keyword(.enum, trailingTrivia: .space),
             name: .identifier("Methods"),
             memberBlock: MemberBlockSyntax(
@@ -347,7 +351,10 @@ final class ProtocolMockBuilder: SyntaxBuilder {
 
     var performMethod: FunctionDeclSyntax {
         FunctionDeclSyntax(
-            modifiers: DeclModifierListSyntax([DeclModifierSyntax(name: .keyword(.private, trailingTrivia: .space))]),
+            modifiers: [
+                DeclModifierSyntax(name: .keyword(.private, trailingTrivia: .space)),
+                DeclModifierSyntax(name: .keyword(.nonisolated, trailingTrivia: .space)),
+            ],
             funcKeyword: .keyword(.func, trailingTrivia: .space),
             name: .identifier("_perform"),
             signature: FunctionSignatureSyntax(
