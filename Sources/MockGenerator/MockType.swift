@@ -1,0 +1,3 @@
+import SwiftSyntax
+
+enum MockType {}

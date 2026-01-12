@@ -23,29 +23,20 @@ jobs:
 
       - uses: maxim-lobanov/setup-xcode@v1.6.0
         with:
-          xcode-version: '26.1.0'
-
-#      - name: Create iOS Simulator
-#        run: |
-#          xcrun simctl create "iPhone 16" "iPhone 16" "iOS18.5" || true
-#          xcrun simctl list devices
+          xcode-version: '26.2.0'
 
       - name: Linting
         run: ./swiftformat . --lint
 
-      - name: Test macOS
+      - name: Unit Tests
+        run: swift test
+
+      - name: End-to-end tests macOS
         run: |
           cd PluginTests
           xcodebuild test -scheme PluginTests-Package -destination "platform=macOS"
 
-      - name: Test iOS 15
+      - name: End-to-end tests iOS
         run: |
           cd PluginTests
-          sed -i '' -e 's/\.iOS(\.v16)/.iOS(.v15)/' Package.swift
-          xcodebuild test -scheme PluginTests-Package -destination 'platform=iOS Simulator,OS=18.5,name=iPhone 16'
-
-      - name: Test iOS 16
-        run: |
-          cd PluginTests
-          sed -i '' -e 's/\.iOS(\.v15)/.iOS(.v16)/' Package.swift
-          xcodebuild test -scheme PluginTests-Package -destination 'platform=iOS Simulator,OS=18.5,name=iPhone 16'
+          xcodebuild test -scheme PluginTests-Package -destination 'platform=iOS Simulator,OS=26.2,name=iPhone 17'

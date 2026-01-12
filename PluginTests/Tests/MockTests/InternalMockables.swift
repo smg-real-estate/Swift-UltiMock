@@ -36,8 +36,6 @@ protocol BaseGenericProtocol<Base> {
 }
 
 // sourcery:AutoMockable
-// Sourcery does not support where clause for associated types
-// sourcery:typealias = "B = Base"
 protocol RefinedGenericProtocol<A>: BaseGenericProtocol
     // The edge case needs Base.ID == A and not A == Base.ID
     where Base: Identifiable, Base.ID == A {

@@ -1,8 +1,7 @@
 import Foundation
+import MockGenerator
 import PathKit
 import SourceKittenFramework
-import SourceryFramework
-import SourceryRuntime
 
 struct CommandContext {
     let configuration: Configuration
@@ -17,34 +16,30 @@ struct CommandContext {
         self.configuration = try JSONDecoder().decode(Configuration.self, from: configurationData)
         self.sources = (sources.isEmpty ? configuration.sources : sources)
             .map {
-                Path($0, relativeTo: root)
+                root + Path($0)
             }
 
         let outputPath = try (output ?? configuration.output).map {
-            Path($0, relativeTo: root)
+            root + Path($0)
         }
         .unwrap("The output path is missing. Use `output` argument or configuration field.")
 
         self.outputPath = outputPath.isDirectory ? outputPath + mockFilename : outputPath
     }
 
-    func parse() throws -> FileParserResult {
-        try [
+    func parse() throws -> [MockedType] {
+        let sources = try [
             parseSources(),
             parseSDKModules()
         ]
             .flatMap(\.self)
-            .reduce(FileParserResult(path: nil, module: nil, types: [], functions: [], typealiases: [])) { result, next in
-                result.typealiases += next.typealiases
-                result.types += next.types
-                result.functions += next.functions
-                return result
-            }
+
+        return try MockedTypesResolver.resolve(from: sources)
     }
 }
 
 private extension CommandContext {
-    func parseSources() throws -> [FileParserResult] {
+    func parseSources() throws -> [() throws -> String] {
         let sourceFiles = try sources
             .flatMap { path in
                 path.isDirectory ? try path.recursiveChildren() : [path]
@@ -53,15 +48,16 @@ private extension CommandContext {
                 !path.isDirectory && path.extension == "swift" && !path.string.hasSuffix("generated.swift")
             }
 
-        return try sourceFiles
-            .map { filePath -> FileParserResult in
-                let content = try filePath.read(.utf8)
-                let parser = try makeParser(for: content)
-                return try parser.parse()
+        return sourceFiles
+            .lazy
+            .map { filePath in
+                {
+                    try filePath.read(.utf8)
+                }
             }
     }
 
-    func parseSDKModules() throws -> [FileParserResult] {
+    func parseSDKModules() throws -> [() throws -> String] {
         // Required for running in sandbox environment
         setenv("IN_PROCESS_SOURCEKIT", "YES", 1)
         //        setenv("SOURCEKIT_LOGGING", "3", 1)
@@ -70,9 +66,10 @@ private extension CommandContext {
             .appendingPathComponent("clang/ModuleCache")
             .path
 
-        let sdkPath = try Path(env["SDKROOT"].wrapped)
+        let sdkPath = try Path(env["SDKROOT"].unwrap("Missing SDKROOT environment variable"))
 
         return try (configuration.sdkModules ?? [])
+            .lazy
             .compactMap { module in
                 let request = try SourceKittenFramework.Request.customRequest(request: [
                     "key.request": UID("source.request.editor.open.interface"),
@@ -95,17 +92,11 @@ private extension CommandContext {
                     "key.synthesizedextensions": 1
                 ])
 
-                let response: [String: any SourceKitRepresentable]
+                return {
+                    let response = try request.send()
 
-                do {
-                    response = try request.send()
-                } catch {
-                    print("Failed to parse SDK module '\(module)': \(error)")
-                    return nil
+                    return try cast(response["key.sourcetext"])
                 }
-
-                let source: String = try cast(response["key.sourcetext"])
-                return try makeParser(for: source).parse()
             }
     }
 
@@ -127,7 +118,7 @@ func systemArchitectureIdentifier() throws -> String {
     var systemInfo = utsname()
 
     guard uname(&systemInfo) == EXIT_SUCCESS else {
-        throw "Unable to detect target architecture"
+        throw SimpleError("Unable to detect target architecture")
     }
 
     let data = Data(bytes: &systemInfo.machine, count: Int(_SYS_NAMELEN))

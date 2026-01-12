@@ -466,7 +466,7 @@ final class MockTests: XCTestCase {
     }
 
     func test_mockingMethodsConstrainedToAssociatedTypes() {
-        let mock = GenericTestMockableMock<Int, ([Int]) -> String>()
+        let mock = GenericTestMockableMock<([Int]) -> String, Int>()
 
         // Note: The parameter type should be inferred without the need of `.value()`
         // which means correct generation of the parameter constraints

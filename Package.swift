@@ -1,4 +1,4 @@
-// swift-tools-version:5.9
+// swift-tools-version:6.2
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import Foundation
@@ -23,9 +23,9 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.2.1"),
-        .package(name: "Sourcery", path: "Submodules/Sourcery"),
         .package(url: "https://github.com/jpsim/SourceKitten", from: "0.32.0"),
-        .package(url: "https://github.com/freddi-kit/ArtifactBundleGen.git", from: "0.0.6")
+        .package(url: "https://github.com/apple/swift-syntax.git", from: "509.0.0"),
+        .package(url: "https://github.com/kylef/PathKit.git", exact: "1.0.1")
     ],
     targets: [
         .target(
@@ -34,12 +34,21 @@ let package = Package(
             swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]
         ),
         .target(name: "XCTestExtensions"),
+        .target(
+            name: "MockGenerator",
+            dependencies: [
+                .product(name: "SwiftSyntax", package: "swift-syntax"),
+                .product(name: "SwiftParser", package: "swift-syntax"),
+                .product(name: "SwiftBasicFormat", package: "swift-syntax"),
+            ]
+        ),
         .executableTarget(
             name: "mock",
             dependencies: [
-                .product(name: "SourceryFramework", package: "Sourcery"),
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
-                .product(name: "SourceKittenFramework", package: "SourceKitten")
+                .product(name: "SourceKittenFramework", package: "SourceKitten"),
+                .product(name: "PathKit", package: "PathKit"),
+                "MockGenerator"
             ],
             swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]
         ),
@@ -47,6 +56,19 @@ let package = Package(
             name: "MockGenerationPlugin",
             capability: .buildTool(),
             dependencies: ["mock"]
+        ),
+        .testTarget(
+            name: "MockGeneratorTests",
+            dependencies: [
+                "MockGenerator",
+                .product(name: "SwiftParser", package: "swift-syntax")
+            ]
+        ),
+        .testTarget(
+            name: "MockCommandTests",
+            dependencies: [
+                "mock"
+            ]
         )
     ]
 )
