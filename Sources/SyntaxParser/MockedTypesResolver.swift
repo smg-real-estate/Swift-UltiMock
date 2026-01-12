@@ -132,25 +132,6 @@ private extension MockedTypesResolver {
                 inherited: inherited
             )
         }
-        if let classDecl = decl.as(ClassDeclSyntax.self) {
-            let superclasses = resolveInheritedClasses(from: classDecl.inheritanceClause, using: typeMap)
-            let protocols = resolveAllProtocols(from: classDecl.inheritanceClause, superclasses: superclasses, using: typeMap)
-            let scopeKey = classDecl.name.text
-            let rewrittenDecl: ClassDeclSyntax
-
-            if hasTypeAliases(in: scopeKey) {
-                let rewriter = TypeAliasRewriter(resolver: self, scope: scopeKey)
-                rewrittenDecl = rewriter.rewrite(classDecl).as(ClassDeclSyntax.self)!
-            } else {
-                rewrittenDecl = classDecl
-            }
-
-            return MockedClass(
-                declaration: rewrittenDecl,
-                superclasses: superclasses,
-                protocols: protocols
-            )
-        }
         return nil
     }
 

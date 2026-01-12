@@ -18,17 +18,6 @@ final class TypeAliasRewriter: SyntaxRewriter {
         return TypeSyntax(resolvedType)
     }
 
-    override func visit(_ node: AccessorBlockSyntax) -> AccessorBlockSyntax {
-        var result = super.visit(node)
-
-        // Ensure accessor blocks have a leading space
-        if result.leadingTrivia.isEmpty {
-            result.leadingTrivia = .space
-        }
-
-        return result
-    }
-
     override func visit(_ node: InheritedTypeSyntax) -> InheritedTypeSyntax {
         guard let resolvedType = resolver.resolveTypeAlias(node.type, in: scope) else {
             return super.visit(node)

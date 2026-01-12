@@ -14,17 +14,3 @@ final class AssociatedTypeRewriter: SyntaxRewriter {
         return TypeSyntax(node)
     }
 }
-
-extension TypeSyntax {
-    func replacingAssociatedTypes(with resolver: AssociatedTypeResolver) -> TypeSyntax {
-        let rewriter = AssociatedTypeRewriter(replacements: resolver.sameTypeConstraints)
-        return rewriter.rewrite(self).as(TypeSyntax.self) ?? self
-    }
-}
-
-extension FunctionTypeSyntax {
-    func replacingAssociatedTypes(with resolver: AssociatedTypeResolver) -> FunctionTypeSyntax {
-        let rewriter = AssociatedTypeRewriter(replacements: resolver.sameTypeConstraints)
-        return rewriter.rewrite(self).as(FunctionTypeSyntax.self) ?? self
-    }
-}

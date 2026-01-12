@@ -48,24 +48,6 @@ extension SyntaxBuilder {
         )
     }
 
-    func assignmentCodeBlockItem(
-        target: String,
-        value: ExprSyntax,
-        isLast: Bool = false
-    ) -> CodeBlockItemSyntax {
-        CodeBlockItemSyntax(
-            leadingTrivia: .newline + .spaces(4),
-            item: .expr(ExprSyntax(SequenceExprSyntax(
-                elements: ExprListSyntax([
-                    ExprSyntax(DeclReferenceExprSyntax(baseName: .identifier(target))),
-                    ExprSyntax(AssignmentExprSyntax(equal: .equalToken(leadingTrivia: .space, trailingTrivia: .space))),
-                    value
-                ])
-            ))),
-            trailingTrivia: isLast ? .newline : []
-        )
-    }
-
     func functionParameter(
         firstName: TokenSyntax = .wildcardToken(trailingTrivia: .space),
         secondName: TokenSyntax? = nil,
@@ -141,19 +123,6 @@ extension SyntaxBuilder {
         )
     }
 
-    func tupleTypeElement(
-        firstName: TokenSyntax = .wildcardToken(),
-        secondName: String,
-        type: TypeSyntax
-    ) -> TupleTypeElementSyntax {
-        TupleTypeElementSyntax(
-            firstName: firstName.with(\.trailingTrivia, .space),
-            secondName: .identifier(secondName),
-            colon: .colonToken(trailingTrivia: .space),
-            type: type
-        )
-    }
-
     func arrayExpression(
         elements: [some ExprSyntaxProtocol],
         wrapped: Bool = false
@@ -162,7 +131,6 @@ extension SyntaxBuilder {
             ArrayExprSyntax(elements: [])
         } else {
             ArrayExprSyntax(
-                leftSquare: .leftSquareToken(),
                 elements: ArrayElementListSyntax(
                     elements.map { element in
                         ArrayElementSyntax(expression: ExprSyntax(element))
@@ -183,29 +151,6 @@ extension SyntaxBuilder {
             base: base.map { ExprSyntax($0) },
             period: .periodToken(),
             name: .identifier(name)
-        )
-    }
-
-    func typeEffectSpecifiers(
-        asyncSpecifier: TokenSyntax?,
-        throwsSpecifier: TokenSyntax?
-    ) -> TypeEffectSpecifiersSyntax? {
-        guard asyncSpecifier != nil || throwsSpecifier != nil else {
-            return nil
-        }
-
-        let asyncToken = asyncSpecifier?
-            .with(\.leadingTrivia, .space)
-            .with(\.trailingTrivia, .space)
-
-        let throwsLeading: Trivia = asyncSpecifier == nil ? .space : []
-        let throwsToken = throwsSpecifier?
-            .with(\.leadingTrivia, throwsLeading)
-            .with(\.trailingTrivia, .space)
-
-        return TypeEffectSpecifiersSyntax(
-            asyncSpecifier: asyncToken,
-            throwsSpecifier: throwsToken
         )
     }
 
