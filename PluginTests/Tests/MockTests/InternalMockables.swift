@@ -1,7 +1,7 @@
 import Foundation
 @testable import TestableMockables
 
-// sourcery:AutoMockable
+// UltiMock:AutoMockable
 protocol InternalMockable {
     func doSomething(with internal: Internal)
     func doSomething(withAny any: Any)
@@ -9,7 +9,7 @@ protocol InternalMockable {
 
 struct Internal {}
 
-// sourcery:AutoMockable
+// UltiMock:AutoMockable
 extension TestableMockable {}
 
 // swiftformat:disable preferFinalClasses
@@ -18,11 +18,11 @@ public class PublicMockableClass {
     public var value: Int = 0
 }
 
-// sourcery:AutoMockable
+// UltiMock:AutoMockable
 class InternalSubclassOfAPublicClass: PublicMockableClass {}
 // swiftformat:enable preferFinalClasses
 
-// sourcery:AutoMockable
+// UltiMock:AutoMockable
 @objc protocol ObjCMockable {
     @objc(doSomethingWith:)
     func doSomething(with int: Int)
@@ -35,7 +35,7 @@ protocol BaseGenericProtocol<Base> {
     subscript(key: Int) -> String { get }
 }
 
-// sourcery:AutoMockable
+// UltiMock:AutoMockable
 protocol RefinedGenericProtocol<A>: BaseGenericProtocol
     // The edge case needs Base.ID == A and not A == Base.ID
     where Base: Identifiable, Base.ID == A {
@@ -51,9 +51,12 @@ protocol RefinedGenericProtocol<A>: BaseGenericProtocol
     subscript(key: Int) -> String { get set }
 }
 
-// sourcery:AutoMockable
+// UltiMock:AutoMockable
 @MainActor
 protocol IsolatedMockable {
     func isolatedMethod()
     nonisolated func nonisolatedMethod()
 }
+
+// Ensure mock generation
+typealias IsolatedMock = IsolatedMockableMock

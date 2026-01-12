@@ -11,13 +11,16 @@ public struct MockedTypesResolver {
 
     public init(
         typeAliases: [String: [String: TypeAliasDeclSyntax]],
-        annotationKeys: [String] = ["sourcery", "UltiMock"]
+        annotationKeys: [String]
     ) {
         self.typeAliases = typeAliases
         self.annotationKeys = annotationKeys
     }
 
-    public static func resolve(from contentSequence: some Sequence<() throws -> String>) throws -> [MockedType] {
+    public static func resolve(
+        from contentSequence: some Sequence<() throws -> String>,
+        annotationKeys: [String]
+    ) throws -> [MockedType] {
         let typesCollector = TypesVisitor()
         let aliasCollector = AliasTableBuilder()
 
@@ -29,7 +32,7 @@ public struct MockedTypesResolver {
             }
         }
 
-        let resolver = MockedTypesResolver(typeAliases: aliasCollector.aliasesByScope)
+        let resolver = MockedTypesResolver(typeAliases: aliasCollector.aliasesByScope, annotationKeys: annotationKeys)
         return resolver.resolve(typesCollector.types)
     }
 

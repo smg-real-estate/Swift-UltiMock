@@ -4,4 +4,5 @@ struct Configuration: Decodable {
     let output: String?
     let imports: [String]?
     let testableImports: [String]?
+    let enableSourceryAnnotation: Bool?
 }

@@ -6,7 +6,7 @@ import Testing
 final class MockedTypesResolverTests {
     @Test func `resolves mocked types`() throws {
         let source = """
-            // UltiMock:AutoMockable
+            // TestAnnotationKey:AutoMockable
             protocol A {
                 func closureAliasResult(_ closure: @escaping ClosureAlias<Int>) -> ClosureAlias<Int>
             }
@@ -14,7 +14,10 @@ final class MockedTypesResolverTests {
             typealias ClosureAlias<T> = (T) -> Void
         """
 
-        let resolved = try MockedTypesResolver.resolve(from: [{ source }])
+        let resolved = try MockedTypesResolver.resolve(
+            from: [{ source }],
+            annotationKeys: ["TestAnnotationKey"]
+        )
 
         #expect(resolved.count == 1)
     }

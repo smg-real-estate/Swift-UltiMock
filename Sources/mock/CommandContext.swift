@@ -8,6 +8,7 @@ struct CommandContext {
     let configurationPath: Path
     let sources: [Path]
     let outputPath: Path
+    let annotationKeys: [String]
 
     init(_ configurationPath: ConfigurationPath, _ sources: [String], _ output: String?) throws {
         let root = configurationPath.resolvedPath.parent()
@@ -25,16 +26,27 @@ struct CommandContext {
         .unwrap("The output path is missing. Use `output` argument or configuration field.")
 
         self.outputPath = outputPath.isDirectory ? outputPath + mockFilename : outputPath
+
+        var annotationKeys = ["UltiMock"]
+
+        if configuration.enableSourceryAnnotation ?? false {
+            annotationKeys.append("sourcery")
+        }
+
+        self.annotationKeys = annotationKeys
     }
 
-    func parse() throws -> [MockedType] {
+    func parse(annotationKeys: [String]) throws -> [MockedType] {
         let sources = try [
             parseSources(),
             parseSDKModules()
         ]
             .flatMap(\.self)
 
-        return try MockedTypesResolver.resolve(from: sources)
+        return try MockedTypesResolver.resolve(
+            from: sources,
+            annotationKeys: annotationKeys
+        )
     }
 }
 

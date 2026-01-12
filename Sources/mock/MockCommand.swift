@@ -32,7 +32,7 @@ struct MockCommand: ParsableCommand {
         let start = Date()
         let context = try CommandContext(configurationPath, sources, output)
 
-        let types = try context.parse()
+        let types = try context.parse(annotationKeys: context.annotationKeys)
 
         let mockSource = MockTemplate(
             mockedTypes: types,

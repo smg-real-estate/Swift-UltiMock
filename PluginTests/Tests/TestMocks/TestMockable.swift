@@ -10,7 +10,7 @@ public struct OnlyProperty: Equatable {
     }
 }
 
-// sourcery:AutoMockable
+// UltiMock:AutoMockable
 public protocol TestMockable: Sendable {
     var property: OnlyProperty { get }
     var throwingProperty: Int { get throws }
@@ -94,7 +94,7 @@ extension TestMockable {
     func noParamsVoid() {}
 }
 
-// sourcery:AutoMockable
+// UltiMock:AutoMockable
 public protocol GenericTestMockable {
     associatedtype Value
     associatedtype ConstrainedValue: Equatable
@@ -122,7 +122,7 @@ open class TestMockableSuperclass {
     open class func openClassMethod() {}
 }
 
-// sourcery:AutoMockable
+// UltiMock:AutoMockable
 extension Test3rdPartyProtocol {}
 
 public typealias ClosureAlias<T> = (T) -> Void
