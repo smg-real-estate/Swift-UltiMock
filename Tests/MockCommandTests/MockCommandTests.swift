@@ -3,7 +3,7 @@ import PathKit
 import Testing
 @testable import mock
 
-struct MockGeneratorTests {
+struct MockCommandTests {
     let pluginTestsPath = Path(#filePath).parent().parent().parent() + "PluginTests/"
 
     @Test func mockGeneration_MockTests() throws {

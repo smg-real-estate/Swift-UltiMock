@@ -1,6 +1,6 @@
 import SwiftParser
 import Testing
-@testable import SyntaxParser
+@testable import MockGenerator
 
 struct TypeAliasCollectorTests {
     let sut = TypeAliasCollector()

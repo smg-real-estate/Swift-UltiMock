@@ -1,7 +1,7 @@
 import SwiftParser
 import SwiftSyntax
 import Testing
-@testable import SyntaxParser
+@testable import MockGenerator
 
 @Suite struct TypesCollectorTests {
     @Test
@@ -120,7 +120,7 @@ private extension TypesCollectorTests {
 }
 
 extension TypesVisitor {
-    static func collect(from source: SourceFileSyntax) -> [SyntaxParser.Syntax.TypeInfo] {
+    static func collect(from source: SourceFileSyntax) -> [MockGenerator.Syntax.TypeInfo] {
         let visitor = TypesVisitor()
         visitor.walk(source.strippingImplementation())
         return visitor.types

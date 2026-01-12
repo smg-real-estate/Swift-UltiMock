@@ -1,6 +1,6 @@
 import SwiftParser
 import Testing
-@testable import SyntaxParser
+@testable import MockGenerator
 
 struct ImplementationStripperTests {
     @Test func `strips function implementation`() {

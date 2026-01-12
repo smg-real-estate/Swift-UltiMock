@@ -1,7 +1,7 @@
 import Foundation
+import MockGenerator
 import PathKit
 import SourceKittenFramework
-import SyntaxParser
 
 struct CommandContext {
     let configuration: Configuration

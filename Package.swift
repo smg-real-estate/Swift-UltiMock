@@ -36,7 +36,7 @@ let package = Package(
         ),
         .target(name: "XCTestExtensions"),
         .target(
-            name: "SyntaxParser",
+            name: "MockGenerator",
             dependencies: [
                 .product(name: "SwiftSyntax", package: "swift-syntax"),
                 .product(name: "SwiftParser", package: "swift-syntax"),
@@ -49,7 +49,7 @@ let package = Package(
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "SourceKittenFramework", package: "SourceKitten"),
                 .product(name: "PathKit", package: "PathKit"),
-                "SyntaxParser"
+                "MockGenerator"
             ],
             swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]
         ),
@@ -59,14 +59,14 @@ let package = Package(
             dependencies: ["mock"]
         ),
         .testTarget(
-            name: "SyntaxParserTests",
+            name: "MockGeneratorTests",
             dependencies: [
-                "SyntaxParser",
+                "MockGenerator",
                 .product(name: "SwiftParser", package: "swift-syntax")
             ]
         ),
         .testTarget(
-            name: "MockGeneratorTests",
+            name: "MockCommandTests",
             dependencies: [
                 "mock"
             ]

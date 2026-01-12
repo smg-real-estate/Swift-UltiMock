@@ -1,7 +1,7 @@
 import SwiftParser
 import SwiftSyntax
 import Testing
-@testable import SyntaxParser
+@testable import MockGenerator
 
 struct ProtocolMockBuilderTests {
     @Test func `mockClass contains correct declaration for a simple protocol`() throws {

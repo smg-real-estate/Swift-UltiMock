@@ -1,6 +1,6 @@
 import ArgumentParser
 import Foundation
-import SyntaxParser
+import MockGenerator
 
 let configFilename = "mock.json"
 let mockFilename = "Mock.generated.swift"

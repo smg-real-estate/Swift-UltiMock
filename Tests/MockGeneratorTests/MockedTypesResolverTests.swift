@@ -1,7 +1,7 @@
 import SwiftParser
 import SwiftSyntax
 import Testing
-@testable import SyntaxParser
+@testable import MockGenerator
 
 final class MockedTypesResolverTests {
     @Test func `resolves mocked types`() throws {
