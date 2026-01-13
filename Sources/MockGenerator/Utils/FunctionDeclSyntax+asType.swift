@@ -37,7 +37,7 @@ extension FunctionEffectSpecifiersSyntax {
     var asTypeEffectSpecifiersSyntax: TypeEffectSpecifiersSyntax {
         .init(
             asyncSpecifier: asyncSpecifier,
-            throwsSpecifier: throwsSpecifier
+            throwsClause: throwsClause
         )
     }
 }

@@ -6,7 +6,7 @@ let keywordsToEscape: Set<String> = ["internal", "inout", "public", "private", "
 extension FunctionParameterSyntax {
     var isInOut: Bool {
         type.as(AttributedTypeSyntax.self)?
-            .specifier?.tokenKind == .keyword(.inout)
+            .specifiers.trimmedDescription.contains("inout") ?? false
     }
 
     var parameterIdentifier: TokenSyntax {
@@ -103,7 +103,7 @@ extension FunctionTypeSyntax {
         if effectSpecifiers?.asyncSpecifier != nil {
             parts.append("async")
         }
-        if effectSpecifiers?.throwsSpecifier != nil {
+        if effectSpecifiers?.throwsClause?.throwsSpecifier != nil {
             parts.append("throws")
         }
 
@@ -112,6 +112,10 @@ extension FunctionTypeSyntax {
 
         return parts.joined(separator: "_")
     }
+
+    var hasTypedThrows: Bool {
+        effectSpecifiers?.throwsClause?.type != nil
+    }
 }
 
 extension IdentifierTypeSyntax {
@@ -119,7 +123,7 @@ extension IdentifierTypeSyntax {
         var slug = name.text
         if let genericArgumentClause {
             slug += "_lab_"
-            slug += genericArgumentClause.arguments.map(\.argument.stubIdentifierSlug).joined(separator: "_")
+            slug += genericArgumentClause.arguments.map { $0.argument.as(TypeSyntax.self)!.stubIdentifierSlug }.joined(separator: "_")
             slug += "_rab"
         }
         return slug
@@ -139,8 +143,7 @@ extension TriviaPiece {
 
 extension SyntaxProtocol {
     func format() -> Self {
-        formatted()
-            .cast(Self.self)
+        formatted().as(Self.self)!
     }
 
     func withoutTrivia(_ predicate: (TriviaPiece) -> Bool) -> Self {

@@ -12,19 +12,19 @@ struct MockGenerationPlugin: BuildToolPlugin {
         }
 
         guard let configurationPath = target.sourceFiles
-            .map(\.path)
-            .first(where: { $0.lastComponent == "mock.json" }) else {
-            throw SimpleError("Missing configuration file in \(target.directory)")
+            .map(\.url)
+            .first(where: { $0.lastPathComponent == "mock.json" }) else {
+            throw SimpleError("Missing configuration file in \(target.directoryURL)")
         }
 
         let configuration = try JSONDecoder().decode(
             Configuration.self,
-            from: Data(contentsOf: URL(fileURLWithPath: configurationPath.string))
+            from: Data(contentsOf: configurationPath)
         )
 
         let inputFiles = [
             configuration.sources.map {
-                target.directory.appending(subpath: $0)
+                target.directoryURL.appending(path: $0)
             },
             target.dependencySources(matching: configuration.packageDependencies ?? [])
         ]
@@ -37,11 +37,11 @@ struct MockGenerationPlugin: BuildToolPlugin {
             .compactMap(\.self)
             .flatMap(\.self)
 
-        let output = context.pluginWorkDirectory.appending(["Mock.generated.swift"])
+        let output = context.pluginWorkDirectoryURL.appending(path: "Mock.generated.swift")
 
         var options = [
-            "output": [output.string],
-            "sources": inputFiles.map(\.string)
+            "output": [output.path],
+            "sources": inputFiles.map(\.path)
         ]
 
         if !imports.isEmpty {
@@ -50,9 +50,9 @@ struct MockGenerationPlugin: BuildToolPlugin {
 
         options["testable-imports"] = configuration.testableImports
 
-        let mock = try context.tool(named: "mock").path
+        let mock = try context.tool(named: "mock").url
 
-        let arguments = [configurationPath.string]
+        let arguments = [configurationPath.path]
             + options.map { ["--\($0)"] + $1 }
             .flatMap(\.self)
 
@@ -92,13 +92,13 @@ struct Configuration: Decodable {
 }
 
 extension PackagePlugin.Target {
-    func dependencySources(matching dependencies: [String]) -> [Path] {
+    func dependencySources(matching dependencies: [String]) -> [URL] {
         guard !dependencies.isEmpty else {
             return []
         }
 
         return recursiveTargetDependencies
             .filter { dependencies.contains($0.name) }
-            .map(\.directory)
+            .map(\.directoryURL)
     }
 }

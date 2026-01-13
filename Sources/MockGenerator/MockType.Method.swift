@@ -54,7 +54,7 @@ extension MockType {
                 }
             }
 
-            if declaration.signature.effectSpecifiers?.throwsSpecifier != nil {
+            if declaration.signature.effectSpecifiers?.throwsClause?.throwsSpecifier != nil {
                 parts.append("throws")
             }
 
@@ -69,8 +69,8 @@ extension MockType {
                         let right = conformance.rightType.stubIdentifierSlug
                         parts.append("\(left)_con_\(right)")
                     case let .sameTypeRequirement(sameType):
-                        let left = sameType.leftType.stubIdentifierSlug
-                        let right = sameType.rightType.stubIdentifierSlug
+                        let left = sameType.leftType.as(TypeSyntax.self)!.stubIdentifierSlug
+                        let right = sameType.rightType.as(TypeSyntax.self)!.stubIdentifierSlug
                         parts.append("\(left)_eq_\(right)")
                     case let .layoutRequirement(layout):
                         let left = layout.type.stubIdentifierSlug
@@ -208,10 +208,9 @@ extension MockType {
                 ))
             }
 
-            if declaration.signature.effectSpecifiers?.throwsSpecifier != nil {
+            if declaration.signature.effectSpecifiers?.throwsClause?.throwsSpecifier != nil {
                 returnExpression = ExprSyntax(TryExprSyntax(
                     tryKeyword: .keyword(.try, trailingTrivia: .space),
-                    questionOrExclamationMark: nil,
                     expression: returnExpression
                 ))
             }
@@ -302,9 +301,9 @@ extension MockType {
             let genericRequirements = [
                 GenericRequirementSyntax(
                     requirement: .sameTypeRequirement(SameTypeRequirementSyntax(
-                        leftType: IdentifierTypeSyntax(name: .identifier("Signature"), trailingTrivia: .space),
+                        leftType: .type(TypeSyntax(IdentifierTypeSyntax(name: .identifier("Signature"), trailingTrivia: .space))),
                         equal: .binaryOperator("==", trailingTrivia: .space),
-                        rightType: functionType.replacingSelfWithTypeName(mockName)
+                        rightType: .type(TypeSyntax(functionType.replacingSelfWithTypeName(mockName)))
                     ))
                 )
             ] + originalGenericRequirements
@@ -393,7 +392,9 @@ extension MockType {
                                             period: .periodToken(),
                                             name: .identifier("init")
                                         ),
+                                        leftParen: nil,
                                         arguments: [],
+                                        rightParen: nil,
                                         trailingClosure: ClosureExprSyntax(
                                             leftBrace: .leftBraceToken(leadingTrivia: .space),
                                             signature: closureSignature,

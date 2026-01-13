@@ -66,7 +66,7 @@ public struct MockedTypesResolver {
                    let genericArgs = type.genericArgumentClause?.arguments {
                     var substitutions: [String: TypeSyntax] = [:]
                     for (param, arg) in zip(genericParams, genericArgs) {
-                        substitutions[param.name.text] = arg.argument
+                        substitutions[param.name.text] = arg.argument.as(TypeSyntax.self)!
                     }
 
                     let rewriter = GenericArgumentRewriter(substitutions: substitutions)

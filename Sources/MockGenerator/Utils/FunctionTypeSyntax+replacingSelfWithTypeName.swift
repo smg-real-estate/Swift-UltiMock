@@ -6,7 +6,7 @@ extension FunctionTypeSyntax {
             replacement: .identifier(name)
         )
         .rewrite(self)
-        .cast(FunctionTypeSyntax.self)
+        .as(FunctionTypeSyntax.self)!
     }
 }
 

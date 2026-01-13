@@ -10,10 +10,10 @@ final class ExpectationParametersRewriter: SyntaxRewriter, SyntaxBuilder {
 
     override func visit(_ node: FunctionParameterSyntax) -> FunctionParameterSyntax {
         let rewrittenType = super.visit(node.type)
-        let wrapped = node.with(\.type, IdentifierTypeSyntax(
+        let wrapped = node.with(\.type, TypeSyntax(IdentifierTypeSyntax(
             name: .identifier("Parameter"),
             genericArgumentClause: genericArgumentClause(arguments: [rewrittenType])
-        ).cast(TypeSyntax.self))
+        )))
 
         let firstNameText = wrapped.firstName.text
         if keywordsToEscape.contains(firstNameText), !firstNameText.hasPrefix("`") {
@@ -29,13 +29,12 @@ final class ExpectationParametersRewriter: SyntaxRewriter, SyntaxBuilder {
     }
 
     override func visit(_ node: AttributedTypeSyntax) -> TypeSyntax {
-        node.with(\.specifier, nil)
-            .with(\.attributes, [])
-            .cast(TypeSyntax.self)
+        TypeSyntax(node.with(\.specifiers, [])
+            .with(\.attributes, []))
     }
 
     override func visit(_ node: ImplicitlyUnwrappedOptionalTypeSyntax) -> TypeSyntax {
-        OptionalTypeSyntax(wrappedType: node.wrappedType).cast(TypeSyntax.self)
+        TypeSyntax(OptionalTypeSyntax(wrappedType: node.wrappedType))
     }
 
     override func visit(_ node: IdentifierTypeSyntax) -> TypeSyntax {
@@ -54,7 +53,7 @@ extension FunctionDeclSyntax {
 
         return with(\.signature.parameterClause.parameters, FunctionParameterListSyntax(
             parameters.map {
-                rewriter.rewrite($0).cast(FunctionParameterSyntax.self)
+                rewriter.rewrite($0).as(FunctionParameterSyntax.self)!
             }
         ))
     }

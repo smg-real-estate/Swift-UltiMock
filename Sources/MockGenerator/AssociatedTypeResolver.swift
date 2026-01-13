@@ -84,8 +84,8 @@ private extension AssociatedTypeResolver {
                 continue
             }
 
-            let leftType = sameType.leftType
-            let rightType = sameType.rightType
+            let leftType = sameType.leftType.as(TypeSyntax.self)!
+            let rightType = sameType.rightType.as(TypeSyntax.self)!
 
             if let leftIdent = leftType.as(IdentifierTypeSyntax.self),
                associatedTypeNames.contains(leftIdent.name.text) {

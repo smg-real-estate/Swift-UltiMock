@@ -24,7 +24,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.2.1"),
         .package(url: "https://github.com/jpsim/SourceKitten", from: "0.32.0"),
-        .package(url: "https://github.com/apple/swift-syntax.git", from: "509.0.0"),
+        .package(url: "https://github.com/apple/swift-syntax.git", from: "602.0.0"),
         .package(url: "https://github.com/kylef/PathKit.git", exact: "1.0.1")
     ],
     targets: [

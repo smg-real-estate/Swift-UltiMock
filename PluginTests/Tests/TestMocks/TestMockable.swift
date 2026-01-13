@@ -10,6 +10,10 @@ public struct OnlyProperty: Equatable {
     }
 }
 
+public enum SampleError: Error {
+    case sample
+}
+
 // UltiMock:AutoMockable
 public protocol TestMockable: Sendable {
     var property: OnlyProperty { get }
@@ -30,6 +34,9 @@ public protocol TestMockable: Sendable {
     func noParamsVoid()
     func noParamsVoidAsync() async
     func noParamsVoidAsyncThrowing() async throws
+
+    @available(macOS 15, iOS 18, *)
+    func noParamsVoidTypedThrowing() throws(SampleError)
 
     func noParamsResult() -> Swift.Int
     func noParamsResult() -> Int?

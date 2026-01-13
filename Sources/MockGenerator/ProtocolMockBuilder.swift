@@ -572,8 +572,9 @@ final class ProtocolMockBuilder: SyntaxBuilder {
             trailingTrivia: .space
         )
         let uncheckedSendableType = AttributedTypeSyntax(
+            specifiers: [],
             attributes: AttributeListSyntax([.attribute(uncheckedAttribute)]),
-            baseType: sendableType
+            baseType: TypeSyntax(sendableType)
         )
 
         return InheritanceClauseSyntax(
@@ -619,7 +620,7 @@ final class ProtocolMockBuilder: SyntaxBuilder {
                 ]
             }
             .compactMap(\.self)
-            .map { rewriter.rewrite($0).cast(ExtensionDeclSyntax.self) }
+            .map { rewriter.rewrite($0).as(ExtensionDeclSyntax.self)! }
             .map { $0.asCodeBlockItem() }
         )
     }

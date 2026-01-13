@@ -3,6 +3,43 @@ import SwiftSyntax
 protocol SyntaxBuilder {}
 
 extension SyntaxBuilder {
+    func typedThrowsAvailabilityAttribute() -> AttributeListSyntax {
+        [
+            .attribute(AttributeSyntax(
+                atSign: .atSignToken(),
+                attributeName: IdentifierTypeSyntax(name: .identifier("available")),
+                leftParen: .leftParenToken(),
+                arguments: .availability(AvailabilityArgumentListSyntax([
+                    AvailabilityArgumentSyntax(
+                        argument: .availabilityVersionRestriction(PlatformVersionSyntax(
+                            platform: .identifier("macOS"),
+                            version: VersionTupleSyntax(
+                                major: .integerLiteral("15"),
+                                components: VersionComponentListSyntax([])
+                            )
+                        )),
+                        trailingComma: .commaToken(trailingTrivia: .space)
+                    ),
+                    AvailabilityArgumentSyntax(
+                        argument: .availabilityVersionRestriction(PlatformVersionSyntax(
+                            platform: .identifier("iOS"),
+                            version: VersionTupleSyntax(
+                                major: .integerLiteral("18"),
+                                components: VersionComponentListSyntax([])
+                            )
+                        )),
+                        trailingComma: .commaToken(trailingTrivia: .space)
+                    ),
+                    AvailabilityArgumentSyntax(
+                        argument: .token(.binaryOperator("*"))
+                    )
+                ])),
+                rightParen: .rightParenToken(),
+                trailingTrivia: .newline
+            ))
+        ]
+    }
+
     func property(
         _ accessLevel: Keyword = .private,
         name: String,
@@ -160,7 +197,7 @@ extension SyntaxBuilder {
         GenericArgumentClauseSyntax(
             leftAngle: .leftAngleToken(),
             arguments: GenericArgumentListSyntax(
-                arguments.map { GenericArgumentSyntax(argument: TypeSyntax($0)) }
+                arguments.map { GenericArgumentSyntax(argument: .type(TypeSyntax($0))) }
             ),
             rightAngle: .rightAngleToken()
         )
@@ -225,6 +262,7 @@ extension SyntaxBuilder {
         isPublic: Bool = true
     ) -> FunctionDeclSyntax {
         FunctionDeclSyntax(
+            attributes: signatureType.hasTypedThrows ? typedThrowsAvailabilityAttribute() : [],
             modifiers: isPublic ? DeclModifierListSyntax([DeclModifierSyntax(name: .keyword(.public, trailingTrivia: .space))]) : DeclModifierListSyntax([]),
             funcKeyword: .keyword(.func, trailingTrivia: .space),
             name: .identifier("expect"),
@@ -290,6 +328,7 @@ extension SyntaxBuilder {
                             firstName: .identifier("perform"),
                             colon: .colonToken(trailingTrivia: .space),
                             type: AttributedTypeSyntax(
+                                specifiers: [],
                                 attributes: AttributeListSyntax([
                                     .attribute(AttributeSyntax(
                                         atSign: .atSignToken(),
@@ -432,6 +471,7 @@ extension SyntaxBuilder {
                             firstName: .identifier("perform"),
                             colon: .colonToken(trailingTrivia: .space),
                             type: AttributedTypeSyntax(
+                                specifiers: [],
                                 attributes: AttributeListSyntax([
                                     .attribute(AttributeSyntax(
                                         atSign: .atSignToken(),

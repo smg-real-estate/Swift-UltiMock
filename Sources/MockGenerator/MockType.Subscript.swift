@@ -121,7 +121,9 @@ extension MockType {
                                             period: .periodToken(),
                                             name: .identifier("init")
                                         ),
+                                        leftParen: nil,
                                         arguments: [],
+                                        rightParen: nil,
                                         trailingClosure: ClosureExprSyntax(
                                             leftBrace: .leftBraceToken(leadingTrivia: .space),
                                             statements: CodeBlockItemListSyntax([
@@ -176,7 +178,9 @@ extension MockType {
                                             period: .periodToken(),
                                             name: .identifier("init")
                                         ),
+                                        leftParen: nil,
                                         arguments: [],
+                                        rightParen: nil,
                                         trailingClosure: ClosureExprSyntax(
                                             leftBrace: .leftBraceToken(leadingTrivia: .space),
                                             statements: CodeBlockItemListSyntax([
@@ -261,7 +265,7 @@ extension MockType {
                     name: .identifier("Parameter"),
                     genericArgumentClause: GenericArgumentClauseSyntax(
                         arguments: GenericArgumentListSyntax([
-                            GenericArgumentSyntax(argument: param.type.replacingImplicitlyUnwrappedOptionals())
+                            GenericArgumentSyntax(argument: .type(param.type.replacingImplicitlyUnwrappedOptionals()))
                         ])
                     )
                 )
@@ -408,10 +412,9 @@ private extension MockType.Subscript {
             ))
         }
 
-        if effectSpecifiers?.throwsSpecifier != nil {
+        if effectSpecifiers?.throwsClause?.throwsSpecifier != nil {
             returnExpression = ExprSyntax(TryExprSyntax(
                 tryKeyword: .keyword(.try, trailingTrivia: .space),
-                questionOrExclamationMark: nil,
                 expression: returnExpression
             ))
         }
@@ -423,16 +426,18 @@ private extension MockType.Subscript {
 
         let accessorEffects = AccessorEffectSpecifiersSyntax(
             asyncSpecifier: effectSpecifiers?.asyncSpecifier?.with(\.leadingTrivia, .space).with(\.trailingTrivia, []),
-            throwsSpecifier: effectSpecifiers?.throwsSpecifier?.with(
-                \.leadingTrivia,
-                effectSpecifiers?.asyncSpecifier == nil ? .space : .space
-            ).with(\.trailingTrivia, [])
+            throwsClause: effectSpecifiers?.throwsClause.map { clause in
+                clause.with(\.throwsSpecifier, clause.throwsSpecifier.with(
+                    \.leadingTrivia,
+                    effectSpecifiers?.asyncSpecifier == nil ? .space : .space
+                ).with(\.trailingTrivia, []))
+            }
         )
 
         return AccessorDeclSyntax(
             leadingTrivia: .newline,
             accessorSpecifier: .keyword(.get),
-            effectSpecifiers: accessorEffects.asyncSpecifier == nil && accessorEffects.throwsSpecifier == nil ? nil : accessorEffects,
+            effectSpecifiers: accessorEffects.asyncSpecifier == nil && accessorEffects.throwsClause == nil ? nil : accessorEffects,
             body: CodeBlockSyntax(
                 leftBrace: .leftBraceToken(leadingTrivia: .space),
                 statements: CodeBlockItemListSyntax([

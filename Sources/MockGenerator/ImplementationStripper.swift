@@ -3,8 +3,7 @@ import SwiftSyntax
 extension SyntaxProtocol {
     func strippingImplementation() -> Self {
         let stripper = ImplementationStripper()
-        return stripper.rewrite(self)
-            .cast(Self.self)
+        return stripper.rewrite(self).as(Self.self)!
     }
 }
 
@@ -32,18 +31,17 @@ final class ImplementationStripper: SyntaxRewriter {
 
     override func visit(_ node: VariableDeclSyntax) -> DeclSyntax {
         if node.hasInitializer {
-            return node.with(\.bindings, PatternBindingListSyntax(
+            return DeclSyntax(node.with(\.bindings, PatternBindingListSyntax(
                 node.bindings.map { binding in
                     binding
                         .with(\.typeAnnotation, binding.typeAnnotation?.with(\.trailingTrivia, []))
                         .with(\.initializer, nil)
                 }
-            ))
-            .cast(DeclSyntax.self)
+            )))
         }
 
         if node.bindingSpecifier.tokenKind == .keyword(.let) || node.bindings.first?.accessorBlock?.isGetterOnly == true {
-            return node.with(\.bindingSpecifier.tokenKind, .keyword(.var))
+            return DeclSyntax(node.with(\.bindingSpecifier.tokenKind, .keyword(.var))
                 .with(\.bindings, PatternBindingListSyntax(
                     node.bindings.map { binding in
                         binding.with(\.accessorBlock, AccessorBlockSyntax(
@@ -56,11 +54,10 @@ final class ImplementationStripper: SyntaxRewriter {
                         ))
                         .with(\.initializer, nil)
                     }
-                ))
-                .cast(DeclSyntax.self)
+                )))
         }
 
-        return node.with(\.bindingSpecifier.tokenKind, .keyword(.var))
+        return DeclSyntax(node.with(\.bindingSpecifier.tokenKind, .keyword(.var))
             .with(\.bindings, PatternBindingListSyntax(
                 node.bindings.map { binding in
                     binding.with(\.accessorBlock, AccessorBlockSyntax(
@@ -76,7 +73,6 @@ final class ImplementationStripper: SyntaxRewriter {
                     ))
                     .with(\.initializer, nil)
                 }
-            ))
-            .cast(DeclSyntax.self)
+            )))
     }
 }

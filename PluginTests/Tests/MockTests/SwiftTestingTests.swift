@@ -151,4 +151,23 @@ struct SwiftTestingTests {
 
         mock.verify() // Checking if our `verifyAsync` lied to us
     }
+
+    @Test
+    func successfulTypedThrowingVerification() throws {
+        let mock = TestMockableMock()
+
+        if #available(macOS 15, iOS 18, *) {
+            // Note: `perform` closure requires an explicit error type declaration,
+            // otherwise the compiler cannot infer the correct error type as of Swift 6.2
+            // and produces "Invalid conversion of thrown error type 'any Error' to 'SampleError'" error.
+            mock.expect(.noParamsVoidTypedThrowing()) { () throws(SampleError) in
+                throw .sample
+            }
+
+            #expect(throws: SampleError.sample) {
+                try mock.noParamsVoidTypedThrowing()
+            }
+        }
+        mock.verify()
+    }
 }

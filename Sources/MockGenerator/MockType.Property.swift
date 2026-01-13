@@ -39,7 +39,7 @@ extension MockType {
             if let effectSpecifiers = declaration.getterEffectSpecifiers {
                 parts.append(contentsOf: [
                     effectSpecifiers.asyncSpecifier,
-                    effectSpecifiers.throwsSpecifier
+                    effectSpecifiers.throwsClause?.throwsSpecifier
                 ]
                     .compactMap(\.?.text)
                 )
@@ -151,7 +151,9 @@ extension MockType {
                                             period: .periodToken(),
                                             name: .identifier("init")
                                         ),
+                                        leftParen: nil,
                                         arguments: [],
+                                        rightParen: nil,
                                         trailingClosure: ClosureExprSyntax(
                                             leftBrace: .leftBraceToken(leadingTrivia: .space),
                                             signature: closureSignature,
@@ -223,7 +225,9 @@ extension MockType {
                                             period: .periodToken(),
                                             name: .identifier("init")
                                         ),
+                                        leftParen: nil,
                                         arguments: [],
+                                        rightParen: nil,
                                         trailingClosure: ClosureExprSyntax(
                                             leftBrace: .leftBraceToken(leadingTrivia: .space),
                                             statements: CodeBlockItemListSyntax([
@@ -304,9 +308,9 @@ extension MockType {
                     requirements: GenericRequirementListSyntax([
                         GenericRequirementSyntax(
                             requirement: .sameTypeRequirement(SameTypeRequirementSyntax(
-                                leftType: IdentifierTypeSyntax(name: .identifier("Signature")),
+                                leftType: .type(TypeSyntax(IdentifierTypeSyntax(name: .identifier("Signature")))),
                                 equal: .binaryOperator("==", leadingTrivia: .space, trailingTrivia: .space),
-                                rightType: TypeSyntax(signatureType)
+                                rightType: .type(TypeSyntax(signatureType))
                             ))
                         )
                     ])
@@ -397,9 +401,9 @@ extension MockType {
                     requirements: GenericRequirementListSyntax([
                         GenericRequirementSyntax(
                             requirement: .sameTypeRequirement(SameTypeRequirementSyntax(
-                                leftType: IdentifierTypeSyntax(name: .identifier("Signature")),
+                                leftType: .type(TypeSyntax(IdentifierTypeSyntax(name: .identifier("Signature")))),
                                 equal: .binaryOperator("==", leadingTrivia: .space, trailingTrivia: .space),
-                                rightType: TypeSyntax(signatureType)
+                                rightType: .type(TypeSyntax(signatureType))
                             ))
                         )
                     ])
@@ -521,10 +525,9 @@ private extension MockType.Property {
             ))
         }
 
-        if effectSpecifiers?.throwsSpecifier != nil {
+        if effectSpecifiers?.throwsClause?.throwsSpecifier != nil {
             returnExpression = ExprSyntax(TryExprSyntax(
                 tryKeyword: .keyword(.try, trailingTrivia: .space),
-                questionOrExclamationMark: nil,
                 expression: returnExpression
             ))
         }
@@ -536,16 +539,18 @@ private extension MockType.Property {
 
         let accessorEffects = AccessorEffectSpecifiersSyntax(
             asyncSpecifier: effectSpecifiers?.asyncSpecifier?.with(\.leadingTrivia, .space).with(\.trailingTrivia, []),
-            throwsSpecifier: effectSpecifiers?.throwsSpecifier?.with(
-                \.leadingTrivia,
-                effectSpecifiers?.asyncSpecifier == nil ? .space : .space
-            ).with(\.trailingTrivia, [])
+            throwsClause: effectSpecifiers?.throwsClause.map { clause in
+                clause.with(\.throwsSpecifier, clause.throwsSpecifier.with(
+                    \.leadingTrivia,
+                    effectSpecifiers?.asyncSpecifier == nil ? .space : .space
+                ).with(\.trailingTrivia, []))
+            }
         )
 
         return AccessorDeclSyntax(
             leadingTrivia: .newline,
             accessorSpecifier: .keyword(.get),
-            effectSpecifiers: accessorEffects.asyncSpecifier == nil && accessorEffects.throwsSpecifier == nil ? nil : accessorEffects,
+            effectSpecifiers: accessorEffects.asyncSpecifier == nil && accessorEffects.throwsClause == nil ? nil : accessorEffects,
             body: CodeBlockSyntax(
                 leftBrace: .leftBraceToken(leadingTrivia: .space),
                 statements: CodeBlockItemListSyntax([

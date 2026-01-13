@@ -504,6 +504,35 @@ struct MockTypeMethodTests {
         """)
     }
 
+    @Test func `expect contains availability annotation when typed throwing`() throws {
+        let syntax = Parser.parse(source: "func foo() throws(Bar)").statements.first?.item
+        let declaration = try #require(FunctionDeclSyntax(syntax))
+
+        let sut = MockType.Method(declaration: declaration, mockName: "TestMock")
+
+        #expect(sut.expect.formatted().description == """
+        @available(macOS 15, iOS 18, *)
+        public func expect(
+            _ expectation: MethodExpectation<() throws(Bar) -> Void>,
+            fileID: String = #fileID,
+            filePath: StaticString = #filePath,
+            line: UInt = #line,
+            column: Int = #column,
+            perform: @escaping () throws(Bar) -> Void = {
+            }
+        ) {
+            _record(
+                expectation.expectation,
+                fileID,
+                filePath,
+                line,
+                column,
+                perform
+            )
+        }
+        """)
+    }
+
     @Test func `expectationMethodDeclaration emits correct method`() throws {
         let syntax = Parser.parse(source: """
         func withParamsVoid(
