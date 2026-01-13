@@ -6,17 +6,15 @@ A fast mock-generation tool for Swift.
 
 ## Overview
 
-**UltiMock** can generate mocks based on protocols or open classes.
+**UltiMock** generates mocks based on protocols.
 It was greatly inspired by [SwiftyMocky](https://github.com/MakeAWishFoundation/SwiftyMocky).
 
-Like **SwiftyMocky** it uses [Sourcery](https://github.com/krzysztofzablocki/Sourcery).
-Instead of calling Sourcery's CLI it uses `SourceryFramework` for parsing source code 
-and generates the mocks directly in Swift without any template languages. 
+Originally based on [Sourcery](https://github.com/krzysztofzablocki/Sourcery), it now uses [SwiftSyntax](https://github.com/apple/swift-syntax) for parsing source code and generates the mocks directly in Swift without any template languages. 
 
 This makes it ⚡️ fast and suitable for running as a Swift Package build plugin.
 
 It also uses [SourceKitten](https://github.com/jpsim/SourceKitten) for generating Swift interfaces 
-for Swift and Objective-C frameworks, which allows generating mocks for SDK protocols and classes. 
+for Swift and Objective-C frameworks, which allows generating mocks for SDK protocols. 
 
 Works with **XCTest** and **Swift Testing**.
 
@@ -26,29 +24,46 @@ Works with **XCTest** and **Swift Testing**.
 * Supports mocking of:
     - methods and properties
     - **generics** and **associated types**
-    - **async** and **throwing**
-    - `open` classes
+    - **async** and **throwing** (including **typed throws**)
     - Swift Package dependencies
-    - Swift and Objective-C framework interfaces (you can mock `UIViewController`, hey!)
+    - Swift and Objective-C framework interfaces
 * Simple and concise interface: just `expect` and `verify`
 * Resetting expectations
-* Auto-forwarding for class mocks
 * Respects expectations order
 
 ## Getting started
 
-1. Annotate the protocols or classes you need to mock:
+1. Annotate the protocols you need to mock:
 ```swift
-// sourcery:AutoMockable
+// UltiMock:AutoMockable
 extension MyProtocol {}
-
-// sourcery:AutoMockable
-extension MyClass {}
 ```
 
-2. Create [mock.json](Tests/TestMocks/mock.json) configuration file in your test target directory.
-The `sources` parameter should contain a directory with the annotated interfaces. 
- 
+2. Create `mock.json` configuration file in your test target directory.
+
+```json
+{
+    "sources": ["."],
+    "packageDependencies": ["MyLibrary"],
+    "sdkModules" : ["CoreLocation.CLLocationManager"],
+    "imports": ["CoreLocation"],
+    "testableImports": ["MyApp"],
+    "enableSourceryAnnotation": true
+}
+```
+
+### Configuration options
+
+| Option | Description |
+| --- | --- |
+| `sources` | A list of directories or files to scan for annotated protocols. Paths are relative to the `mock.json` file. |
+| `packageDependencies` | A list of Swift Package dependencies to scan for annotated protocols. These are also automatically added to the imports. |
+| `sdkModules` | A list of SDK modules to generate interfaces for. This allows mocking of system types like `CLLocationManager`. |
+| `imports` | A list of modules to import in the generated mock file. |
+| `testableImports` | A list of modules to import as `@testable` in the generated mock file. |
+| `enableSourceryAnnotation` | If `true`, the tool will also look for `// sourcery:AutoMockable` annotations, providing compatibility with Sourcery-based projects. |
+| `output` | (Optional) Path to the output file. Defaults to `Mock.generated.swift`. |
+
 3. Add `UltiMock` package plugin to your `Package.swift`:
 ```swift
     dependencies: [
@@ -182,22 +197,14 @@ mock.expect(.present(.identical(to: viewController, completion: .isNotNil))) { _
 }
 ```
 
+Typed throws are also supported:
+```swift
+mock.expect(.doSomething()) { () throws(MyError) in
+    throw .someError
+}
+```
+
 Note: The perform closure is optional for methods without a return value.
 
 ## Resetting expectations
 You can reset mock's expectations by calling `resetExpectations()` method.
-
-## Class mocks
-### Expectations
-A class mock expectation uses same syntax as in protocol mocks except the extra perform closure parameter 
-for calling the mocked method's original implementation:
-
-```swift
-mock.expect(set: .count, to: 3) { forwardToOriginal, newValue in
-    forwardToOriginal(newValue)
-}
-```
-
-### Auto-forwarding
-A class mock can be switched to the mocked class original behavior by setting `autoForwardingEnabled` property to `true`. 
-This can be used to avoid mocking precondition calls in complex test setups. 
