@@ -1,12 +1,12 @@
 import SwiftSyntax
 
-extension FunctionTypeSyntax {
+extension SyntaxProtocol {
     func replacingSelfWithTypeName(_ name: String) -> Self {
         SelfWithTypeNameRewriter(
             replacement: .identifier(name)
         )
         .rewrite(self)
-        .as(FunctionTypeSyntax.self)!
+        .as(Self.self)!
     }
 }
 
