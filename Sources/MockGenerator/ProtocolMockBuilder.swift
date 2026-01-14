@@ -20,9 +20,13 @@ final class ProtocolMockBuilder: SyntaxBuilder {
         self.mockClassName = mockedProtocol.declaration.name.text + "Mock"
         self.mockedProtocol = mockedProtocol
         self.allMethods = MockType.Method.collectMethods(from: mockedProtocol.allProtocols, mockName: mockClassName)
+            .unique(by: \.stubIdentifier)
         self.allProperties = MockType.Property.collectProperties(from: mockedProtocol.allProtocols, mockName: mockClassName)
+            .unique(by: \.stubIdentifierSlug) { lhs, rhs in
+                lhs.declaration.isReadwrite ? lhs : rhs
+            }
         self.allSubscripts = MockType.Subscript.collectSubscripts(from: mockedProtocol.allProtocols, mockName: mockClassName)
-            .unique(by: \.setterFunctionType.description) { lhs, rhs in
+            .unique(by: \.stubIdentifierSlug) { lhs, rhs in
                 lhs.declaration.isReadwrite ? lhs : rhs
             }
     }
@@ -38,19 +42,14 @@ final class ProtocolMockBuilder: SyntaxBuilder {
     var methodsEnum: EnumDeclSyntax {
         var members: [MemberBlockItemSyntax] = []
 
-        // Add method variable declarations
         members.append(contentsOf: allMethods.map(\.variableDeclaration).map { MemberBlockItemSyntax(decl: $0) })
 
-        // Add property getter variable declarations
         members.append(contentsOf: allProperties.map(\.variableDeclaration).map { MemberBlockItemSyntax(decl: $0) })
 
-        // Add property setter variable declarations (only for read-write properties)
         members.append(contentsOf: allProperties.compactMap(\.setterVariableDeclaration).map { MemberBlockItemSyntax(decl: $0) })
 
-        // Add subscript getter variable declarations
         members.append(contentsOf: allSubscripts.map(\.getterVariableDeclaration).map { MemberBlockItemSyntax(decl: $0) })
 
-        // Add subscript setter variable declarations (only for read-write subscripts)
         members.append(contentsOf: allSubscripts.compactMap(\.setterVariableDeclaration).map { MemberBlockItemSyntax(decl: $0) })
 
         return EnumDeclSyntax(
@@ -613,15 +612,20 @@ final class ProtocolMockBuilder: SyntaxBuilder {
     var extensions: CodeBlockItemListSyntax {
         let rewriter = AssociatedTypeRewriter(replacements: associatedTypeResolver.sameTypeConstraints)
         return CodeBlockItemListSyntax(
-            allProperties.flatMap {
-                [
-                    $0.getterExpectationExtension(isPublic: isPublic),
+            [
+                allProperties.map {
+                    $0.getterExpectationExtension(isPublic: isPublic)
+                },
+                allProperties.unique(by: \.setterFunctionType).compactMap {
                     $0.setterExpectationExtension(isPublic: isPublic)
-                ]
-            }
-            .compactMap(\.self)
-            .map { rewriter.rewrite($0).as(ExtensionDeclSyntax.self)! }
-            .map { $0.asCodeBlockItem() }
+                }
+            ]
+                .flatMap(\.self)
+                .map {
+                    rewriter.rewrite($0)
+                        .as(ExtensionDeclSyntax.self)!
+                        .asCodeBlockItem()
+                }
         )
     }
 }

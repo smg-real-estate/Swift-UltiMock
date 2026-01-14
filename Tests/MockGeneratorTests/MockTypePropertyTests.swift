@@ -20,7 +20,7 @@ struct MockTypePropertyTests {
 
         let sut = MockType.Property(declaration: declaration, mockName: "TestMock")
 
-        #expect(sut.stubIdentifier == expectedIdentifier)
+        #expect(sut.stubIdentifierSlug == expectedIdentifier)
     }
 
     @Test func `implementation for readonly`() throws {
@@ -33,7 +33,7 @@ struct MockTypePropertyTests {
         var readonly: Int {
             get {
                 let perform = _perform(
-                    Methods.get_\(sut.stubIdentifier)
+                    Methods.get_\(sut.stubIdentifierSlug)
                 ) as! () -> Int
                 return perform()
             }
@@ -51,7 +51,7 @@ struct MockTypePropertyTests {
         var readonlyThrowing: Double {
             get throws {
                 let perform = _perform(
-                    Methods.get_\(sut.stubIdentifier)
+                    Methods.get_\(sut.stubIdentifierSlug)
                 ) as! () throws -> Double
                 return try perform()
             }
@@ -69,7 +69,7 @@ struct MockTypePropertyTests {
         var readonlyAsync: String {
             get async {
                 let perform = _perform(
-                    Methods.get_\(sut.stubIdentifier)
+                    Methods.get_\(sut.stubIdentifierSlug)
                 ) as! () async -> String
                 return await perform()
             }
@@ -87,7 +87,7 @@ struct MockTypePropertyTests {
         var readonlyAsyncThrowing: Int {
             get async throws {
                 let perform = _perform(
-                    Methods.get_\(sut.stubIdentifier)
+                    Methods.get_\(sut.stubIdentifierSlug)
                 ) as! () async throws -> Int
                 return try await perform()
             }
@@ -105,13 +105,13 @@ struct MockTypePropertyTests {
         var readwrite: Int {
             get {
                 let perform = _perform(
-                    Methods.get_\(sut.stubIdentifier)
+                    Methods.get_\(sut.stubIdentifierSlug)
                 ) as! () -> Int
                 return perform()
             }
             set {
                 let perform = _perform(
-                    Methods.set_\(sut.stubIdentifier),
+                    Methods.set_\(sut.stubIdentifierSlug),
                     [newValue]
                 ) as! (Int) -> Void
                 return perform(newValue)
@@ -130,13 +130,13 @@ struct MockTypePropertyTests {
         var readwrite: Int! {
             get {
                 let perform = _perform(
-                    Methods.get_\(sut.stubIdentifier)
+                    Methods.get_\(sut.stubIdentifierSlug)
                 ) as! () -> Int?
                 return perform()
             }
             set {
                 let perform = _perform(
-                    Methods.set_\(sut.stubIdentifier),
+                    Methods.set_\(sut.stubIdentifierSlug),
                     [newValue]
                 ) as! (Int?) -> Void
                 return perform(newValue)
@@ -240,7 +240,7 @@ struct MockTypePropertyTests {
         #expect(sut.getterExpectationExtension(isPublic: isPublic).formatted().description == """
         \(accessModifier)extension TestMock.PropertyExpectation where Signature == () async throws -> Int? {
             static var readonly: Self {
-                .init(method: TestMock.Methods.get_\(sut.stubIdentifier))
+                .init(method: TestMock.Methods.get_\(sut.stubIdentifierSlug))
             }
         }
         """)
@@ -258,7 +258,7 @@ struct MockTypePropertyTests {
         #expect(sut.getterExpectationExtension(isPublic: isPublic).formatted().description == """
         \(accessModifier)extension TestMock.PropertyExpectation where Signature == () -> Int? {
             static var readwrite: Self {
-                .init(method: TestMock.Methods.get_\(sut.stubIdentifier))
+                .init(method: TestMock.Methods.get_\(sut.stubIdentifierSlug))
             }
         }
         """)
@@ -276,7 +276,7 @@ struct MockTypePropertyTests {
         #expect(sut.setterExpectationExtension(isPublic: isPublic)?.formatted().description == """
         \(accessModifier)extension TestMock.PropertyExpectation where Signature == (Int?) -> Void {
             static var readwrite: Self {
-                .init(method: TestMock.Methods.set_\(sut.stubIdentifier))
+                .init(method: TestMock.Methods.set_\(sut.stubIdentifierSlug))
             }
         }
         """)

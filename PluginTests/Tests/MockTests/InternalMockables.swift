@@ -60,3 +60,21 @@ protocol IsolatedMockable {
 
 // Ensure mock generation
 typealias IsolatedMock = IsolatedMockableMock
+
+protocol BaseProtocol {
+    var a: Int { get }
+    var b: Int { get }
+    subscript(key: String) -> String { get }
+    func doSomething()
+}
+
+// UltiMock:AutoMockable
+protocol OverridingProtocol: BaseProtocol {
+    var a: Int { get }
+    var b: Int { get set }
+    subscript(key: String) -> String { get set }
+    func doSomething()
+}
+
+// Ensure mock generation
+typealias OverridingMock = OverridingProtocolMock

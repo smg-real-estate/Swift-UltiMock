@@ -29,7 +29,7 @@ extension MockType {
         lazy var getterFunctionType = declaration.getterFunctionType
         lazy var setterFunctionType = declaration.setterFunctionType
 
-        lazy var stubIdentifier = {
+        lazy var stubIdentifierSlug = {
             var parts: [String] = []
 
             for param in parameters {
@@ -46,13 +46,8 @@ extension MockType {
             return parts.joined(separator: "_")
         }()
 
-        var getterStubIdentifier: String {
-            "subscript_get_\(stubIdentifier)"
-        }
-
-        var setterStubIdentifier: String {
-            "subscript_set_\(stubIdentifier)"
-        }
+        lazy var getterStubIdentifier = "subscript_get_\(stubIdentifierSlug)"
+        lazy var setterStubIdentifier = "subscript_set_\(stubIdentifierSlug)"
 
         var callDescription: String {
             var description = "["

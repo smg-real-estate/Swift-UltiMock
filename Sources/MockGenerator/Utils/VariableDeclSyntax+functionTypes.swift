@@ -41,6 +41,12 @@ extension VariableDeclSyntax {
             nil
         }
     }
+
+    var isReadwrite: Bool {
+        accessors?.contains {
+            $0.accessorSpecifier.tokenKind == .keyword(.set)
+        } ?? false
+    }
 }
 
 extension TypeSyntax {

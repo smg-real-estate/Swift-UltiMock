@@ -104,13 +104,14 @@ struct ProtocolMockBuilderTests {
         """)
     }
 
-    @Test func `methodsEnum contains stub identifiers for all methods`() {
+    @Test func `methodsEnum contains stub identifiers for all methods without duplicates`() {
         let source = Parser.parse(source: """
         protocol Foo {
             func doSomething() -> Int
         }
 
         protocol Bar: Foo {
+            func doSomething() -> Int
             func doSomethingElse<T>(with: T) async throws -> String where T: Equatable
         }
         """)
@@ -536,6 +537,27 @@ struct ProtocolMockBuilderTests {
         try #require(result.count == 5)
     }
 
+    @Test func `property-related content has no duplicated signatures`() {
+        let source = Parser.parse(source: """
+        protocol Foo {
+            var a: Int { get } 
+            var b: Int { get } 
+        }
+
+        protocol Bar: Foo {
+            var b: Int { get set } 
+        }
+        """)
+
+        let types = source.statements.map { $0.item.cast(ProtocolDeclSyntax.self) }
+
+        let sut = MockedProtocol(declaration: types[1], inherited: [types[0]]).mockBuilder
+
+        #expect(sut.methodsEnum.memberBlock.members.count == 3)
+        #expect(sut.expectationSetters.count == 2)
+        #expect(sut.extensions.count == 3)
+    }
+
     @Test func `expectationSetters contains subscript expect method declarations without duplicated signatures`() {
         let source = Parser.parse(source: """
         protocol Foo {
@@ -553,25 +575,6 @@ struct ProtocolMockBuilderTests {
 
         let result = sut.expectationSetters
         #expect(result.count == 2)
-    }
-
-    @Test func `subscripts prefer settable version when base protocol has read-only and refined protocol has read-write`() throws {
-        let source = Parser.parse(source: """
-        protocol Foo {
-            subscript(key: Int) -> String { get }
-        }
-
-        protocol Bar: Foo {
-            subscript(key: Int) -> String { get set }
-        }
-        """)
-
-        let types = source.statements.map { $0.item.cast(ProtocolDeclSyntax.self) }
-
-        let sut = MockedProtocol(declaration: types[1], inherited: [types[0]]).mockBuilder
-
-        let subscriptDecl = try #require(sut.allSubscripts.first)
-        #expect(subscriptDecl.declaration.isReadwrite)
     }
 
     @Test func `generic parameters resolve where constraints correctly`() {

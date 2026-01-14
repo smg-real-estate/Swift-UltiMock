@@ -25,7 +25,7 @@ extension MockType {
         lazy var getterFunctionType = declaration.getterFunctionType
         lazy var setterFunctionType = declaration.setterFunctionType
 
-        lazy var stubIdentifier = {
+        lazy var stubIdentifierSlug = {
             guard let binding = declaration.bindings.first,
                   let pattern = binding.pattern.as(IdentifierPatternSyntax.self),
                   let type = binding.typeAnnotation?.type else {
@@ -49,6 +49,9 @@ extension MockType {
 
             return parts.joined(separator: "_")
         }()
+
+        lazy var getterStubIdentifier = "get_\(stubIdentifierSlug)"
+        lazy var setterStubIdentifier = "set_\(stubIdentifierSlug)"
 
         func implementation(isPublic: Bool = false) -> VariableDeclSyntax {
             guard let binding = declaration.bindings.first,
@@ -136,7 +139,7 @@ extension MockType {
                 bindingSpecifier: .keyword(.var, trailingTrivia: .space),
                 bindings: PatternBindingListSyntax([
                     PatternBindingSyntax(
-                        pattern: IdentifierPatternSyntax(identifier: .identifier("get_\(stubIdentifier)")),
+                        pattern: IdentifierPatternSyntax(identifier: .identifier(getterStubIdentifier)),
                         typeAnnotation: TypeAnnotationSyntax(
                             colon: .colonToken(trailingTrivia: .space),
                             type: IdentifierTypeSyntax(name: .identifier("MockMethod"))
@@ -210,7 +213,7 @@ extension MockType {
                 bindingSpecifier: .keyword(.var, trailingTrivia: .space),
                 bindings: PatternBindingListSyntax([
                     PatternBindingSyntax(
-                        pattern: IdentifierPatternSyntax(identifier: .identifier("set_\(stubIdentifier)")),
+                        pattern: IdentifierPatternSyntax(identifier: .identifier(setterStubIdentifier)),
                         typeAnnotation: TypeAnnotationSyntax(
                             colon: .colonToken(trailingTrivia: .space),
                             type: IdentifierTypeSyntax(name: .identifier("MockMethod"))
@@ -352,7 +355,7 @@ extension MockType {
                                                                         base: DeclReferenceExprSyntax(baseName: .identifier(mockName)),
                                                                         name: "Methods"
                                                                     ),
-                                                                    name: "get_\(stubIdentifier)"
+                                                                    name: getterStubIdentifier
                                                                 )
                                                             )
                                                         ]),
@@ -445,7 +448,7 @@ extension MockType {
                                                                         base: DeclReferenceExprSyntax(baseName: .identifier(mockName)),
                                                                         name: "Methods"
                                                                     ),
-                                                                    name: "set_\(stubIdentifier)"
+                                                                    name: setterStubIdentifier
                                                                 )
                                                             )
                                                         ]),
@@ -474,7 +477,7 @@ private extension MockType.Property {
     ) -> AccessorDeclSyntax {
         let methodReference = memberAccess(
             base: DeclReferenceExprSyntax(baseName: .identifier("Methods")),
-            name: "get_\(stubIdentifier)"
+            name: getterStubIdentifier
         )
 
         let performCall = functionCall(
@@ -570,7 +573,7 @@ private extension MockType.Property {
     func buildSetAccessor(type: TypeSyntax) -> AccessorDeclSyntax {
         let methodReference = memberAccess(
             base: DeclReferenceExprSyntax(baseName: .identifier("Methods")),
-            name: "set_\(stubIdentifier)"
+            name: setterStubIdentifier
         )
 
         let performCall = functionCall(
