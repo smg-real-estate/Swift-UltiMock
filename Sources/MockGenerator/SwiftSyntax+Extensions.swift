@@ -78,8 +78,16 @@ extension TypeSyntax {
             "lsb_" + type.key.stubIdentifierSlug + "_col_" + type.value.stubIdentifierSlug + "_rsb"
         } else if let type = `as`(AttributedTypeSyntax.self) {
             type.baseType.stubIdentifierSlug
-        } else if let type = `as`(TupleTypeSyntax.self), type.elements.count == 1, let element = type.elements.first {
-            element.type.stubIdentifierSlug
+        } else if let type = `as`(TupleTypeSyntax.self) {
+            if type.elements.count == 1, let element = type.elements.first, element.firstName == nil {
+                element.type.stubIdentifierSlug
+            } else {
+                "lpar_" + type.elements.map { element in
+                    let name = element.firstName?.text ?? ""
+                    let typeSlug = element.type.stubIdentifierSlug
+                    return name.isEmpty ? typeSlug : "\(name)_\(typeSlug)"
+                }.joined(separator: "_") + "_rpar"
+            }
         } else if let type = `as`(FunctionTypeSyntax.self) {
             type.stubIdentifierSlug
         } else if let type = `as`(IdentifierTypeSyntax.self) {

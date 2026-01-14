@@ -11,6 +11,8 @@ struct MockTypeSubscriptTests {
         ("subscript(key: String!) -> Int! { get set }", "subscript_get_key_key_String_impopt_Int_impopt"),
         ("subscript(_ index: Int) -> String { get }", "subscript_get___index_Int_String"),
         ("subscript(key: Int, secondary: String) -> Bool { get }", "subscript_get_key_key_Int_secondary_secondary_String_Bool"),
+        ("subscript(key: (Int, Int)) -> String { get }", "subscript_get_key_key_lpar_Int_Int_rpar_String"),
+        ("subscript(key: Int) -> (Int, Int) { get }", "subscript_get_key_key_Int_lpar_Int_Int_rpar"),
     ])
     func `getterStubIdentifier maps subscript correctly`(source: String, expectedIdentifier: String) throws {
         let syntax = Parser.parse(source: source).statements.first?.item

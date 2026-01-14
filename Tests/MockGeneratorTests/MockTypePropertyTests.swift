@@ -12,6 +12,7 @@ struct MockTypePropertyTests {
         ("var property: Int { get throws }", "property_throws_Int"),
         ("var property: Int { get async }", "property_async_Int"),
         ("var property: Int { get async throws }", "property_async_throws_Int"),
+        ("var property: (int: Int, string: String) { get }", "property_lpar_int_Int_string_String_rpar"),
     ])
     func `stubIdentifier maps non-textual information`(source: String, expectedIdentifier: String) throws {
         let syntax = Parser.parse(source: source).statements.first?.item

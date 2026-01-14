@@ -32,6 +32,8 @@ struct MockTypeMethodTests {
         ("func returningClosure() -> (Int) -> String", "returningClosure_ret_lpar_Int_rpar_ret_String"),
         ("func generic(some: some TestGenericProtocol<Int>, any: any TestGenericProtocol<String>) -> Int", "generic_some_some_TestGenericProtocol_lab_Int_rab_any_any_TestGenericProtocol_lab_String_rab_ret_Int"),
         ("func doSomethingWithInput<I, O>(_ input: I) -> O where Value == (I) -> O", "doSomethingWithInput___I_ret_O_where_Value_eq_lpar_I_rpar_ret_O"),
+        ("func tupleParameter(_ tuple: (int: Int, string: String))", "tupleParameter___lpar_int_Int_string_String_rpar_sync_ret_Void"),
+        ("func tupleResult() -> (int: Int, string: String)", "tupleResult_ret_lpar_int_Int_string_String_rpar"),
     ])
     func `stubIdentifier maps non-textual information`(source: String, expectedIdentifier: String) throws {
         let syntax = Parser.parse(source: source).statements.first?.item
