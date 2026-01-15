@@ -62,6 +62,8 @@ public struct MockedTypesResolver {
         let scopes = generateScopeChain(scope)
         for scopeKey in scopes {
             if let alias = typeAliases[scopeKey]?[typeName] {
+                var resolvedType = alias.initializer.value
+
                 if let genericParams = alias.genericParameterClause?.parameters,
                    let genericArgs = type.genericArgumentClause?.arguments {
                     var substitutions: [String: TypeSyntax] = [:]
@@ -71,8 +73,12 @@ public struct MockedTypesResolver {
 
                     let rewriter = GenericArgumentRewriter(substitutions: substitutions)
                     return rewriter.rewrite(alias.initializer.value).as(TypeSyntax.self)
+                } else if let genericArgs = type.genericArgumentClause,
+                          let identifierType = resolvedType.as(IdentifierTypeSyntax.self) {
+                    resolvedType = TypeSyntax(identifierType.with(\.genericArgumentClause, genericArgs))
                 }
-                return alias.initializer.value
+
+                return resolvedType
             }
         }
         return nil
