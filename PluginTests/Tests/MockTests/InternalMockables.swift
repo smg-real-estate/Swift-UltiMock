@@ -1,3 +1,4 @@
+import CoreLocation
 import Foundation
 @testable import TestableMockables
 
@@ -9,12 +10,19 @@ enum TestNamespace {
 
 typealias NamespacedGenericAlias = TestNamespace.Generic
 
+// Should be parsed AFTER parsing dependencies, so we could override external aliases if needed.
+// E.g. to disambiguate aliases from different modules with the same name.
+typealias ParameterAlias = String
+typealias CLLocationDegrees = Int
+
 // UltiMock:AutoMockable
 protocol InternalMockable {
     func doSomething(with internal: Internal)
     func doSomething(withAny any: Any)
     func withClosureWithTypeAliasedGeneric<T, E: Error>(closure: @escaping (MyResult<T, E>) -> Void)
     func withClosureWithNamespacedTypeAliasedGeneric<T>(closure: @escaping (NamespacedGenericAlias<T>) -> Void)
+    func withShadowedType(_ a: ParameterAlias)
+    func withLocationDegrees(_ degrees: CLLocationDegrees)
 }
 
 struct Internal {}

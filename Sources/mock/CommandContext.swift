@@ -38,8 +38,8 @@ struct CommandContext {
 
     func parse(annotationKeys: [String]) throws -> [MockedType] {
         let sources = try [
-            parseSources(),
-            parseSDKModules()
+            parseSDKModules(),
+            parseSources()
         ]
             .flatMap(\.self)
 

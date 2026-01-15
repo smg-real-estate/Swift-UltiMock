@@ -3,3 +3,5 @@ protocol TestableMockable {
 }
 
 struct InternalMockableParameter {}
+
+typealias ParameterAlias = TestableMockables.InternalMockableParameter

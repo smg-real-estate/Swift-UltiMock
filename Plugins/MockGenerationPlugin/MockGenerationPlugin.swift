@@ -23,10 +23,10 @@ struct MockGenerationPlugin: BuildToolPlugin {
         )
 
         let inputFiles = [
+            target.dependencySources(matching: configuration.packageDependencies ?? []),
             configuration.sources.map {
                 target.directoryURL.appending(path: $0)
-            },
-            target.dependencySources(matching: configuration.packageDependencies ?? [])
+            }
         ]
             .flatMap(\.self)
 
