@@ -84,4 +84,31 @@ final class MockedTypesResolverTests {
         }
         """)
     }
+
+    @Test func `resolves namespaced generic type aliases without parameters`() throws {
+        let source = """
+        // TestAnnotationKey:AutoMockable
+        protocol A {
+            func withClosureWithTypeAliasedGeneric<T>(closure: @escaping (Foo<T>) -> Void)
+        }
+
+        typealias Foo = MyModule.Bar
+        """
+
+        let resolved = try MockedTypesResolver.resolve(
+            from: [{ source }],
+            annotationKeys: ["TestAnnotationKey"]
+        )
+
+        #expect(resolved.count == 1)
+
+        let mockedProtocol = try #require(resolved.first as? MockedProtocol)
+
+        #expect(mockedProtocol.declaration.description == """
+        // TestAnnotationKey:AutoMockable
+        protocol A {
+            func withClosureWithTypeAliasedGeneric<T>(closure: @escaping (MyModule.Bar<T>) -> Void)
+        }
+        """)
+    }
 }

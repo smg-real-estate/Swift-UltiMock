@@ -73,9 +73,12 @@ public struct MockedTypesResolver {
 
                     let rewriter = GenericArgumentRewriter(substitutions: substitutions)
                     return rewriter.rewrite(alias.initializer.value).as(TypeSyntax.self)
-                } else if let genericArgs = type.genericArgumentClause,
-                          let identifierType = resolvedType.as(IdentifierTypeSyntax.self) {
-                    resolvedType = TypeSyntax(identifierType.with(\.genericArgumentClause, genericArgs))
+                } else if let genericArgs = type.genericArgumentClause {
+                    if let identifierType = resolvedType.as(IdentifierTypeSyntax.self) {
+                        resolvedType = TypeSyntax(identifierType.with(\.genericArgumentClause, genericArgs))
+                    } else if let memberType = resolvedType.as(MemberTypeSyntax.self) {
+                        resolvedType = TypeSyntax(memberType.with(\.genericArgumentClause, genericArgs))
+                    }
                 }
 
                 return resolvedType

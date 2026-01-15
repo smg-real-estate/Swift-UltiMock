@@ -3,11 +3,18 @@ import Foundation
 
 typealias MyResult = Result
 
+enum TestNamespace {
+    struct Generic<T> {}
+}
+
+typealias NamespacedGenericAlias = TestNamespace.Generic
+
 // UltiMock:AutoMockable
 protocol InternalMockable {
     func doSomething(with internal: Internal)
     func doSomething(withAny any: Any)
     func withClosureWithTypeAliasedGeneric<T, E: Error>(closure: @escaping (MyResult<T, E>) -> Void)
+    func withClosureWithNamespacedTypeAliasedGeneric<T>(closure: @escaping (NamespacedGenericAlias<T>) -> Void)
 }
 
 struct Internal {}
