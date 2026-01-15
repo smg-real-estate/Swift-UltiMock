@@ -26,7 +26,11 @@ class InternalSubclassOfAPublicClass: PublicMockableClass {}
 @objc protocol ObjCMockable {
     @objc(doSomethingWith:)
     func doSomething(with int: Int)
+    @objc optional func optionalMethod()
 }
+
+// Ensure mock generation
+typealias ObjCMock = ObjCMockableMock
 
 protocol BaseGenericProtocol<Base> {
     associatedtype Base

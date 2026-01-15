@@ -212,6 +212,10 @@ extension MockType {
                 implementationDeclaration.funcKeyword.leadingTrivia = []
             }
 
+            implementationDeclaration.modifiers = implementationDeclaration.modifiers.filter {
+                $0.name.tokenKind != .keyword(.optional)
+            }
+
             return implementationDeclaration
                 .with(\.signature, implementationDeclaration.signature.with(\.trailingTrivia, .space))
                 .with(\.genericWhereClause, implementationDeclaration.genericWhereClause?.with(\.trailingTrivia, .space))
