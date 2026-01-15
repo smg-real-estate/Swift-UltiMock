@@ -18,13 +18,18 @@ extension Sequence {
     }
 
     @inlinable
-    func unique(by id: (Element) -> some Hashable, finalValue: (Element, Element) -> Element) -> [Element] {
-        Dictionary(
-            map { element in
-                (id(element), element)
-            },
-            uniquingKeysWith: finalValue
-        )
-        .map(\.value)
+    func unique<ID: Hashable>(by id: (Element) -> ID, finalValue: (Element, Element) -> Element) -> [Element] {
+        var indexes: [ID: Int] = [:]
+        var elements: [Element] = []
+        for element in self {
+            let elementID = id(element)
+            if let index = indexes[elementID] {
+                elements[index] = finalValue(elements[index], element)
+            } else {
+                indexes[elementID] = elements.count
+                elements.append(element)
+            }
+        }
+        return elements
     }
 }
