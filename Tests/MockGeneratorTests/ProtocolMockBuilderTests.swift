@@ -21,6 +21,39 @@ struct ProtocolMockBuilderTests {
         """)
     }
 
+    @Test func `mockClass respects protocol isolation`() throws {
+        let source = Parser.parse(source: """
+        @MainActor
+        protocol TestProtocol {}
+        """)
+
+        let declaration = try #require(source.statements.first?.item.as(ProtocolDeclSyntax.self))
+
+        let sut = MockedProtocol(declaration: declaration, inherited: []).mockBuilder
+
+        #expect(sut.mockClass.withoutMembers().description == """
+        class TestProtocolMock: Mock, @MainActor TestProtocol, @unchecked Sendable {
+        }
+        """)
+    }
+
+    @Test func `mockClass does not propagate objc attribute to inheritance clause`() throws {
+        let source = Parser.parse(source: """
+        @objc protocol TestProtocol {
+            func doSomething()
+        }
+        """)
+
+        let declaration = try #require(source.statements.first?.item.as(ProtocolDeclSyntax.self))
+
+        let sut = MockedProtocol(declaration: declaration, inherited: []).mockBuilder
+
+        #expect(sut.mockClass.withoutMembers().description == """
+        class TestProtocolMock: Mock, TestProtocol, @unchecked Sendable {
+        }
+        """)
+    }
+
     @Test func `mockClass contains correct declaration for a protocol with associated types`() throws {
         let source = Parser.parse(source: """
         protocol TestProtocol {

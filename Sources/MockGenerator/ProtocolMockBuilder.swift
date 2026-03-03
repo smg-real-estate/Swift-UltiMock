@@ -563,7 +563,26 @@ final class ProtocolMockBuilder: SyntaxBuilder {
 
     var inheritanceClause: InheritanceClauseSyntax {
         let mockType = IdentifierTypeSyntax(name: .identifier("Mock"))
-        let protocolType = IdentifierTypeSyntax(name: .identifier(mockedProtocol.declaration.name.text))
+        let protocolDecl = mockedProtocol.declaration
+        let protocolType = IdentifierTypeSyntax(name: .identifier(protocolDecl.name.text))
+
+        let isolationAttributes = protocolDecl.attributes.compactMap { element -> AttributeListSyntax.Element? in
+            guard case let .attribute(attr) = element,
+                  let identifierType = attr.attributeName.as(IdentifierTypeSyntax.self),
+                  identifierType.name.text.first?.isUppercase == true
+            else {
+                return nil
+            }
+            return .attribute(attr.with(\.trailingTrivia, .space))
+        }
+
+        let conformedProtocolType: TypeSyntax =
+            isolationAttributes.isEmpty ? TypeSyntax(protocolType) :
+            TypeSyntax(AttributedTypeSyntax(
+                specifiers: [],
+                attributes: AttributeListSyntax(isolationAttributes),
+                baseType: TypeSyntax(protocolType)
+            ))
 
         let sendableType = IdentifierTypeSyntax(name: .identifier("Sendable"))
         let uncheckedAttribute = AttributeSyntax(
@@ -583,7 +602,7 @@ final class ProtocolMockBuilder: SyntaxBuilder {
                     type: mockType
                 ).with(\.trailingComma, .commaToken(trailingTrivia: .space)),
                 InheritedTypeSyntax(
-                    type: protocolType
+                    type: conformedProtocolType
                 ).with(\.trailingComma, .commaToken(trailingTrivia: .space)),
                 InheritedTypeSyntax(type: uncheckedSendableType)
             ])

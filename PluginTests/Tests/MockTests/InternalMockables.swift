@@ -100,3 +100,14 @@ protocol OverridingProtocol: BaseProtocol {
 
 // Ensure mock generation
 typealias OverridingMock = OverridingProtocolMock
+
+protocol NonIsolatedProtocol {
+    func foo()
+}
+
+// UltiMock:AutoMockable
+@MainActor
+protocol IsolatedProtocol: NonIsolatedProtocol {} // foo() is non-isolated, but the protocol is isolated to @MainActor
+
+// Ensure mock generation
+typealias IsolatedProtocolMockAlias = IsolatedProtocolMock
