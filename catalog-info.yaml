@@ -1,0 +1,17 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+    github.com/project-slug: smg-real-estate/Swift-UltiMock
+    github.com/team-slug: orgs/smg-real-estate/teams/ios
+  name: swift-UltiMock
+  description: A fast mock-generation tool for Swift.
+  links:
+    - url: https://github.com/smg-real-estate/Swift-UltiMock
+      title: GitHub
+      icon: github
+spec:
+  type: library
+  lifecycle: production
+  owner: jolly-appsolotls
