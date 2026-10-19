@@ -465,6 +465,7 @@ final class MockTests: XCTestCase {
         mock.verify()
     }
 
+#if compiler(<6.3)
     func test_mockingMethodsConstrainedToAssociatedTypes() {
         let mock = GenericTestMockableMock<([Int]) -> String, Int>()
 
@@ -474,6 +475,7 @@ final class MockTests: XCTestCase {
         XCTAssertEqual(mock.doSomethingWithInput([1, 2, 3]), "123")
         mock.verify()
     }
+#endif
 
     func test_3DPartyModuleMock_Generated() {
         _ = Test3rdPartyProtocolMock<Int, String>()
