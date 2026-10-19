@@ -23,7 +23,7 @@ jobs:
 
       - uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
         with:
-          xcode-version: '26.2.0'
+          xcode-version: '26.6'
 
       - name: Linting
         run: ./swiftformat . --lint
@@ -39,4 +39,4 @@ jobs:
       - name: End-to-end tests iOS
         run: |
           cd PluginTests
-          xcodebuild test -scheme PluginTests-Package -destination 'platform=iOS Simulator,OS=26.2,name=iPhone 17'
+          xcodebuild test -scheme PluginTests-Package -destination 'platform=iOS Simulator,OS=26.5,name=iPhone 17'
