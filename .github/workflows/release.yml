@@ -14,8 +14,17 @@ jobs:
   release:
     runs-on: macos-26
     environment: release
+    env:
+      VERSION: ${{ inputs.version }}
 
     steps:
+      - name: Validate version
+        run: |
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::Invalid version '$VERSION'"
+            exit 1
+          fi
+
       - uses: actions/checkout@v4
       - name: "Fetch submodules"
         run: |
@@ -38,11 +47,12 @@ jobs:
           cp .build/arm64-apple-macosx/release/mock ${{ env.ARTIFACTS_BUDLE_NAME }}/arm64-apple-macosx/bin/mock
           mkdir -p ${{ env.ARTIFACTS_BUDLE_NAME }}/x86_64-apple-macosx/bin
           cp .build/x86_64-apple-macosx/release/mock ${{ env.ARTIFACTS_BUDLE_NAME }}/x86_64-apple-macosx/bin/mock
-          echo '{
+          cat > ${{ env.ARTIFACTS_BUDLE_NAME }}/info.json <<EOF
+          {
             "schemaVersion" : "1.0",
             "artifacts" : {
               "mock" : {
-                "version" : "${{ github.event.inputs.version }}",
+                "version" : "${VERSION}",
                 "variants" : [
                   {
                     "supportedTriples" : [
@@ -60,7 +70,8 @@ jobs:
                 "type" : "executable"
               }
             }
-          }' > ${{ env.ARTIFACTS_BUDLE_NAME }}/info.json
+          }
+          EOF
           zip -r ${{ env.ARTIFACTS_BUDLE_NAME }}.zip ${{ env.ARTIFACTS_BUDLE_NAME }}
 
       - name: Create release
@@ -68,7 +79,7 @@ jobs:
         uses: softprops/action-gh-release@v2.4.2
         with:
           prerelease: true
-          tag_name: ${{ github.event.inputs.version }}
+          tag_name: ${{ inputs.version }}
           files: "${{ env.ARTIFACTS_BUDLE_NAME }}.zip"
           repository: "${{ github.repository_owner }}/${{ env.RELEASE_REPO }}"
           token: ${{ secrets.RELEASE_REPO_TOKEN }}
@@ -79,20 +90,21 @@ jobs:
           cd ${{ env.RELEASE_REPO }}
           # Sync swift-tools-version
           sed -i '' "1s|.*swift-tools-version:.*|$(head -n 1 ../Package.swift)|" Package.swift
-          sed -e '1h;2,$H;$!d;g' -re 's|(\.binaryTarget\(.*name: "ultimock".*url: ").*.zip"|\1${{ fromJSON(steps.create-release.outputs.assets)[0].browser_download_url }}"|g' -i '' Package.swift
+          sed -e '1h;2,$H;$!d;g' -re "s|(\.binaryTarget\(.*name: \"ultimock\".*url: \").*.zip\"|\1${ASSET_URL}\"|g" -i '' Package.swift
           sed -e '1h;2,$H;$!d;g' -re "s/(\.binaryTarget\(.*name: \"ultimock\".*checksum: \")[a-z,0-9]*/\1$(swift package compute-checksum ../${{ env.ARTIFACTS_BUDLE_NAME }}.zip)/g" -i '' Package.swift
           git submodule update --init
           cd UltiMock
           git checkout ${{ github.sha }}
           cd ..
           git add .
-          git commit -m "Release ${{ github.event.inputs.version }}"
+          git commit -m "Release ${VERSION}"
           git push "https://oauth2:${PUSH_TOKEN}@github.com/smg-real-estate/${{ env.RELEASE_REPO }}.git"
           cd ..
         env:
           PUSH_TOKEN: ${{ secrets.RELEASE_REPO_TOKEN }}
+          ASSET_URL: ${{ fromJSON(steps.create-release.outputs.assets)[0].browser_download_url }}
 
       - name: Tag
         run: |
-          git tag ${{ github.event.inputs.version }}
+          git tag "$VERSION"
           git push --tags
