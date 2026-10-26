@@ -108,7 +108,10 @@ public protocol GenericTestMockable {
 
     func doSomething(with value: Value)
     func doSomething(with value: ConstrainedValue)
+#if compiler(<6.3)
+    // Swift 6.3 warns that requirements cannot constrain `Self`; this becomes an error in a future language mode
     func doSomethingWithInput<I, O>(_ input: I) -> O where Value == (I) -> O
+#endif
 }
 
 protocol RequiringInitializer {
